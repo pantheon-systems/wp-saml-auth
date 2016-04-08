@@ -1,0 +1,25 @@
+{
+    "name": "danielbachhuber/wp-saml-auth",
+    "description": "SAML authentication for WordPress, using SimpleSAMLphp.",
+    "type": "wordpress-plugin",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Pantheon",
+            "email": "noreply@pantheon.io"
+        },
+        {
+            "name": "Daniel Bachhuber",
+            "email": "daniel@handbuilt.co"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require-dev": {
+        "squizlabs/php_codesniffer": "2.3.4",
+        "wp-coding-standards/wpcs": "0.8.0"
+    },
+    "scripts": {
+        "post-install-cmd": "\"vendor/bin/phpcs\" --config-set installed_paths vendor/wp-coding-standards/wpcs",
+        "post-update-cmd" : "\"vendor/bin/phpcs\" --config-set installed_paths vendor/wp-coding-standards/wpcs"
+    }
+}
