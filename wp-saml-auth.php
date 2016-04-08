@@ -44,7 +44,7 @@ class WP_SAML_Auth {
 		if ( ! class_exists( 'SimpleSAML_Auth_Simple' ) ) {
 			add_action( 'admin_notices', function() {
 				if ( current_user_can( 'manage_options' ) ) {
-					echo '<div class="message error"><p>' . sprintf( __( "WP SAML Auth wasn't able to find the <code>SimpleSAML_Auth_Simple</code> class. Please check the <code>simplesamlphp_autoload</code> configuration option, or <a href='%s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ), 'https://wordpress.org/plugins/wp-saml-auth/' ) . '</p></div>';
+					echo '<div class="message error"><p>' . wp_kses_post( sprintf( __( "WP SAML Auth wasn't able to find the <code>SimpleSAML_Auth_Simple</code> class. Please check the <code>simplesamlphp_autoload</code> configuration option, or <a href='%s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ), 'https://wordpress.org/plugins/wp-saml-auth/' ) ) . '</p></div>';
 				}
 			});
 			return;
