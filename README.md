@@ -13,3 +13,6 @@ SAML authentication for WordPress, using SimpleSAMLphp.
 
 [![Build Status](https://travis-ci.org/danielbachhuber/wp-saml-auth.svg?branch=master)](https://travis-ci.org/danielbachhuber/wp-saml-auth)
 
+## Installation ##
+
+This plugin requires access to a SimpleSAMLphp installation running on the same server. If your server is already running SimpleSAMLphp, then you are good to go. Otherwise, you'll need to install and configure SimpleSAMLphp on the server before you can begin using this plugin.
