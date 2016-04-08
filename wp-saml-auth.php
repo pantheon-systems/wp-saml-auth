@@ -15,6 +15,8 @@ class WP_SAML_Auth {
 
 	private static $instance;
 
+	private $provider = null;
+
 	public static function get_instance() {
 		if ( ! isset( self::$instance ) ) {
 			self::$instance = new WP_SAML_Auth;
@@ -48,6 +50,8 @@ class WP_SAML_Auth {
 			return;
 		}
 
+		$this->provider = new SimpleSAML_Auth_Simple( self::get_option( 'auth_source' ) );
+
 	}
 
 	/**
@@ -59,7 +63,9 @@ class WP_SAML_Auth {
 	public static function get_option( $option_name ) {
 		$defaults = array(
 			// Path to SimpleSAMLphp autoloader.
-			'simplesamlphp_autoload' => dirname( __FILE__ ) . '/vendor/autoload.php',
+			'simplesamlphp_autoload' => dirname( __FILE__ ) . '/simplesamlphp/lib/_autoload.php',
+			// Authentication source to pass to SimpleSAMLphp.
+			'auth_source'            => 'default-sp',
 			// Whether or not to auto-provision new users
 			'auto_provision'         => true,
 			// If auto-provisioning new users, the default role they should be
