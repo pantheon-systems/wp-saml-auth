@@ -2,7 +2,7 @@
     "name": "danielbachhuber/wp-saml-auth",
     "description": "SAML authentication for WordPress, using SimpleSAMLphp.",
     "type": "wordpress-plugin",
-    "license": "MIT",
+    "license": "GPLv2 or later",
     "authors": [
         {
             "name": "Pantheon",
