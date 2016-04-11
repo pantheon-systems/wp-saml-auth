@@ -20,21 +20,9 @@ class WP_SAML_Auth {
 	public static function get_instance() {
 		if ( ! isset( self::$instance ) ) {
 			self::$instance = new WP_SAML_Auth;
-			self::$instance->setup_actions();
-			self::$instance->setup_filters();
+			add_action( 'init', array( self::$instance, 'action_init' ) );
 		}
 		return self::$instance;
-	}
-
-	protected function setup_actions() {
-		add_action( 'init', array( $this, 'action_init' ) );
-		add_action( 'login_head', array( $this, 'action_login_head' ) );
-		add_action( 'login_message', array( $this, 'action_login_message' ) );
-	}
-
-	protected function setup_filters() {
-		add_filter( 'login_body_class', array( $this, 'filter_login_body_class' ) );
-		add_filter( 'authenticate', array( $this, 'filter_authenticate' ), 21, 3 ); // after wp_authenticate_username_password runs
 	}
 
 	public function action_init() {
@@ -54,6 +42,10 @@ class WP_SAML_Auth {
 		}
 
 		$this->provider = new SimpleSAML_Auth_Simple( self::get_option( 'auth_source' ) );
+		add_action( 'login_head', array( $this, 'action_login_head' ) );
+		add_action( 'login_message', array( $this, 'action_login_message' ) );
+		add_filter( 'login_body_class', array( $this, 'filter_login_body_class' ) );
+		add_filter( 'authenticate', array( $this, 'filter_authenticate' ), 21, 3 ); // after wp_authenticate_username_password runs
 
 	}
 
