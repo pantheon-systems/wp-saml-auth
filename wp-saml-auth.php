@@ -83,9 +83,9 @@ class WP_SAML_Auth {
 		if ( ! self::get_option( 'permit_wp_login' ) ) {
 			return $message;
 		}
-		echo '<h3><em>' . __( 'Use one-click authentication:', 'wp-saml-auth' ) . '</em></h3>';
-		echo '<div id="wp-saml-auth-cta"><p><a class="button" href="' . esc_url( add_query_arg( 'action', 'simplesamlphp', wp_login_url() ) ) . '">' . __( 'Sign In', 'wp-saml-auth' ) . '</a></p></div>';
-		echo '<h3><em>' . __( 'Or, sign in with WordPress:', 'wp-saml-auth' ) . '</em></h3>';
+		echo '<h3><em>' . esc_html__( 'Use one-click authentication:', 'wp-saml-auth' ) . '</em></h3>';
+		echo '<div id="wp-saml-auth-cta"><p><a class="button" href="' . esc_url( add_query_arg( 'action', 'simplesamlphp', wp_login_url() ) ) . '">' . esc_html__( 'Sign In', 'wp-saml-auth' ) . '</a></p></div>';
+		echo '<h3><em>' . esc_html__( 'Or, sign in with WordPress:', 'wp-saml-auth' ) . '</em></h3>';
 		return $message;
 	}
 
@@ -127,18 +127,18 @@ class WP_SAML_Auth {
 		$get_user_by = self::get_option( 'get_user_by' );
 		$attribute = self::get_option( "user_{$get_user_by}_attribute" );
 		if ( empty( $attributes[ $attribute ][0] ) ) {
-			return new WP_Error( 'wp_saml_auth', sprintf( __( '"%s" attribute missing in SimpleSAMLphp response. Please contact your administrator.', 'wp-saml-auth' ), $get_user_by ) );
+			return new WP_Error( 'wp_saml_auth', sprintf( esc_html__( '"%s" attribute missing in SimpleSAMLphp response. Please contact your administrator.', 'wp-saml-auth' ), $get_user_by ) );
 		}
 		$existing_user = get_user_by( $get_user_by, $attributes[ $attribute ][0] );
 		if ( $existing_user ) {
 			return $existing_user;
 		}
 		if ( ! self::get_option( 'auto_provision' ) ) {
-			return new WP_Error( 'wp_saml_auth', __( 'No WordPress user exists for your account. Please contact your administrator.', 'wp-saml-auth' ) );
+			return new WP_Error( 'wp_saml_auth', esc_html__( 'No WordPress user exists for your account. Please contact your administrator.', 'wp-saml-auth' ) );
 		}
 
 		$user_args = array();
-		foreach( array( 'display_name', 'user_login', 'user_email', 'first_name', 'last_name' ) as $type ) {
+		foreach ( array( 'display_name', 'user_login', 'user_email', 'first_name', 'last_name' ) as $type ) {
 			$attribute = self::get_option( "{$type}_attribute" );
 			$user_args[ $type ] = ! empty( $attributes[ $attribute ][0] ) ? $attributes[ $attribute ][0] : '';
 		}
