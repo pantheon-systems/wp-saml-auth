@@ -59,7 +59,8 @@ class WP_SAML_Auth {
 	public function action_login_head() {
 		?>
 <style>
-	.wp-saml-auth-deny-wp-login #loginform {
+	.wp-saml-auth-deny-wp-login #loginform,
+	.wp-saml-auth-deny-wp-login #nav {
 		display: none;
 	}
 </style>
