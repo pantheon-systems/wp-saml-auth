@@ -25,6 +25,102 @@ class WP_SAML_Auth {
 		return self::$instance;
 	}
 
+	/**
+	 * Get a configuration option for this implementation.
+	 *
+	 * @param string $option_name
+	 * @return mixed
+	 */
+	public static function get_option( $option_name ) {
+		$defaults = array(
+			/**
+			 * Path to SimpleSAMLphp autoloader.
+			 *
+			 * Follow the standard implementation by installing SimpleSAMLphp
+			 * alongside the plugin, and provide the path to its autoloader.
+			 * Alternatively, this plugin will work if it can find the
+			 * `SimpleSAML_Auth_Simple` class.
+			 *
+			 * @param string
+			 */
+			'simplesamlphp_autoload' => dirname( __FILE__ ) . '/simplesamlphp/lib/_autoload.php',
+			/**
+			 * Authentication source to pass to SimpleSAMLphp
+			 *
+			 * This must be one of your configured identity providers in
+			 * SimpleSAMLphp. If the identity provider isn't configured
+			 * properly, the plugin will not work properly.
+			 *
+			 * @param string
+			 */
+			'auth_source'            => 'default-sp',
+			/**
+			 * Whether or not to automatically provision new WordPress users.
+			 *
+			 * When WordPress is presented with a SAML user without a
+			 * corresponding WordPress account, it can either create a new user
+			 * or display an error that the user needs to contact the site
+			 * administrator.
+			 *
+			 * @param bool
+			 */
+			'auto_provision'         => true,
+			/**
+			 * Whether or not to permit logging in with username and password.
+			 *
+			 * If this feature is disabled, all authentication requests will be
+			 * channeled through SimpleSAMLphp.
+			 *
+			 * @param bool
+			 */
+			'permit_wp_login'        => true,
+			/**
+			 * Attribute by which to get a WordPress user for a SAML user.
+			 *
+			 * @param string Supported options are 'email' and 'login'.
+			 */
+			'get_user_by'            => 'email',
+			/**
+			 * SAML attribute which includes the user_login value for a user.
+			 *
+			 * @param string
+			 */
+			'user_login_attribute'   => 'uid',
+			/**
+			 * SAML attribute which includes the user_email value for a user.
+			 *
+			 * @param string
+			 */
+			'user_email_attribute'   => 'mail',
+			/**
+			 * SAML attribute which includes the display_name value for a user.
+			 *
+			 * @param string
+			 */
+			'display_name_attribute' => 'display_name',
+			/**
+			 * SAML attribute which includes the first_name value for a user.
+			 *
+			 * @param string
+			 */
+			'first_name_attribute' => 'first_name',
+			/**
+			 * SAML attribute which includes the last_name value for a user.
+			 *
+			 * @param string
+			 */
+			'last_name_attribute' => 'last_name',
+			/**
+			 * Default WordPress role to grant when provisioning new users.
+			 *
+			 * @param string
+			 */
+			'default_role'           => get_option( 'default_role' ),
+		);
+		$value = isset( $defaults[ $option_name ] ) ? $defaults[ $option_name ] : null;
+		return apply_filters( 'wp_saml_auth_option', $value, $option_name );
+	}
+
 	public function action_init() {
 
 		$simplesamlphp_path = self::get_option( 'simplesamlphp_autoload' );
@@ -142,41 +238,6 @@ class WP_SAML_Auth {
 			return $user_id;
 		}
 		return get_user_by( 'id', $user_id );
-	}
-
-	/**
-	 * Get a configuration option for this implementation.
-	 *
-	 * @param string $option_name
-	 * @return mixed
-	 */
-	public static function get_option( $option_name ) {
-		$defaults = array(
-			// Path to SimpleSAMLphp autoloader.
-			'simplesamlphp_autoload' => dirname( __FILE__ ) . '/simplesamlphp/lib/_autoload.php',
-			// Authentication source to pass to SimpleSAMLphp.
-			'auth_source'            => 'default-sp',
-			// Whether or not to auto-provision new users
-			'auto_provision'         => true,
-			// Attribute to get the user by
-			'get_user_by'            => 'email',
-			// SAML attribute storing the user_login value for a user.
-			'user_login_attribute'   => 'uid',
-			// SAML attribute storing the user_email value for a user.
-			'user_email_attribute'   => 'mail',
-			// SAML attribute storing the display_name value for a user.
-			'display_name_attribute' => 'display_name',
-			// SAML attribute storing the display_name value for a user.
-			'display_name_attribute' => 'display_name',
-			// Whether or not to permit login through WordPress.
-			// If false, then all authentication is pushed through SimpleSAMLphp
-			'permit_wp_login'        => true,
-			// If auto-provisioning new users, the default role they should be
-			// assigned.
-			'default_role'           => get_option( 'default_role' ),
-		);
-		$value = isset( $defaults[ $option_name ] ) ? $defaults[ $option_name ] : null;
-		return apply_filters( 'wp_saml_auth_option', $value, $option_name );
 	}
 
 }
