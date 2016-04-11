@@ -28,10 +28,12 @@ class WP_SAML_Auth {
 
 	protected function setup_actions() {
 		add_action( 'init', array( $this, 'action_init' ) );
+		add_action( 'login_head', array( $this, 'action_login_head' ) );
 	}
 
 	protected function setup_filters() {
-
+		add_filter( 'login_body_class', array( $this, 'filter_login_body_class' ) );
+		add_filter( 'authenticate', array( $this, 'filter_authenticate' ), 21, 3 ); // after wp_authenticate_username_password runs
 	}
 
 	public function action_init() {
@@ -54,6 +56,79 @@ class WP_SAML_Auth {
 
 	}
 
+	public function action_login_head() {
+		?>
+<style>
+	.wp-saml-auth-deny-wp-login #loginform {
+		display: none;
+	}
+</style>
+<?php
+	}
+
+	/**
+	 * Add body classes for our specific configuration attributes
+	 */
+	public function filter_login_body_class( $classes ) {
+
+		if ( ! self::get_option( 'permit_wp_login' ) ) {
+			$classes[] = 'wp-saml-auth-deny-wp-login';
+		}
+
+		return $classes;
+	}
+
+	/**
+	 * Check if the user is authenticated against the SimpleSAMLphp instance
+	 */
+	public function filter_authenticate( $user, $username, $password ) {
+
+		$permit_wp_login = self::get_option( 'permit_wp_login' );
+		if ( is_a( $user, 'WP_User' ) && $permit_wp_login ) {
+			return $user;
+		}
+
+		if ( ! $permit_wp_login || ( ! empty( $_GET['action'] ) && 'simplesamlphp' === $_GET['action'] ) ) {
+			$user = $this->do_saml_authentication();
+		}
+		return $user;
+	}
+
+	/**
+	 * Do the SAML authentication dance
+	 */
+	public function do_saml_authentication() {
+		$this->provider->requireAuth();
+		$attributes = $this->provider->getAttributes();
+
+		$get_user_by = self::get_option( 'get_user_by' );
+		$attribute = self::get_option( "user_{$get_user_by}_attribute" );
+		if ( empty( $attributes[ $attribute ][0] ) ) {
+			return new WP_Error( 'wp_saml_auth', sprintf( __( '"%s" attribute missing in SimpleSAMLphp response. Please contact your administrator.', 'wp-saml-auth' ), $get_user_by ) );
+		}
+		$existing_user = get_user_by( $get_user_by, $attributes[ $attribute ][0] );
+		if ( $existing_user ) {
+			return $existing_user;
+		}
+		if ( ! self::get_option( 'auto_provision' ) ) {
+			return new WP_Error( 'wp_saml_auth', __( 'No WordPress user exists for your account. Please contact your administrator.', 'wp-saml-auth' ) );
+		}
+
+		$user_args = array();
+		foreach( array( 'display_name', 'user_login', 'user_email', 'first_name', 'last_name' ) as $type ) {
+			$attribute = self::get_option( "{$type}_attribute" );
+			$user_args[ $type ] = ! empty( $attributes[ $attribute ][0] ) ? $attributes[ $attribute ][0] : '';
+		}
+		$user_args['role'] = self::get_option( 'default_role' );
+		$user_args['user_pass'] = wp_generate_password();
+		$user_args = apply_filters( 'wp_saml_auth_insert_user', $user_args );
+		$user_id = wp_insert_user( $user_args );
+		if ( is_wp_error( $user_id ) ) {
+			return $user_id;
+		}
+		return get_user_by( 'id', $user_id );
+	}
+
 	/**
 	 * Get a configuration option for this implementation.
 	 *
@@ -68,6 +143,19 @@ class WP_SAML_Auth {
 			'auth_source'            => 'default-sp',
 			// Whether or not to auto-provision new users
 			'auto_provision'         => true,
+			// Attribute to get the user by
+			'get_user_by'            => 'email',
+			// SAML attribute storing the user_login value for a user.
+			'user_login_attribute'   => 'uid',
+			// SAML attribute storing the user_email value for a user.
+			'user_email_attribute'   => 'mail',
+			// SAML attribute storing the display_name value for a user.
+			'display_name_attribute' => 'display_name',
+			// SAML attribute storing the display_name value for a user.
+			'display_name_attribute' => 'display_name',
+			// Whether or not to permit login through WordPress.
+			// If false, then all authentication is pushed through SimpleSAMLphp
+			'permit_wp_login'        => true,
 			// If auto-provisioning new users, the default role they should be
 			// assigned.
 			'default_role'           => get_option( 'default_role' ),
