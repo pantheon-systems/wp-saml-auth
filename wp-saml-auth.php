@@ -29,6 +29,7 @@ class WP_SAML_Auth {
 	protected function setup_actions() {
 		add_action( 'init', array( $this, 'action_init' ) );
 		add_action( 'login_head', array( $this, 'action_login_head' ) );
+		add_action( 'login_message', array( $this, 'action_login_message' ) );
 	}
 
 	protected function setup_filters() {
@@ -59,12 +60,33 @@ class WP_SAML_Auth {
 	public function action_login_head() {
 		?>
 <style>
+	#wp-saml-auth-cta {
+		background: #fff;
+		-webkit-box-shadow: 0 1px 3px rgba(0,0,0,.13);
+		box-shadow: 0 1px 3px rgba(0,0,0,.13);
+		padding: 26px 24px 26px;
+		margin-top: 24px;
+		margin-bottom: 24px;
+	}
 	.wp-saml-auth-deny-wp-login #loginform,
 	.wp-saml-auth-deny-wp-login #nav {
 		display: none;
 	}
 </style>
 <?php
+	}
+
+	/**
+	 * Such a hack — use a filter to add the button to sign in with SimpleSAMLphp
+	 */
+	public function action_login_message( $message ) {
+		if ( ! self::get_option( 'permit_wp_login' ) ) {
+			return $message;
+		}
+		echo '<h3><em>' . __( 'Use one-click authentication:', 'wp-saml-auth' ) . '</em></h3>';
+		echo '<div id="wp-saml-auth-cta"><p><a class="button" href="' . esc_url( add_query_arg( 'action', 'simplesamlphp', wp_login_url() ) ) . '">' . __( 'Sign In', 'wp-saml-auth' ) . '</a></p></div>';
+		echo '<h3><em>' . __( 'Or, sign in with WordPress:', 'wp-saml-auth' ) . '</em></h3>';
+		return $message;
 	}
 
 	/**
