@@ -23,11 +23,10 @@ See installation instructions for full configuration details.
 
 This plugin requires access to a SimpleSAMLphp installation running on the same server. If your server is already running SimpleSAMLphp, then you are good to go. Otherwise, you'll need to install and configure SimpleSAMLphp on the server before you can begin using this plugin.
 
-Once SimpleSAMLphp is installed and running on your server, you can configure this plugin using a filter included in your theme's functions.php or a mu-plugin:
+Once SimpleSAMLphp is installed and running on your server, you can configure this plugin using a filter included in your theme's functions.php file or a mu-plugin:
 
-    function wpsax_filter_option( $value, $option_name ){
-
-        $overrides = array(
+    function wpsax_filter_option( $value, $option_name ) {
+        $defaults = array(
             /**
              * Path to SimpleSAMLphp autoloader.
              *
@@ -112,8 +111,8 @@ Once SimpleSAMLphp is installed and running on your server, you can configure th
              */
             'default_role'           => get_option( 'default_role' ),
         );
-
-        return isset( $overrides[ $option_name ] ) ? $overrides[ $option_name ] : $value;
+        $value = isset( $defaults[ $option_name ] ) ? $defaults[ $option_name ] : $value;
+        return $value;
     }
     add_filter( 'wp_saml_auth_option', 'wpsax_filter_option', 10, 2 );
 
