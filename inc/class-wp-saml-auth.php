@@ -24,6 +24,15 @@ class WP_SAML_Auth {
 		return apply_filters( 'wp_saml_auth_option', null, $option_name );
 	}
 
+	/**
+	 * Get the provider instance for WP_SAML_Auth
+	 *
+	 * @return mixed
+	 */
+	public function get_provider() {
+		return $this->provider;
+	}
+
 	public function action_init() {
 
 		$simplesamlphp_path = self::get_option( 'simplesamlphp_autoload' );
@@ -43,6 +52,7 @@ class WP_SAML_Auth {
 		$this->provider = new SimpleSAML_Auth_Simple( self::get_option( 'auth_source' ) );
 		add_action( 'login_head', array( $this, 'action_login_head' ) );
 		add_action( 'login_message', array( $this, 'action_login_message' ) );
+		add_action( 'wp_logout', array( $this, 'action_wp_logout' ) );
 		add_filter( 'login_body_class', array( $this, 'filter_login_body_class' ) );
 		add_filter( 'authenticate', array( $this, 'filter_authenticate' ), 21, 3 ); // after wp_authenticate_username_password runs
 
@@ -81,6 +91,13 @@ class WP_SAML_Auth {
 	}
 
 	/**
+	 * Log the user out of the SAML instance when they log out of WordPress
+	 */
+	public function action_wp_logout() {
+		$this->provider->logout( add_query_arg( 'loggedout', true, wp_login_url() ) );
+	}
+
+	/**
 	 * Add body classes for our specific configuration attributes
 	 */
 	public function filter_login_body_class( $classes ) {
@@ -102,7 +119,7 @@ class WP_SAML_Auth {
 			return $user;
 		}
 
-		if ( ! $permit_wp_login || ( ! empty( $_GET['action'] ) && 'simplesamlphp' === $_GET['action'] ) ) {
+		if ( ( ! $permit_wp_login && empty( $_GET['loggedout'] ) ) || ( ! empty( $_GET['action'] ) && 'simplesamlphp' === $_GET['action'] ) ) {
 			$user = $this->do_saml_authentication();
 		}
 		return $user;
