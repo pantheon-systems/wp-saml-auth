@@ -22,7 +22,7 @@ class Test_Authentication extends WP_UnitTestCase {
 		$user = wp_get_current_user();
 		$this->assertEquals( 'student', $user->user_login );
 		$this->assertEquals( 'student@example.org', $user->user_email );
-		$this->assertEquals( 'subscriber', $user->roles[0] );
+		$this->assertEquals( array( 'subscriber' ), $user->roles );
 		$this->assertEquals( $user, get_user_by( 'login', 'student' ) );
 		wp_logout();
 		$this->assertEquals( 0, get_current_user_id() );
@@ -50,6 +50,7 @@ class Test_Authentication extends WP_UnitTestCase {
 		// User doesn't exist yet, so expect an error
 		$user = $this->saml_signon( 'student' );
 		$this->assertTrue( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
+		$this->assertEquals( 0, get_current_user_id() );
 		$this->assertInstanceOf( 'WP_Error', $user );
 		$this->assertEquals( 'wp_saml_auth_auto_provision_disabled', $user->get_error_code() );
 		// User exists now, so expect login to work with lookup by email address
@@ -69,6 +70,27 @@ class Test_Authentication extends WP_UnitTestCase {
 		$this->assertTrue( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
 		$this->assertInstanceOf( 'WP_Error', $user );
 		$this->assertEquals( 'wp_saml_auth_auto_provision_disabled', $user->get_error_code() );
+	}
+
+	public function test_saml_login_auto_provision_missing_field() {
+		// Default behavior is to provision by email ddress
+		$user = $this->saml_signon( 'studentwithoutmail' );
+		$this->assertTrue( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
+		$this->assertEquals( 0, get_current_user_id() );
+		$this->assertInstanceOf( 'WP_Error', $user );
+		$this->assertEquals( 'wp_saml_auth_missing_attribute', $user->get_error_code() );
+		// Changing field to 'login' will provision the user without an email address
+		$this->options['get_user_by'] = 'login';
+		$user = $this->saml_signon( 'studentwithoutmail' );
+		$this->assertEquals( 'student', $user->user_login );
+		$this->assertEmpty( $user->user_email );
+		$this->assertEquals( 'student', wp_get_current_user()->user_login );
+	}
+
+	public function test_saml_login_auto_provision_custom_role() {
+		$this->options['default_role'] = 'author';
+		$user = $this->saml_signon( 'student' );
+		$this->assertEquals( array( 'author' ), $user->roles );
 	}
 
 	public function test_user_pass_login_not_permitted() {
