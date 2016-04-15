@@ -15,7 +15,15 @@ SAML authentication for WordPress, using SimpleSAMLphp.
 
 SAML authentication for WordPress, using [SimpleSAMLphp](https://simplesamlphp.org/). When activated, and provided access to a functional SimpleSAMLphp application, this plugin permits authentication using any of the protocols supported by SimpleSAMLphp.
 
-End users can log in via SimpleSAMLphp using a button added to the standard WordPress login view. When the button is clicked, the `SimpleSAML_Auth_Simple` class is called to determine whether the user is authenticated. If the user isn't authenticated, they're redirected to the SimpleSAMLphp login view. If they are authenticated, they will be signed into WordPress as their corresponding WordPress user. If no such WordPress user exists, one will be created.
+The standard user flow looks like this:
+
+* User can log in via SimpleSAMLphp using a button added to the standard WordPress login view.
+* When the button is clicked, the `SimpleSAML_Auth_Simple` class is called to determine whether the user is authenticated.
+* If the user isn't authenticated, they're redirected to the SimpleSAMLphp login view.
+* Once the user is authenticated with SimpleSAMLphp, they will be signed into WordPress as their corresponding WordPress user. A new WordPress user will be created if none exists.
+* When the user logs out of WordPress, they are also logged out of SimpleSAMLphp.
+
+A set of configuration options allow you to change the plugin's default behavior. For instance, `permit_wp_login=>false` will force all authentication to go through SimpleSAMLphp, bypassing `wp-login.php`. Similiarly, `auto_provision=>false` will disable automatic creation of new WordPress users.
 
 See installation instructions for full configuration details.
 
