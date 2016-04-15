@@ -10,17 +10,65 @@ class Test_Authentication extends WP_UnitTestCase {
 	public function setUp() {
 		parent::setUp();
 		$this->options = array();
+		$GLOBALS['wp_saml_auth_current_user'] = null;
 		add_filter( 'wp_saml_auth_option', array( $this, 'filter_wp_saml_auth_option' ), 10, 2 );
 	}
 
-	public function test_user_pass_login_permitted() {
+	public function test_default_behavior_saml_login_no_existing_user() {
+		$this->assertEquals( 0, get_current_user_id() );
+		$this->assertFalse( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
+		$this->assertFalse( get_user_by( 'login', 'student' ) );
+		$this->saml_signon( 'student' );
+		$user = wp_get_current_user();
+		$this->assertEquals( 'student', $user->user_login );
+		$this->assertEquals( 'student@example.org', $user->user_email );
+		$this->assertEquals( 'subscriber', $user->roles[0] );
+		$this->assertEquals( $user, get_user_by( 'login', 'student' ) );
+		wp_logout();
+		$this->assertEquals( 0, get_current_user_id() );
+		$this->assertFalse( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
+	}
+
+	public function test_default_behavior_user_pass_login() {
 		$this->factory->user->create( array( 'user_login' => 'testnowplogin', 'user_pass' => 'testnowplogin' ) );
-		$this->options['permit_wp_login'] = true;
+		$this->assertFalse( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
 		$user = wp_signon( array(
 			'user_login'     => 'testnowplogin',
 			'user_password'  => 'testnowplogin',
 		) );
 		$this->assertInstanceOf( 'WP_User', $user );
+		$user = wp_get_current_user();
+		$this->assertEquals( 'testnowplogin', $user->user_login );
+		$this->assertFalse( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
+		wp_logout();
+		$this->assertEquals( 0, get_current_user_id() );
+		$this->assertFalse( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
+	}
+
+	public function test_saml_login_disable_auto_provision() {
+		$this->options['auto_provision'] = false;
+		// User doesn't exist yet, so expect an error
+		$user = $this->saml_signon( 'student' );
+		$this->assertTrue( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
+		$this->assertInstanceOf( 'WP_Error', $user );
+		$this->assertEquals( 'wp_saml_auth_auto_provision_disabled', $user->get_error_code() );
+		// User exists now, so expect login to work with lookup by email address
+		$user_id = $this->factory->user->create( array( 'user_login' => 'studentdifflogin', 'user_email' => 'student@example.org' ) );
+		$user = $this->saml_signon( 'student' );
+		$this->assertTrue( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
+		$this->assertInstanceOf( 'WP_User', $user );
+		$this->assertEquals( 'studentdifflogin', $user->user_login );
+		$this->assertEquals( 'studentdifflogin', wp_get_current_user()->user_login );
+	}
+
+	public function test_saml_login_disable_auto_provision_invalid_map_field() {
+		$this->options['auto_provision'] = false;
+		$this->options['get_user_by'] = 'login';
+		$user_id = $this->factory->user->create( array( 'user_login' => 'studentdifflogin', 'user_email' => 'student@example.org' ) );
+		$user = $this->saml_signon( 'student' );
+		$this->assertTrue( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
+		$this->assertInstanceOf( 'WP_Error', $user );
+		$this->assertEquals( 'wp_saml_auth_auto_provision_disabled', $user->get_error_code() );
 	}
 
 	public function test_user_pass_login_not_permitted() {
@@ -54,11 +102,19 @@ class Test_Authentication extends WP_UnitTestCase {
 		$user = null;
 		switch ( $username ) {
 			case 'student':
+			case 'studentwithoutuid':
+			case 'studentwithoutmail':
 				$user = array(
 					'uid'                  => array( 'student' ),
 					'eduPersonAffiliation' => array( 'member', 'student' ),
 					'mail'                 => array( 'student@example.org' ),
 				);
+				if ( 'studentwithoutuid' === $username ) {
+					unset( $user['uid'] );
+				}
+				if ( 'studentwithoutmail' === $username ) {
+					unset( $user['mail'] );
+				}
 				break;
 		}
 
