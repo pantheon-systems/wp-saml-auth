@@ -124,6 +124,23 @@ Once SimpleSAMLphp is installed and running on your server, you can configure th
     }
     add_filter( 'wp_saml_auth_option', 'wpsax_filter_option', 10, 2 );
 
+## Frequently Asked Questions ##
+
+### How do I use SimpleSAMLphp on a multi web node environment? ###
+
+Because SimpleSAMLphp uses PHP sessions to manage user authentication, it will work unreliably or not at all on a server configuration with multiple web nodes. This is because PHP's default session handler uses the filesystem, and each web node has a different filesystem. Fortunately, there's a way around this problem.
+
+First, install and activate the [WP Native PHP Sessions plugin](https://wordpress.org/plugins/wp-native-php-sessions/), which registers a database-based PHP session handler.
+
+Next, modify SimpleSAMLphp's `www/_include.php` file to require `wp-load.php`. If you installed SimpleSAMLphp within the `wp-saml-auth` directory, you'd edit `simplesamlphp/www/_include.php` to include:
+
+    <?php
+    require_once dirname( dirname( dirname( dirname( dirname( dirname( __FILE__ ) ) ) ) ) ) . '/wp-load.php';
+
+Note: the declaration does need to be at the top of `_include.php`, to ensure WordPress is loaded before SimpleSAMLphp.
+
+There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Native PHP Sessions active, SimpleSAMLphp and WP SAML Auth will be able to communicate to one another on a multi web node environment.
+
 ## Changelog ##
 
 ### 0.1.0 (???? ??, ????) ###
