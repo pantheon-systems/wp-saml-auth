@@ -39,7 +39,7 @@ class SimpleSAML_Auth_Simple {
 	 * @return bool  TRUE if the user is authenticated, FALSE if not.
 	 */
 	public function isAuthenticated() {
-		return false;
+		return (bool) $this->getCurrentUser();
 	}
 
 
@@ -58,7 +58,7 @@ class SimpleSAML_Auth_Simple {
 	 * @param array $params  Various options to the authentication request.
 	 */
 	public function requireAuth(array $params = array()) {
-		return false;
+		return (bool) $this->getCurrentUser();
 	}
 
 	/**
@@ -77,6 +77,32 @@ class SimpleSAML_Auth_Simple {
 			return array();
 		}
 
+		return $this->getCurrentUser();
+	}
+
+	/**
+	 * Log the user out.
+	 *
+	 * This function logs the user out. It will never return. By default,
+	 * it will cause a redirect to the current page after logging the user
+	 * out, but a different URL can be given with the $params parameter.
+	 *
+	 * Generic parameters are:
+	 *  - 'ReturnTo': The URL the user should be returned to after logout.
+	 *  - 'ReturnCallback': The function that should be called after logout.
+	 *  - 'ReturnStateParam': The parameter we should return the state in when redirecting.
+	 *  - 'ReturnStateStage': The stage the state array should be saved with.
+	 *
+	 * @param string|array|NULL $params  Either the URL the user should be redirected to after logging out,
+	 *                                   or an array with parameters for the logout. If this parameter is
+	 *                                   NULL, we will return to the current page.
+	 */
+	public function logout( $params = NULL ) {
+		$GLOBALS['wp_saml_auth_current_user'] = false;
+	}
+
+	private function getCurrentUser() {
+		return ! empty( $GLOBALS['wp_saml_auth_current_user'] ) ? $GLOBALS['wp_saml_auth_current_user'] : null;
 	}
 
 }

@@ -32,8 +32,31 @@ function _wp_saml_auth_filter_option( $value, $option_name ) {
 	return $value;
 }
 
+/**
+ * Log in a user by setting authentication cookies.
+ *
+ * @since 2.5.0
+ */
 function wp_set_auth_cookie( $user_id, $remember = false, $secure = '', $token = '' ) {
+	wp_set_current_user( $user_id );
 	return true;
+}
+
+/**
+ * Log the current user out.
+ *
+ * @since 2.5.0
+ */
+function wp_logout() {
+	wp_destroy_current_session();
+	wp_set_current_user( 0 );
+
+	/**
+	 * Fires after a user is logged-out.
+	 *
+	 * @since 1.5.0
+	 */
+	do_action( 'wp_logout' );
 }
 
 // Start up the WP testing environment.

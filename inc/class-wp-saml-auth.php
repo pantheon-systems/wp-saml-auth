@@ -24,6 +24,15 @@ class WP_SAML_Auth {
 		return apply_filters( 'wp_saml_auth_option', null, $option_name );
 	}
 
+	/**
+	 * Get the provider instance for WP_SAML_Auth
+	 *
+	 * @return mixed
+	 */
+	public function get_provider() {
+		return $this->provider;
+	}
+
 	public function action_init() {
 
 		$simplesamlphp_path = self::get_option( 'simplesamlphp_autoload' );
@@ -43,6 +52,7 @@ class WP_SAML_Auth {
 		$this->provider = new SimpleSAML_Auth_Simple( self::get_option( 'auth_source' ) );
 		add_action( 'login_head', array( $this, 'action_login_head' ) );
 		add_action( 'login_message', array( $this, 'action_login_message' ) );
+		add_action( 'wp_logout', array( $this, 'action_wp_logout' ) );
 		add_filter( 'login_body_class', array( $this, 'filter_login_body_class' ) );
 		add_filter( 'authenticate', array( $this, 'filter_authenticate' ), 21, 3 ); // after wp_authenticate_username_password runs
 
@@ -78,6 +88,13 @@ class WP_SAML_Auth {
 		echo '<div id="wp-saml-auth-cta"><p><a class="button" href="' . esc_url( add_query_arg( 'action', 'simplesamlphp', wp_login_url() ) ) . '">' . esc_html__( 'Sign In', 'wp-saml-auth' ) . '</a></p></div>';
 		echo '<h3><em>' . esc_html__( 'Or, sign in with WordPress:', 'wp-saml-auth' ) . '</em></h3>';
 		return $message;
+	}
+
+	/**
+	 * Log the user out of the SAML instance when they log out of WordPress
+	 */
+	public function action_wp_logout() {
+		$this->provider->logout();
 	}
 
 	/**
