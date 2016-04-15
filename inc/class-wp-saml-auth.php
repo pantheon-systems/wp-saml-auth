@@ -94,7 +94,7 @@ class WP_SAML_Auth {
 	 * Log the user out of the SAML instance when they log out of WordPress
 	 */
 	public function action_wp_logout() {
-		$this->provider->logout();
+		$this->provider->logout( add_query_arg( 'loggedout', true, wp_login_url() ) );
 	}
 
 	/**
@@ -119,7 +119,7 @@ class WP_SAML_Auth {
 			return $user;
 		}
 
-		if ( ! $permit_wp_login || ( ! empty( $_GET['action'] ) && 'simplesamlphp' === $_GET['action'] ) ) {
+		if ( ( ! $permit_wp_login && empty( $_GET['loggedout'] ) ) || ( ! empty( $_GET['action'] ) && 'simplesamlphp' === $_GET['action'] ) ) {
 			$user = $this->do_saml_authentication();
 		}
 		return $user;
