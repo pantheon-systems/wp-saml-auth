@@ -13,7 +13,7 @@ SAML authentication for WordPress, using SimpleSAMLphp.
 
 [![Build Status](https://travis-ci.org/danielbachhuber/wp-saml-auth.svg?branch=master)](https://travis-ci.org/danielbachhuber/wp-saml-auth)
 
-SAML authentication for WordPress, using [SimpleSAMLphp](https://simplesamlphp.org/). When activated, and provided access to a functional SimpleSAMLphp application, this plugin permits authentication using any of the protocols supported by SimpleSAMLphp.
+SAML authentication for WordPress, using [SimpleSAMLphp](https://simplesamlphp.org/). When activated, and provided access to a functional SimpleSAMLphp installation, this plugin permits authentication using any of the methods supported by SimpleSAMLphp.
 
 The standard user flow looks like this:
 
@@ -29,7 +29,7 @@ See installation instructions for full configuration details.
 
 ## Installation ##
 
-This plugin requires access to a SimpleSAMLphp installation running on the same server. If your server is already running SimpleSAMLphp, then you are good to go. Otherwise, you'll need to install and configure SimpleSAMLphp on the server before you can begin using this plugin.
+This plugin requires access to a SimpleSAMLphp installation running in the same environment. If you are already running SimpleSAMLphp, then you are good to go. Otherwise, you'll need to install and configure SimpleSAMLphp before you can begin using this plugin.
 
 Once SimpleSAMLphp is installed and running on your server, you can configure this plugin using a filter included in your theme's functions.php file or a mu-plugin:
 
@@ -137,7 +137,7 @@ Next, modify SimpleSAMLphp's `www/_include.php` file to require `wp-load.php`. I
     <?php
     require_once dirname( dirname( dirname( dirname( dirname( dirname( __FILE__ ) ) ) ) ) ) . '/wp-load.php';
 
-Note: the declaration does need to be at the top of `_include.php`, to ensure WordPress is loaded before SimpleSAMLphp.
+Note: the declaration does need to be at the top of `_include.php`, to ensure WordPress (and thus the session handling) is loaded before SimpleSAMLphp.
 
 There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Native PHP Sessions active, SimpleSAMLphp and WP SAML Auth will be able to communicate to one another on a multi web node environment.
 
