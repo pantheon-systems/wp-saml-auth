@@ -11,7 +11,7 @@ SAML authentication for WordPress, using SimpleSAMLphp.
 
 ## Description ##
 
-[![Build Status](https://travis-ci.org/pantheon-systems/wp-saml-auth.svg?branch=master)](https://travis-ci.org/pantheon-systems/wp-saml-auth)
+[![Build Status](https://travis-ci.org/pantheon-systems/wp-saml-auth.svg?branch=master)](https://travis-ci.org/pantheon-systems/wp-saml-auth) [![Coverage Status](https://coveralls.io/repos/github/pantheon-systems/wp-saml-auth/badge.svg?branch=master)](https://coveralls.io/github/pantheon-systems/wp-saml-auth?branch=master)
 
 SAML authentication for WordPress, using [SimpleSAMLphp](https://simplesamlphp.org/). When activated, and provided access to a functional SimpleSAMLphp installation, this plugin permits authentication using any of the methods supported by SimpleSAMLphp.
 
