@@ -29,7 +29,7 @@ See installation instructions for full configuration details.
 
 ## Installation ##
 
-This plugin requires access to a SimpleSAMLphp installation running in the same environment. If you are already running SimpleSAMLphp, then you are good to go. Otherwise, you'll need to install and configure SimpleSAMLphp before you can begin using this plugin.
+This plugin requires access to a SimpleSAMLphp installation running in the same environment. If you are already running SimpleSAMLphp, then you are good to go. Otherwise, you'll need to install and configure SimpleSAMLphp before you can begin using this plugin. For local testing purposes, the [Identity Provider QuickStart](https://simplesamlphp.org/docs/stable/simplesamlphp-idp) is a good place to start.
 
 Once SimpleSAMLphp is installed and running on your server, you can configure this plugin using a filter included in your theme's functions.php file or a mu-plugin:
 
