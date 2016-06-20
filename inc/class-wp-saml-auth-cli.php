@@ -68,7 +68,7 @@ class WP_SAML_Auth_CLI {
 	 *
 	 * @subcommand scaffold-config
 	 */
-	public function scaffold_config( $_, $assoc_args ) {
+	public function scaffold_config( $args, $assoc_args ) {
 
 		$defaults = array(
 			'simplesamlphp_autoload'     => dirname( dirname( __FILE__ ) ) . '/simplesamlphp/lib/_autoload.php',
@@ -81,11 +81,11 @@ class WP_SAML_Auth_CLI {
 			'display_name_attribute'     => 'display_name',
 			'first_name_attribute'       => 'first_name',
 			'last_name_attribute'        => 'last_name',
-			'default_role'               => get_option( 'default_role' )
+			'default_role'               => get_option( 'default_role' ),
 		);
 		$assoc_args = array_merge( $defaults, $assoc_args );
 
-		foreach( array( 'auto_provision' ) as $bool ) {
+		foreach ( array( 'auto_provision' ) as $bool ) {
 			// Support --auto_provision=false passed as an argument
 			$assoc_args[ $bool ] = 'false' === $assoc_args[ $bool ] ? false : (bool) $assoc_args[ $bool ];
 		}
@@ -109,7 +109,7 @@ function wpsax_filter_option( \$value, \$option_name ) {
 }
 add_filter( 'wp_saml_auth_option', 'wpsax_filter_option', 10, 2 );
 EOT;
-		echo $function;
+		WP_CLI::log( $function );
 	}
 
 }
