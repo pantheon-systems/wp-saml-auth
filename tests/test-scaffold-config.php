@@ -35,7 +35,7 @@ class Test_Scaffold_Config extends WP_UnitTestCase {
 	 */
 	private static function scaffold_config_function( $assoc_args = array() ) {
 		$function_name = 'wpsax_' . md5( rand() );
-		$function = wpsa_scaffold_config_function( $assoc_args );
+		$function = WP_SAML_Auth_Test_CLI::scaffold_config_function( $assoc_args );
 		$function = str_replace( 'function wpsax_filter_option', 'function ' . $function_name, $function );
 		// @codingStandardsIgnoreStart
 		eval( $function );
