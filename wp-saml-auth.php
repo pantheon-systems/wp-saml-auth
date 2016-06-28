@@ -130,7 +130,7 @@ function wpsa_scaffold_config_function( $assoc_args ) {
 	);
 	$assoc_args = array_merge( $defaults, $assoc_args );
 
-	foreach ( array( 'auto_provision' ) as $bool ) {
+	foreach ( array( 'auto_provision', 'permit_wp_login' ) as $bool ) {
 		// Support --auto_provision=false passed as an argument
 		$assoc_args[ $bool ] = 'false' === $assoc_args[ $bool ] ? false : (bool) $assoc_args[ $bool ];
 	}

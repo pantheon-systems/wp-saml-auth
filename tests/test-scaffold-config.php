@@ -20,6 +20,16 @@ class Test_Scaffold_Config extends WP_UnitTestCase {
 
 	}
 
+	public function test_false_auto_provision_permit_wp_login() {
+
+		$function = self::scaffold_config_function( array(
+			'permit_wp_login'   => 'false',
+			'auto_provision'    => 'false',
+		) );
+		$this->assertEquals( false, $function( null, 'auto_provision' ) );
+		$this->assertEquals( false, $function( null, 'permit_wp_login' ) );
+	}
+
 	/**
 	 * Scaffolds a config function and evals it into scope
 	 */
