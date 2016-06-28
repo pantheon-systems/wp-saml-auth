@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * Configure and manage the WP SAML Auth plugin.
+ */
 class WP_SAML_Auth_CLI {
 
 	/**
