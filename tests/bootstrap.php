@@ -18,6 +18,8 @@ require_once $_tests_dir . '/includes/functions.php';
  */
 function _manually_load_plugin() {
 	require dirname( dirname( __FILE__ ) ) . '/wp-saml-auth.php';
+	require dirname( dirname( __FILE__ ) ) . '/inc/class-wp-saml-auth-cli.php';
+	require dirname( __FILE__ ) . '/class-wp-saml-auth-test-cli.php';
 
 	add_filter( 'wp_saml_auth_option', '_wp_saml_auth_filter_option', 10, 2 );
 }
