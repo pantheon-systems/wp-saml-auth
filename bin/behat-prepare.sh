@@ -31,7 +31,7 @@ terminus site set-connection-mode --mode=sftp
 terminus wp "core install --title=$TERMINUS_ENV-$TERMINUS_SITE --url=$PANTHEON_SITE_URL --admin_user=pantheon --admin_email=wp-saml-auth@getpantheon.com --admin_password=pantheon"
 terminus wp "plugin install wp-native-php-sessions --activate"
 terminus wp "scaffold child-theme $TERMINUS_SITE --parent_theme=twentysixteen --activate"
-terminus site code commit --message="Set up WP Native Sessions and child theme for testing"
+yes | terminus site code commit --message="Set up WP Native Sessions and child theme for testing"
 
 ###
 # Switch to git mode for pushing the rest of the files up
