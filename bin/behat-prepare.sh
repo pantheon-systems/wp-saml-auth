@@ -76,7 +76,7 @@ openssl req -newkey rsa:2048 -new -x509 -days 3652 -nodes -out $PREPARE_DIR/priv
 sed -i  -- "s/<button/<button id='submit'/g" $PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.php
 
 cd $PREPARE_DIR
-ln -s ./private/simplesamlphp/www/ ./simplesamlphp
+ln -s ./private/simplesamlphp/www ./simplesamlphp
 
 ###
 # Push files to the environment
