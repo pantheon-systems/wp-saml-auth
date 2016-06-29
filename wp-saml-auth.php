@@ -115,3 +115,8 @@ add_filter( 'wp_saml_auth_option', 'wpsa_filter_option', 0, 2 );
  */
 require_once dirname( __FILE__ ) . '/inc/class-wp-saml-auth.php';
 WP_SAML_Auth::get_instance();
+
+if ( defined( 'WP_CLI' ) && WP_CLI ) {
+	require_once dirname( __FILE__ ) . '/inc/class-wp-saml-auth-cli.php';
+	WP_CLI::add_command( 'saml-auth', 'WP_SAML_Auth_CLI' );
+}
