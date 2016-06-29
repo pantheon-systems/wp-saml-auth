@@ -37,10 +37,18 @@ mkdir $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE
 cp $BASH_DIR/fixtures/functions.php  $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE/functions.php
 cp $BASH_DIR/fixtures/style.css  $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE/style.css
 
+rm -rf $PREPARE_DIR/wp-content/plugins/wp-native-php-sessions
 wget -O $PREPARE_DIR/wp-native-php-sessions.zip https://downloads.wordpress.org/plugin/wp-native-php-sessions.zip
 unzip $PREPARE_DIR/wp-native-php-sessions.zip -d $PREPARE_DIR
 mv $PREPARE_DIR/wp-native-php-sessions $PREPARE_DIR/wp-content/plugins/
 rm $PREPARE_DIR/wp-native-php-sessions.zip
+
+###
+# Add the copy of this plugin itself to the environment
+###
+cd $BASH_DIR/..
+rsync -av --exclude='vendor/' --exclude='node_modules/' --exclude='simplesamlphp/' --exclude='tests/' ./* $PREPARE_DIR/wp-content/plugins/wp-saml-auth
+rm -rf $PREPARE_DIR/wp-content/plugins/wp-saml-auth/.git
 
 ###
 # Add SimpleSAML PHP to the environment
@@ -83,5 +91,5 @@ git push
 # Set up WordPress, theme, and plugins for the test run
 ###
 terminus wp "core install --title=$TERMINUS_ENV-$TERMINUS_SITE --url=$PANTHEON_SITE_URL --admin_user=pantheon --admin_email=wp-saml-auth@getpantheon.com --admin_password=pantheon"
-terminus wp "plugin activate wp-native-php-sessions"
+terminus wp "plugin activate wp-native-php-sessions wp-saml-auth"
 terminus wp "theme activate $TERMINUS_SITE"
