@@ -1,14 +1,4 @@
-
-#####################
-# This section of code is added to the bottom of functions.php by a testing
-# script for wp-saml-auth
-####################
-
-
-
-
-
-
+<?php
 
 function samltheme_filter_option( $value, $option_name ) {
     $defaults = array(

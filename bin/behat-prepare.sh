@@ -23,23 +23,23 @@ BASH_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 SIMPLESAMLPHP_VERSION='1.14.4'
 
 ###
-# Ensure environment is in SFTP mode for installing plugins
-###
-terminus site set-connection-mode --mode=sftp
-
-###
-# Set up WordPress and plugins for the test run
-###
-terminus wp "core install --title=$TERMINUS_ENV-$TERMINUS_SITE --url=$PANTHEON_SITE_URL --admin_user=pantheon --admin_email=wp-saml-auth@getpantheon.com --admin_password=pantheon"
-terminus wp "plugin install wp-native-php-sessions --activate"
-terminus wp "scaffold child-theme $TERMINUS_SITE --parent_theme=twentysixteen --activate"
-yes | terminus site code commit --message="Include WP Native Sessions and testing child theme"
-
-###
-# Switch to git mode for pushing the rest of the files up
+# Switch to git mode for pushing the files up
 ###
 terminus site set-connection-mode --mode=git
-git clone $PANTHEON_GIT_URL $PREPARE_DIR
+git clone -b $TERMINUS_ENV $PANTHEON_GIT_URL $PREPARE_DIR
+
+###
+# Add WP Native PHP Sessions and child theme to environment
+###
+rm -rf $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE
+mkdir $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE
+cp $BASH_DIR/fixtures/functions.php  $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE/functions.php
+cp $BASH_DIR/fixtures/style.css  $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE/style.css
+
+wget -O $PREPARE_DIR/wp-native-php-sessions.zip https://downloads.wordpress.org/plugin/wp-native-php-sessions.zip
+unzip $PREPARE_DIR/wp-native-php-sessions.zip -d $PREPARE_DIR
+mv $PREPARE_DIR/wp-native-php-sessions $PREPARE_DIR/wp-content/plugins/
+rm $PREPARE_DIR/wp-native-php-sessions.zip
 
 ###
 # Add SimpleSAML PHP to the environment
@@ -72,8 +72,15 @@ ln -s $PREPARE_DIR/private/simplesamlphp/www $PREPARE_DIR/simplesamlphp
 # Push files to the environment
 ###
 cd $PREPARE_DIR
-git add private
+git add private wp-content
 git config user.email "wp-saml-auth@getpantheon.com"
 git config user.name "Pantheon"
 git commit -m "Include SimpleSAML PHP and its configuration files"
-git push origin $TERMINUS_ENV
+git push
+
+###
+# Set up WordPress, theme, and plugins for the test run
+###
+terminus wp "core install --title=$TERMINUS_ENV-$TERMINUS_SITE --url=$PANTHEON_SITE_URL --admin_user=pantheon --admin_email=wp-saml-auth@getpantheon.com --admin_password=pantheon"
+terminus wp "plugin activate wp-native-php-sessions"
+terminus wp "theme activate $TERMINUS_SITE"
