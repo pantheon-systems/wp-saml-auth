@@ -18,7 +18,6 @@ require_once $_tests_dir . '/includes/functions.php';
  */
 function _manually_load_plugin() {
 	require dirname( dirname( dirname( __FILE__ ) ) ) . '/wp-saml-auth.php';
-	require dirname( dirname( dirname( __FILE__ ) ) ) . '/wp-saml-auth.php';
 	require dirname( dirname( dirname( __FILE__ ) ) ) . '/inc/class-wp-saml-auth-cli.php';
 	require dirname( __FILE__ ) . '/class-wp-saml-auth-test-cli.php';
 
