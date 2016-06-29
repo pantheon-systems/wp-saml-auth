@@ -12,6 +12,7 @@ dependencies:
     - ~/.composer/cache
   override:
     - composer global require pantheon-systems/terminus
+    - composer install
     - terminus auth login --machine-token=$TERMINUS_TOKEN
 
 test:
