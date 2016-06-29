@@ -31,7 +31,7 @@ module.exports = function( grunt ) {
 				src: './'
 			},
 			options: {
-				bin: "vendor/bin/phpcs --extensions=php --ignore=\"*/vendor/*,*/node_modules/*,*/simplesamlphp/*\"",
+				bin: "vendor/bin/phpcs --extensions=php --ignore=\"*/vendor/*,*/node_modules/*,*/bin/*,*/simplesamlphp/*\"",
 				standard: "phpcs.ruleset.xml"
 			}
 		},
