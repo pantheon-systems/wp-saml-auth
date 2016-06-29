@@ -26,6 +26,7 @@ SIMPLESAMLPHP_VERSION='1.14.4'
 # Switch to git mode for pushing the files up
 ###
 terminus site set-connection-mode --mode=git
+rm -rf $PREPARE_DIR
 git clone -b $TERMINUS_ENV $PANTHEON_GIT_URL $PREPARE_DIR
 
 ###
