@@ -39,11 +39,13 @@ git clone -b $TERMINUS_ENV $PANTHEON_GIT_URL $PREPARE_DIR
 # Add WP Native PHP Sessions and child theme to environment
 ###
 rm -rf $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE
+# Create a child theme that includes WP SAML Auth configuration details
 mkdir $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE
 cp $BASH_DIR/fixtures/functions.php  $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE/functions.php
 cp $BASH_DIR/fixtures/style.css  $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE/style.css
 
 rm -rf $PREPARE_DIR/wp-content/plugins/wp-native-php-sessions
+# Download the latest WP Native PHP sessions release from WordPress.org
 wget -O $PREPARE_DIR/wp-native-php-sessions.zip https://downloads.wordpress.org/plugin/wp-native-php-sessions.zip
 unzip $PREPARE_DIR/wp-native-php-sessions.zip -d $PREPARE_DIR
 mv $PREPARE_DIR/wp-native-php-sessions $PREPARE_DIR/wp-content/plugins/
@@ -57,7 +59,9 @@ rsync -av --exclude='vendor/' --exclude='node_modules/' --exclude='simplesamlphp
 rm -rf $PREPARE_DIR/wp-content/plugins/wp-saml-auth/.git
 
 ###
-# Add SimpleSAML PHP to the environment
+# Add SimpleSAMLphp to the environment
+# SimpleSAMLphp is installed to ~/code/private, and then symlinked into the
+# web root
 ###
 rm -rf $PREPARE_DIR/private
 mkdir $PREPARE_DIR/private
@@ -67,21 +71,30 @@ mv $PREPARE_DIR/private/simplesamlphp-$SIMPLESAMLPHP_VERSION $PREPARE_DIR/privat
 rm $PREPARE_DIR/simplesamlphp.tar.gz
 
 ###
-# Configure SimpleSAML PHP for the environment
+# Configure SimpleSAMLphp for the environment
+# For the purposes of the Behat tests, we're using SimpleSAMLphp as an identity
+# provider with its exampleauth module enabled
 ###
+# Append existing configuration files with our the specifics for our tests
 cat $BASH_DIR/fixtures/authsources.php.additions >> $PREPARE_DIR/private/simplesamlphp/config/authsources.php
 cat $BASH_DIR/fixtures/config.php.additions      >> $PREPARE_DIR/private/simplesamlphp/config/config.php
 
+# Copy identify provider configuration files into their appropriate locations
 cp $BASH_DIR/fixtures/saml20-idp-hosted.php  $PREPARE_DIR/private/simplesamlphp/metadata/saml20-idp-hosted.php
 cp $BASH_DIR/fixtures/shib13-idp-hosted.php  $PREPARE_DIR/private/simplesamlphp/metadata/shib13-idp-hosted.php
 
+# Enable the exampleauth module
 touch $PREPARE_DIR/private/simplesamlphp/modules/exampleauth/enable
 
+# Generate a certificate SimpleSAMLphp uses for encryption
+# Because these files are in ~/code/private, they're inaccessible from the web
 openssl req -newkey rsa:2048 -new -x509 -days 3652 -nodes -out $PREPARE_DIR/private/simplesamlphp/cert/saml.crt -keyout $PREPARE_DIR/private/simplesamlphp/cert/saml.pem -batch
 
+# Modify the login template so Behat can submit the form
 sed -i  -- "s/<button/<button id='submit'/g" $PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.php
 
 cd $PREPARE_DIR
+# Make the SimpleSAMLphp installation publicly accessible
 ln -s ./private/simplesamlphp/www ./simplesaml
 
 ###
@@ -91,7 +104,7 @@ cd $PREPARE_DIR
 git add private wp-content simplesaml
 git config user.email "wp-saml-auth@getpantheon.com"
 git config user.name "Pantheon"
-git commit -m "Include SimpleSAML PHP and its configuration files"
+git commit -m "Include SimpleSAMLphp and its configuration files"
 git push
 
 ###
