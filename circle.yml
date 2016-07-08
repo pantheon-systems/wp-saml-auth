@@ -21,4 +21,4 @@ test:
   override:
     - ./bin/behat-test.sh
   post:
-    - ./bin/behat-cleanup.sh
+    #- ./bin/behat-cleanup.sh
