@@ -107,10 +107,12 @@ git config user.name "Pantheon"
 git commit -m "Include SimpleSAMLphp and its configuration files"
 git push
 
+# Sometimes Pantheon takes a little time to refresh the filesystem
+sleep 10
+
 ###
 # Set up WordPress, theme, and plugins for the test run
 ###
 terminus wp "core install --title=$TERMINUS_ENV-$TERMINUS_SITE --url=$PANTHEON_SITE_URL --admin_user=pantheon --admin_email=wp-saml-auth@getpantheon.com --admin_password=pantheon"
-terminus wp "cache flush"
 terminus wp "plugin activate wp-native-php-sessions wp-saml-auth"
 terminus wp "theme activate $TERMINUS_SITE"
