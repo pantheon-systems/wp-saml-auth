@@ -26,7 +26,7 @@ PANTHEON_GIT_URL=$(terminus site connection-info --field=git_url)
 PANTHEON_SITE_URL="$TERMINUS_ENV-$TERMINUS_SITE.pantheonsite.io"
 PREPARE_DIR="/tmp/$TERMINUS_ENV-$TERMINUS_SITE"
 BASH_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-SIMPLESAMLPHP_VERSION='1.14.4'
+SIMPLESAMLPHP_VERSION='1.5.1'
 
 ###
 # Switch to git mode for pushing the files up
