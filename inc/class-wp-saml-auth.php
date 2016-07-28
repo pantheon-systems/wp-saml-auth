@@ -129,7 +129,7 @@ class WP_SAML_Auth {
 	 * Do the SAML authentication dance
 	 */
 	public function do_saml_authentication() {
-		$this->provider->requireAuth(array('ReturnTo' => $_SERVER['REQUEST_URI']));
+		$this->provider->requireAuth( array('ReturnTo' => $_SERVER['REQUEST_URI']) );
 		$attributes = $this->provider->getAttributes();
 
 		$get_user_by = self::get_option( 'get_user_by' );
