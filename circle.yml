@@ -12,6 +12,7 @@ machine:
     # in this step, it would result in a different password being used in each
     # line of other steps. Each CircleCI command runs in a separate shell.
     WORDPRESS_ADMIN_PASSWORD: $(cat ~/WORDPRESS_ADMIN_PASSWORD)
+    WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
 
 dependencies:
   cache_directories:
