@@ -9,7 +9,8 @@ use Behat\MinkExtension\Context\MinkContext;
 use Behat\Behat\Hook\Scope\BeforeScenarioScope;
 
 /**
- * Define application features from the specific context.
+ * This class replaces PantheonSystems\PantheonWordPressUpstreamTests\Behat\AdminLogIn
+ * However it does not actually extend it so as to avoid unecessary coupling.
  */
 class AdminLogIn implements Context, SnippetAcceptingContext {
 
