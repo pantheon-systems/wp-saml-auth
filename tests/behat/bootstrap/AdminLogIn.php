@@ -1,6 +1,5 @@
 <?php
 
-
 namespace PantheonSystems\WPSamlAuth\Behat;
 
 use Behat\Behat\Context\Context;

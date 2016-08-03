@@ -88,8 +88,6 @@ echo "// This variable was added by behat-prepare.sh." >>  $PREPARE_DIR/private/
 } &> /dev/null
 echo "\$wordpress_admin_username = '"${WORDPRESS_ADMIN_USERNAME}"';" >> $PREPARE_DIR/private/simplesamlphp/config/authsources.php
 cat $BASH_DIR/fixtures/authsources.php.additions >> $PREPARE_DIR/private/simplesamlphp/config/authsources.php
-
-
 cat $BASH_DIR/fixtures/config.php.additions      >> $PREPARE_DIR/private/simplesamlphp/config/config.php
 
 # Copy identify provider configuration files into their appropriate locations
