@@ -22,6 +22,6 @@ $config['example-userpass'] = array(
 	$wordpress_admin_username . ':' . $wordpress_admin_password => array(
 		'uid' => array($wordpress_admin_username),
 		'eduPersonAffiliation' => array('member', 'employee'),
-		'mail' => array($wordpress_admin_username),
+		'mail' => array($wordpress_admin_email),
 	),
 );
