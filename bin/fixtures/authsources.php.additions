@@ -19,8 +19,8 @@ $config['example-userpass'] = array(
 		'eduPersonAffiliation' => array('member', 'employee'),
 		'mail' => array('test-em@example.com'),
     ),
-	$wordpress_admin_password . ':' . $wordpress_admin_password => array(
-		'uid' => array('admin'),
+	$wordpress_admin_username . ':' . $wordpress_admin_password => array(
+		'uid' => array($wordpress_admin_username),
 		'eduPersonAffiliation' => array('member', 'employee'),
 		'mail' => array('no-reply@getpantheon.com'),
 	),
