@@ -81,6 +81,13 @@ rm $PREPARE_DIR/simplesamlphp.tar.gz
 # provider with its exampleauth module enabled
 ###
 # Append existing configuration files with our the specifics for our tests
+echo "// This variable was added by behat-prepare.sh." >>  $PREPARE_DIR/private/simplesamlphp/config/authsources.php
+# Silence output so as not to show the password.
+{
+  echo "\$wordpress_admin_password = '"${WORDPRESS_ADMIN_PASSWORD}"';" >> $PREPARE_DIR/private/simplesamlphp/config/authsources.php
+} &> /dev/null
+echo "\$wordpress_admin_username = '"${WORDPRESS_ADMIN_USERNAME}"';" >> $PREPARE_DIR/private/simplesamlphp/config/authsources.php
+echo "\$wordpress_admin_email = '"${WORDPRESS_ADMIN_EMAIL}"';" >> $PREPARE_DIR/private/simplesamlphp/config/authsources.php
 cat $BASH_DIR/fixtures/authsources.php.additions >> $PREPARE_DIR/private/simplesamlphp/config/authsources.php
 cat $BASH_DIR/fixtures/config.php.additions      >> $PREPARE_DIR/private/simplesamlphp/config/config.php
 
@@ -118,6 +125,9 @@ sleep 10
 ###
 # Set up WordPress, theme, and plugins for the test run
 ###
-terminus wp "core install --title=$TERMINUS_ENV-$TERMINUS_SITE --url=$PANTHEON_SITE_URL --admin_user=pantheon --admin_email=wp-saml-auth@getpantheon.com --admin_password=pantheon"
+# Silence output so as not to show the password.
+{
+  terminus wp "core install --title=$TERMINUS_ENV-$TERMINUS_SITE --url=$PANTHEON_SITE_URL --admin_user=$WORDPRESS_ADMIN_USERNAME --admin_email=$WORDPRESS_ADMIN_EMAIL --admin_password=$WORDPRESS_ADMIN_PASSWORD"
+} &> /dev/null
 terminus wp "plugin activate wp-native-php-sessions wp-saml-auth"
 terminus wp "theme activate $TERMINUS_SITE"
