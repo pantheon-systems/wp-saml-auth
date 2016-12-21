@@ -38,6 +38,9 @@ else
 	WP_TESTS_TAG="tags/$LATEST_VERSION"
 fi
 
+# Lock test suite to 4.6, see https://core.trac.wordpress.org/ticket/39367
+WP_TESTS_TAG="tags/4.6"
+
 set -ex
 
 install_wp() {
