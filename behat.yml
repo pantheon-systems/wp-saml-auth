@@ -1,0 +1,25 @@
+# behat.yml
+default:
+  suites:
+    # The core tests make assumptions that no additional users have been created
+    # so they run before the default suite, which adds users.
+    core:
+      filters:
+        tags: "~@upstreamonly"
+      paths:
+        - vendor/pantheon-systems/pantheon-wordpress-upstream-tests/features
+      contexts:
+        - Behat\MinkExtension\Context\MinkContext
+        - PantheonSystems\WPSamlAuth\Behat\AdminLogIn
+        - PantheonSystems\PantheonWordPressUpstreamTests\Behat\ResponseHeader
+    default:
+      paths:
+        - tests/behat
+      contexts:
+        - Behat\MinkExtension\Context\MinkContext
+        - PantheonSystems\WPSamlAuth\Behat\AdminLogIn
+        - PantheonSystems\PantheonWordPressUpstreamTests\Behat\ResponseHeader
+  extensions:
+    Behat\MinkExtension:
+      # base_url set by ENV
+      goutte: ~

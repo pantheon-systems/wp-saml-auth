@@ -11,7 +11,7 @@ SAML authentication for WordPress, using SimpleSAMLphp.
 
 ## Description ##
 
-[![Build Status](https://travis-ci.org/pantheon-systems/wp-saml-auth.svg?branch=master)](https://travis-ci.org/pantheon-systems/wp-saml-auth)
+[![Travis CI](https://travis-ci.org/pantheon-systems/wp-saml-auth.svg?branch=master)](https://travis-ci.org/pantheon-systems/wp-saml-auth) [![CircleCI](https://circleci.com/gh/pantheon-systems/wp-saml-auth/tree/master.svg?style=svg)](https://circleci.com/gh/pantheon-systems/wp-saml-auth/tree/master)
 
 SAML authentication for WordPress, using [SimpleSAMLphp](https://simplesamlphp.org/). When activated, and provided access to a functional SimpleSAMLphp installation, this plugin permits authentication using any of the methods supported by SimpleSAMLphp.
 
@@ -123,6 +123,25 @@ Once SimpleSAMLphp is installed and running on your server, you can configure th
         return $value;
     }
     add_filter( 'wp_saml_auth_option', 'wpsax_filter_option', 10, 2 );
+
+## Contributing ##
+
+The best way to contribute to the development of this plugin is by participating on the GitHub project:
+
+https://github.com/pantheon-systems/wp-saml-auth
+
+Pull requests and issues are welcome!
+
+You may notice there are two sets of tests running, on two different services:
+
+* Travis CI runs the [PHPUnit](https://phpunit.de/) test suite, which mocks interactions with SimpleSAMLphp.
+* Circle CI runs the [Behat](http://behat.org/) test suite against a Pantheon site, to ensure the plugin's compatibility with the Pantheon platform. This includes configuring a fully-functional instance of SimpleSAMLphp.
+
+Both of these test suites can be run locally, with a varying amount of setup.
+
+PHPUnit requires the [WordPress PHPUnit test suite](https://make.wordpress.org/core/handbook/testing/automated-testing/phpunit/), and access to a database with name `wordpress_test`. If you haven't already configured the test suite locally, you can run `bash bin/install-wp-tests.sh wordpress_test root '' localhost`.
+
+Behat requires a Pantheon site. Once you've created the site, you'll need [install Terminus](https://github.com/pantheon-systems/terminus#installation), and set the `TERMINUS_TOKEN`, `TERMINUS_SITE`, and `TERMINUS_ENV` environment variables. Then, you can run `./bin/behat-prepare.sh` to prepare the site for the test suite.
 
 ## Frequently Asked Questions ##
 

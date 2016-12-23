@@ -1,0 +1,27 @@
+
+#####################
+# This section of code is added to the bottom of authsources.php by a testing
+# script for wp-saml-auth
+####################
+
+$config['default-sp']['privatekey'] = 'saml.pem';
+$config['default-sp']['certificate'] = 'saml.crt';
+
+$config['example-userpass'] = array(
+	'exampleauth:UserPass',
+    'student:studentpass' => array(
+    	'uid' => array('test'),
+    	'eduPersonAffiliation' => array('member', 'student'),
+    	'mail' => array('test-student@example.com'),
+    ),
+    'employee:employeepass' => array(
+		'uid' => array('employee'),
+		'eduPersonAffiliation' => array('member', 'employee'),
+		'mail' => array('test-em@example.com'),
+    ),
+	$wordpress_admin_username . ':' . $wordpress_admin_password => array(
+		'uid' => array($wordpress_admin_username),
+		'eduPersonAffiliation' => array('member', 'employee'),
+		'mail' => array($wordpress_admin_email),
+	),
+);

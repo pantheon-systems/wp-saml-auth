@@ -1,6 +1,5 @@
 .DS_Store
 wp-cli.local.yml
-composer.lock
 /node_modules/
 /simplesamlphp/
 /vendor/
