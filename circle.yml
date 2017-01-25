@@ -45,8 +45,6 @@ dependencies:
       cd ~/terminus && composer install
       terminus auth:login --machine-token=$TERMINUS_TOKEN
 
-
-
 test:
   pre:
     - ./bin/behat-prepare.sh
