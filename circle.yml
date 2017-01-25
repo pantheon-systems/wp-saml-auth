@@ -13,6 +13,7 @@ machine:
     # line of other steps. Each CircleCI command runs in a separate shell.
     WORDPRESS_ADMIN_PASSWORD: $(cat ~/WORDPRESS_ADMIN_PASSWORD)
     WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
+    PATH: $PATH:~/terminus/bin
 
 dependencies:
   cache_directories:
