@@ -2,8 +2,8 @@
 **Contributors:** getpantheon, danielbachhuber, Outlandish Josh  
 **Tags:** authentication, SAML, SimpleSAMLphp  
 **Requires at least:** 4.4  
-**Tested up to:** 4.7  
-**Stable tag:** 0.1.0  
+**Tested up to:** 4.7.3  
+**Stable tag:** 0.2.0  
 **License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html  
 
@@ -124,6 +124,30 @@ Once SimpleSAMLphp is installed and running on your server, you can configure th
     }
     add_filter( 'wp_saml_auth_option', 'wpsax_filter_option', 10, 2 );
 
+## WP-CLI Commands ##
+
+This plugin implements a variety of [WP-CLI](https://wp-cli.org) commands. All commands are grouped into the `wp saml-auth` namespace.
+
+    $ wp help saml-auth
+
+    NAME
+    
+      wp saml-auth
+    
+    DESCRIPTION
+    
+      Configure and manage the WP SAML Auth plugin.
+    
+    SYNOPSIS
+    
+      wp saml-auth <command>
+    
+    SUBCOMMANDS
+    
+      scaffold-config      Scaffold a configuration filter to customize WP SAML Auth usage.
+
+Use `wp help saml-auth <command>` to learn more about each command.
+
 ## Contributing ##
 
 The best way to contribute to the development of this plugin is by participating on the GitHub project:
@@ -162,6 +186,10 @@ There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Nati
 
 ## Changelog ##
 
-### 0.1.0 (April 18, 2016) ###
+### 0.2.0 (March 7, 2017) ###
+* Introduces `wp saml-auth scaffold-config`, a WP-CLI command to scaffold a configuration filter to customize WP SAML Auth usage.
+* Redirects back to WordPress after SimpleSAMLPHP authentication.
+* Variety of test suite improvements.
 
+### 0.1.0 (April 18, 2016) ###
 * Initial release.
