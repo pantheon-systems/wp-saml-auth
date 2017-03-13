@@ -32,7 +32,6 @@ PANTHEON_GIT_URL=$(terminus connection:info $SITE_ENV --field=git_url)
 PANTHEON_SITE_URL="$TERMINUS_ENV-$TERMINUS_SITE.pantheonsite.io"
 PREPARE_DIR="/tmp/$TERMINUS_ENV-$TERMINUS_SITE"
 BASH_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-SIMPLESAMLPHP_VERSION='1.14.11'
 
 ###
 # Switch to git mode for pushing the files up
@@ -71,10 +70,11 @@ rm -rf $PREPARE_DIR/wp-content/plugins/wp-saml-auth/.git
 ###
 rm -rf $PREPARE_DIR/private
 mkdir $PREPARE_DIR/private
-wget -O $PREPARE_DIR/simplesamlphp.tar.gz https://github.com/simplesamlphp/simplesamlphp/releases/download/v$SIMPLESAMLPHP_VERSION/simplesamlphp-$SIMPLESAMLPHP_VERSION.tar.gz
-tar -zxvf $PREPARE_DIR/simplesamlphp.tar.gz -C $PREPARE_DIR/private
-mv $PREPARE_DIR/private/simplesamlphp-$SIMPLESAMLPHP_VERSION $PREPARE_DIR/private/simplesamlphp
-rm $PREPARE_DIR/simplesamlphp.tar.gz
+wget https://simplesamlphp.org/download\?latest -O $PREPARE_DIR/simplesamlphp-latest.tar.gz
+tar -zxvf $PREPARE_DIR/simplesamlphp-latest.tar.gz -C $PREPARE_DIR/private
+ORIG_SIMPLESAMLPHP_DIR=$(ls $PREPARE_DIR/private)
+mv $PREPARE_DIR/private/$ORIG_SIMPLESAMLPHP_DIR $PREPARE_DIR/private/simplesamlphp
+rm $PREPARE_DIR/simplesamlphp-latest.tar.gz
 
 ###
 # Configure SimpleSAMLphp for the environment
