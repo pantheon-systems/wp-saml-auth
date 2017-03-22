@@ -142,11 +142,10 @@ class WP_SAML_Auth {
 			/**
 			 * Runs after a existing user has been authenticated in WordPress
 			 *
-			 * @param int   $existing_user  The ID user object in WordPress
-			 * @param array $attributes     All attributes received from the SAML Response
+			 * @param WP_User $existing_user  The existing user object.
+			 * @param array   $attributes     All attributes received from the SAML Response
 			 */
 			do_action( 'wp_saml_auth_existing_user_authenticated', $existing_user, $attributes );
-
 			return $existing_user;
 		}
 		if ( ! self::get_option( 'auto_provision' ) ) {
@@ -165,16 +164,17 @@ class WP_SAML_Auth {
 		if ( is_wp_error( $user_id ) ) {
 			return $user_id;
 		}
+		
+		$user = get_user_by( 'id', $user_id );
 
 		/**
 		 * Runs after the user has been authenticated in WordPress
 		 *
-		 * @param int   $user_id    The ID of the user in WordPress
-		 * @param array $attributes All attributes received from the SAML Response
+		 * @param WP_User $user       The new user object.
+		 * @param array   $attributes All attributes received from the SAML Response
 		 */
-		do_action( 'wp_saml_auth_user_authenticated', $user_id, $attributes );
-
-		return get_user_by( 'id', $user_id );
+		do_action( 'wp_saml_auth_new_user_authenticated', $user, $attributes );
+		return $user;
 	}
 
 }
