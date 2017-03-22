@@ -140,12 +140,12 @@ class WP_SAML_Auth {
 		$existing_user = get_user_by( $get_user_by, $attributes[ $attribute ][0] );
 		if ( $existing_user ) {
 			/**
-			 * Runs after the user has been authenticated in WordPress
+			 * Runs after a existing user has been authenticated in WordPress
 			 *
-			 * @param int   $user_id    The ID of the user in WordPress
-			 * @param array $attributes All attributes received from the SAML Response
+			 * @param int   $existing_user  The ID user object in WordPress
+			 * @param array $attributes     All attributes received from the SAML Response
 			 */
-			do_action( 'wp_saml_auth_user_authenticated', $existing_user, $attributes );
+			do_action( 'wp_saml_auth_existing_user_authenticated', $existing_user, $attributes );
 
 			return $existing_user;
 		}
