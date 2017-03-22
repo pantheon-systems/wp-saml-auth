@@ -164,7 +164,7 @@ class WP_SAML_Auth {
 		if ( is_wp_error( $user_id ) ) {
 			return $user_id;
 		}
-		
+
 		$user = get_user_by( 'id', $user_id );
 
 		/**
