@@ -3,7 +3,7 @@
 **Tags:** authentication, SAML, SimpleSAMLphp  
 **Requires at least:** 4.4  
 **Tested up to:** 4.7.3  
-**Stable tag:** 0.2.0  
+**Stable tag:** 0.2.1  
 **License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html  
 
@@ -185,6 +185,10 @@ Note: the declaration does need to be at the top of `_include.php`, to ensure Wo
 There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Native PHP Sessions active, SimpleSAMLphp and WP SAML Auth will be able to communicate to one another on a multi web node environment.
 
 ## Changelog ##
+
+### 0.2.1 (March 22, 2017) ###
+* Introduces `wp_saml_auth_new_user_authenticated` and `wp_saml_auth_existing_user_authenticated` actions to permit themes / plugins to run a callback post-authentication.
+* Runs Behat test suite against latest stable SimpleSAMLphp, instead of a pinned version.
 
 ### 0.2.0 (March 7, 2017) ###
 * Introduces `wp saml-auth scaffold-config`, a WP-CLI command to scaffold a configuration filter to customize WP SAML Auth usage.
