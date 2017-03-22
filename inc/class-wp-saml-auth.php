@@ -139,6 +139,14 @@ class WP_SAML_Auth {
 		}
 		$existing_user = get_user_by( $get_user_by, $attributes[ $attribute ][0] );
 		if ( $existing_user ) {
+			/**
+			 * Runs after the user has been authenticated in WordPress
+			 *
+			 * @param int   $user_id    The ID of the user in WordPress
+			 * @param array $attributes All attributes received from the SAML Response
+			 */
+			do_action( 'wp_saml_auth_user_authenticated', $existing_user, $attributes );
+
 			return $existing_user;
 		}
 		if ( ! self::get_option( 'auto_provision' ) ) {
@@ -157,6 +165,15 @@ class WP_SAML_Auth {
 		if ( is_wp_error( $user_id ) ) {
 			return $user_id;
 		}
+
+		/**
+		 * Runs after the user has been authenticated in WordPress
+		 *
+		 * @param int   $user_id    The ID of the user in WordPress
+		 * @param array $attributes All attributes received from the SAML Response
+		 */
+		do_action( 'wp_saml_auth_user_authenticated', $user_id, $attributes );
+
 		return get_user_by( 'id', $user_id );
 	}
 
