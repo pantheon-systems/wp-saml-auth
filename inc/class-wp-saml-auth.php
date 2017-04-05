@@ -135,7 +135,7 @@ class WP_SAML_Auth {
 		$get_user_by = self::get_option( 'get_user_by' );
 		$attribute = self::get_option( "user_{$get_user_by}_attribute" );
 		if ( empty( $attributes[ $attribute ][0] ) ) {
-			return new WP_Error( 'wp_saml_auth_missing_attribute', sprintf( esc_html__( '"%s" attribute missing in SimpleSAMLphp response. Please contact your administrator.', 'wp-saml-auth' ), $get_user_by ) );
+			return new WP_Error( 'wp_saml_auth_missing_attribute', sprintf( esc_html__( '"%s" attribute is expected, but missing, in SimpleSAMLphp response. Attribute is used to fetch existing user by "%s". Please contact your administrator.', 'wp-saml-auth' ), $attribute, $get_user_by ) );
 		}
 		$existing_user = get_user_by( $get_user_by, $attributes[ $attribute ][0] );
 		if ( $existing_user ) {
