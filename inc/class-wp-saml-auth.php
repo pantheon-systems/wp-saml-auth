@@ -132,6 +132,19 @@ class WP_SAML_Auth {
 		$this->provider->requireAuth( array( 'ReturnTo' => $_SERVER['REQUEST_URI'] ) );
 		$attributes = $this->provider->getAttributes();
 
+		/**
+		 * Runs before the SAML authentication dance proceeds
+		 *
+		 * Can be used to short-circuit the authentication process.
+		 *
+		 * @param false $short_circuit Return some non-false value to bypass authentication.
+		 * @param array $attributes All attributes received from the SAML response.
+		 */
+		$pre_auth = apply_filters( 'wp_saml_auth_pre_authentication', false, $attributes );
+		if ( false !== $pre_auth ) {
+			return $pre_auth;
+		}
+
 		$get_user_by = self::get_option( 'get_user_by' );
 		$attribute = self::get_option( "user_{$get_user_by}_attribute" );
 		if ( empty( $attributes[ $attribute ][0] ) ) {
