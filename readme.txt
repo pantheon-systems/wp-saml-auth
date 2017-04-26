@@ -126,6 +126,18 @@ Once SimpleSAMLphp is installed and running on your server, you can configure th
     }
     add_filter( 'wp_saml_auth_option', 'wpsax_filter_option', 10, 2 );
 
+If you need to adapt authentication behavior based on the SAML response, you can do so with the `wp_saml_auth_pre_authentication` filter:
+
+    /**
+     * Reject authentication if $attributes doesn't include the authorized group.
+     */
+    add_filter( 'wp_saml_auth_pre_authentication', function( $ret, $attributes ) {
+        if ( empty( $attributes['group'] ) || ! in_array( 'administrators', $attributes['group'] ) ) {
+            return new WP_Error( 'unauthorized-group', "Sorry, you're not a member of an authorized group." );
+        }
+        return $ret;
+    }, 10, 2 );
+
 == WP-CLI Commands ==
 
 This plugin implements a variety of [WP-CLI](https://wp-cli.org) commands. All commands are grouped into the `wp saml-auth` namespace.
