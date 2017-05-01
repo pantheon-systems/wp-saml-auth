@@ -35,21 +35,67 @@ class WP_SAML_Auth {
 
 	public function action_init() {
 
-		$simplesamlphp_path = self::get_option( 'simplesamlphp_autoload' );
-		if ( file_exists( $simplesamlphp_path ) ) {
-			require_once $simplesamlphp_path;
-		}
-
-		if ( ! class_exists( 'SimpleSAML_Auth_Simple' ) ) {
-			add_action( 'admin_notices', function() {
-				if ( current_user_can( 'manage_options' ) ) {
-					echo '<div class="message error"><p>' . wp_kses_post( sprintf( __( "WP SAML Auth wasn't able to find the <code>SimpleSAML_Auth_Simple</code> class. Please check the <code>simplesamlphp_autoload</code> configuration option, or <a href='%s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ), 'https://wordpress.org/plugins/wp-saml-auth/' ) ) . '</p></div>';
+		$connection_type = self::get_option( 'connection_type' );
+		if ( 'internal' === $connection_type ) {
+			$autoload = dirname( __DIR__ ) . '/vendor/autoload.php';
+			if ( file_exists( $autoload ) ) {
+				require_once $autoload;
+			}
+			if ( ! class_exists( 'OneLogin_Saml2_Auth' ) ) {
+				add_action( 'admin_notices', function() {
+					if ( current_user_can( 'manage_options' ) ) {
+						echo '<div class="message error"><p>' . wp_kses_post( sprintf( __( "WP SAML Auth wasn't able to find the <code>OneLogin_Saml2_Auth</code> class. Please verify your Composer autoloader, or <a href='%s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ), 'https://wordpress.org/plugins/wp-saml-auth/' ) ) . '</p></div>';
+					}
+				});
+				return;
+			}
+			$auth_config = array(
+				'strict'       => false, // @todo change
+				'debug'        => defined( 'WP_DEBUG' ) && WP_DEBUG ? true : false,
+				'baseurl'      => wp_login_url(),
+				'sp'           => array(
+					'entityId' => 'urn:wp-saml-auth.dev',
+					'assertionConsumerService' => array(
+						'url'  => 'http://wp-saml-auth.dev',
+						'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST',
+					),
+				),
+				'idp'          => array(
+					'entityId' => 'urn:handbuilt-test0.auth0.com',
+					'singleSignOnService' => array(
+						'url'  => 'https://handbuilt-test0.auth0.com/samlp/R7d8TB2k5Ppxw0F5Um1xVZg5V462S59h',
+						'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
+					),
+					'certFingerprint' => 'A1:E3:13:CB:1F:0C:3B:E5:80:4D:B7:04:46:D8:B5:EF:AA:0F:74:23',
+					'certFingerprintAlgorithm' => 'sha1',
+				),
+			);
+			$this->provider = new OneLogin_Saml2_Auth( $auth_config );
+			// @todo Auth0 doesn't like /wp-login.php as a whitelisted URL, so need to run early
+			if ( ! empty( $_POST['SAMLResponse'] ) ) {
+				$ret = $this->do_saml_authentication();
+				if ( is_wp_error( $ret ) ) {
+					wp_die( $ret->get_error_message() );
+				} elseif ( is_a( $ret, 'WP_User' ) ) {
+					wp_set_auth_cookie( $ret->ID );
+					wp_safe_redirect( admin_url() );
 				}
-			});
-			return;
+			}
+		} else {
+			$simplesamlphp_path = self::get_option( 'simplesamlphp_autoload' );
+			if ( file_exists( $simplesamlphp_path ) ) {
+				require_once $simplesamlphp_path;
+			}
+			if ( ! class_exists( 'SimpleSAML_Auth_Simple' ) ) {
+				add_action( 'admin_notices', function() {
+					if ( current_user_can( 'manage_options' ) ) {
+						echo '<div class="message error"><p>' . wp_kses_post( sprintf( __( "WP SAML Auth wasn't able to find the <code>SimpleSAML_Auth_Simple</code> class. Please check the <code>simplesamlphp_autoload</code> configuration option, or <a href='%s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ), 'https://wordpress.org/plugins/wp-saml-auth/' ) ) . '</p></div>';
+					}
+				});
+				return;
+			}
+			$this->provider = new SimpleSAML_Auth_Simple( self::get_option( 'auth_source' ) );
 		}
-
-		$this->provider = new SimpleSAML_Auth_Simple( self::get_option( 'auth_source' ) );
 		add_action( 'login_head', array( $this, 'action_login_head' ) );
 		add_action( 'login_message', array( $this, 'action_login_message' ) );
 		add_action( 'wp_logout', array( $this, 'action_wp_logout' ) );
@@ -129,8 +175,22 @@ class WP_SAML_Auth {
 	 * Do the SAML authentication dance
 	 */
 	public function do_saml_authentication() {
-		$this->provider->requireAuth( array( 'ReturnTo' => $_SERVER['REQUEST_URI'] ) );
-		$attributes = $this->provider->getAttributes();
+		if ( is_a( $this->provider, 'OneLogin_Saml2_Auth' ) ) {
+			if ( ! empty( $_POST['SAMLResponse'] ) ) {
+				$this->provider->processResponse();
+				if ( ! $this->provider->isAuthenticated() ) {
+					return new WP_Error( 'wp_saml_auth_unauthenticated', __( 'User is not authenticated with SAML IdP.', 'wp-saml-auth' ) );
+				}
+				$attributes = $this->provider->getAttributes();
+			} else {
+				$this->provider->login( $_SERVER['REQUEST_URI'] );
+			}
+		} elseif ( is_a( $this->provider, 'SimpleSAML_Auth_Simple' ) ) {
+			$this->provider->requireAuth( array( 'ReturnTo' => $_SERVER['REQUEST_URI'] ) );
+			$attributes = $this->provider->getAttributes();
+		} else {
+			return new WP_Error( 'wp_saml_auth_invalid_provider', __( 'Invalid provider specified for SAML authentication', 'wp-saml-auth' ) );
+		}
 
 		/**
 		 * Runs before the SAML authentication dance proceeds

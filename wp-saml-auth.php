@@ -20,6 +20,15 @@
 function wpsa_filter_option( $value, $option_name ) {
 	$defaults = array(
 		/**
+		 * Type of SAML connection bridge to use.
+		 *
+		 * Permits use of SimpleSAMLphp or OneLogin dependency.
+		 * Defaults to SimpleSAMLphp for backwards compatibility.
+		 *
+		 * @param string
+		 */
+		'connection_type' => 'simplesamlphp',
+		/**
 		 * Path to SimpleSAMLphp autoloader.
 		 *
 		 * Follow the standard implementation by installing SimpleSAMLphp

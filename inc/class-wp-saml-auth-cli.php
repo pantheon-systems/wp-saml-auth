@@ -85,6 +85,7 @@ class WP_SAML_Auth_CLI {
 	 */
 	protected static function scaffold_config_function( $assoc_args ) {
 		$defaults = array(
+			'type'                       => 'internal',
 			'simplesamlphp_autoload'     => dirname( dirname( __FILE__ ) ) . '/simplesamlphp/lib/_autoload.php',
 			'auth_source'                => 'default-sp',
 			'auto_provision'             => true,
