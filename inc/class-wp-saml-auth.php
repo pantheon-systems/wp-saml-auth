@@ -177,7 +177,9 @@ class WP_SAML_Auth {
 			return $user;
 		}
 
-		if ( ( ! $permit_wp_login && empty( $_GET['loggedout'] ) ) || ( ! empty( $_GET['action'] ) && 'wp-saml-auth' === $_GET['action'] ) ) {
+		if ( ! empty( $_POST['SAMLResponse'] ) ) {
+			$user = $this->do_saml_authentication();
+		} elseif ( ( ! $permit_wp_login && empty( $_GET['loggedout'] ) ) || ( ! empty( $_GET['action'] ) && 'wp-saml-auth' === $_GET['action'] ) ) {
 			$user = $this->do_saml_authentication();
 		}
 		return $user;
