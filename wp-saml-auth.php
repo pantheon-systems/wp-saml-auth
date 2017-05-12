@@ -76,6 +76,11 @@ function wpsa_filter_option( $value, $option_name ) {
 					'url'  => '',
 					'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
 				),
+				'singleLogoutService' => array(
+					// Required: Set based on provider's supplied value.
+					'url'  => '',
+					'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
+				),
 				// Required: Contents of the IDP's public x509 certificate.
 				'x509cert' => '',
 				// Optional: Instead of using the x509 cert, you can specify the fingerprint and algorithm.
