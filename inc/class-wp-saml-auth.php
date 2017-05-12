@@ -78,16 +78,6 @@ class WP_SAML_Auth {
 			}
 			$auth_config = self::get_option( 'internal_config' );
 			$this->provider = new OneLogin_Saml2_Auth( $auth_config );
-			// @todo Auth0 doesn't like /wp-login.php as a whitelisted URL, so need to run early.
-			if ( ! empty( $_POST['SAMLResponse'] ) ) {
-				$ret = $this->do_saml_authentication();
-				if ( is_wp_error( $ret ) ) {
-					wp_die( $ret->get_error_message() );
-				} elseif ( is_a( $ret, 'WP_User' ) ) {
-					wp_set_auth_cookie( $ret->ID );
-					wp_safe_redirect( admin_url() );
-				}
-			}
 		} else {
 			$simplesamlphp_path = self::get_option( 'simplesamlphp_autoload' );
 			if ( file_exists( $simplesamlphp_path ) ) {
