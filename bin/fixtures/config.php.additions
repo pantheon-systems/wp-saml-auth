@@ -5,6 +5,7 @@
 # These steps come from https://pantheon.io/docs/shibboleth-sso/
 ####################
 
+require_once $_SERVER['DOCUMENT_ROOT'] . '/wp-load.php';
 $ps = json_decode($_SERVER['PRESSFLOW_SETTINGS'], TRUE);
 $host = $_SERVER['HTTP_HOST'];
 $drop_id = $ps['conf']['pantheon_binding'];
@@ -23,7 +24,6 @@ $config['certdir'] = 'cert/';
 $config['loggingdir'] = 'log/';
 $config['datadir'] = 'data/';
 $config['tempdir'] = '/srv/bindings/'. $drop_id .'/tmp/simplesaml';
-ini_set( 'session.save_handler', 'files' );
 
 $config['enable.saml20-idp'] = TRUE;
 $config['enable.shib13-idp'] = TRUE;
