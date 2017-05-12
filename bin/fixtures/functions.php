@@ -28,5 +28,8 @@ add_filter( 'wp_saml_auth_option', function( $value, $option_name ){
     if ( 'user_email_attribute' === $option_name ) {
         return 'urn:oid:0.9.2342.19200300.100.1.3';
     }
+    if ( 'permit_wp_login' === $option_name ) {
+        return false;
+    }
     return $value;
 }, 11, 2 );
