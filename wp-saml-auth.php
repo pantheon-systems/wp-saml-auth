@@ -56,9 +56,11 @@ function wpsa_filter_option( $value, $option_name ) {
 		 * @param array
 		 */
 		'internal_config'        => array(
-			'strict'       => false, // @todo change
+			// Validation of SAML responses is required.
+			'strict'       => true,
 			'debug'        => defined( 'WP_DEBUG' ) && WP_DEBUG ? true : false,
-			'baseurl'      => wp_login_url(), // Process SAML response as a part of login scope.
+			// Processes SAML responses as a part of login scope.
+			'baseurl'      => home_url(),
 			'sp'           => array(
 				'entityId' => 'urn:' . parse_url( home_url(), PHP_URL_HOST ),
 				'assertionConsumerService' => array(
@@ -67,13 +69,18 @@ function wpsa_filter_option( $value, $option_name ) {
 				),
 			),
 			'idp'          => array(
-				'entityId' => '', // This will need to be set based on your provider.
+				// Required: Set based on provider's supplied value.
+				'entityId' => '',
 				'singleSignOnService' => array(
-					'url'  => '', // This will need to be set based on your provider.
+					// Required: Set based on provider's supplied value.
+					'url'  => '',
 					'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
 				),
-				'certFingerprint' => '', // This will need to be set based on your provider.
-				'certFingerprintAlgorithm' => 'sha1',
+				// Required: Contents of the IDP's public x509 certificate.
+				'x509cert' => '',
+				// Optional: Instead of using the x509 cert, you can specify the fingerprint and algorithm.
+				'certFingerprint' => '',
+				'certFingerprintAlgorithm' => '',
 			),
 		),
 		/**
