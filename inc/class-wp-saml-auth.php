@@ -192,7 +192,8 @@ class WP_SAML_Auth {
 			if ( ! empty( $_POST['SAMLResponse'] ) ) {
 				$this->provider->processResponse();
 				if ( ! $this->provider->isAuthenticated() ) {
-					return new WP_Error( 'wp_saml_auth_unauthenticated', __( 'User is not authenticated with SAML IdP.', 'wp-saml-auth' ) );
+					// Translators: Includes error reason from OneLogin.
+					return new WP_Error( 'wp_saml_auth_unauthenticated', sprintf( __( 'User is not authenticated with SAML IdP. Reason: %s', 'wp-saml-auth' ), $this->provider->getLastErrorReason() ) );
 				}
 				$attributes = $this->provider->getAttributes();
 			} else {
