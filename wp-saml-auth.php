@@ -8,14 +8,15 @@
  * Plugin URI: https://wordpress.org/plugins/wp-saml-auth/
  * Text Domain: wp-saml-auth
  * Domain Path: /languages
+ *
  * @package Wp_Saml_Auth
  */
 
 /**
  * Provides default options for WP SAML Auth.
  *
- * @param mixed $value
- * @param string $option_name
+ * @param mixed  $value       Configuration value.
+ * @param string $option_name Configuration option name.
  */
 function wpsa_filter_option( $value, $option_name ) {
 	$defaults = array(
