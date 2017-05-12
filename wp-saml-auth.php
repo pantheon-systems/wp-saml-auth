@@ -51,6 +51,32 @@ function wpsa_filter_option( $value, $option_name ) {
 		 */
 		'auth_source'            => 'default-sp',
 		/**
+		 * Configuration options for OneLogin library use
+		 *
+		 * @param array
+		 */
+		'internal_config'        => array(
+			'strict'       => false, // @todo change
+			'debug'        => defined( 'WP_DEBUG' ) && WP_DEBUG ? true : false,
+			'baseurl'      => wp_login_url(),
+			'sp'           => array(
+				'entityId' => 'urn:' . parse_url( home_url(), PHP_URL_HOST ),
+				'assertionConsumerService' => array(
+					'url'  => home_url(),
+					'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST',
+				),
+			),
+			'idp'          => array(
+				'entityId' => '', // This will need to be set based on your provider.
+				'singleSignOnService' => array(
+					'url'  => '', // This will need to be set based on your provider.
+					'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
+				),
+				'certFingerprint' => '', // This will need to be set based on your provider.
+				'certFingerprintAlgorithm' => 'sha1',
+			),
+		),
+		/**
 		 * Whether or not to automatically provision new WordPress users.
 		 *
 		 * When WordPress is presented with a SAML user without a

@@ -76,27 +76,7 @@ class WP_SAML_Auth {
 				});
 				return;
 			}
-			$auth_config = array(
-				'strict'       => false, // @todo change
-				'debug'        => defined( 'WP_DEBUG' ) && WP_DEBUG ? true : false,
-				'baseurl'      => wp_login_url(),
-				'sp'           => array(
-					'entityId' => 'urn:wp-saml-auth.dev',
-					'assertionConsumerService' => array(
-						'url'  => 'http://wp-saml-auth.dev',
-						'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST',
-					),
-				),
-				'idp'          => array(
-					'entityId' => 'urn:handbuilt-test0.auth0.com',
-					'singleSignOnService' => array(
-						'url'  => 'https://handbuilt-test0.auth0.com/samlp/R7d8TB2k5Ppxw0F5Um1xVZg5V462S59h',
-						'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
-					),
-					'certFingerprint' => 'A1:E3:13:CB:1F:0C:3B:E5:80:4D:B7:04:46:D8:B5:EF:AA:0F:74:23',
-					'certFingerprintAlgorithm' => 'sha1',
-				),
-			);
+			$auth_config = self::get_option( 'internal_config' );
 			$this->provider = new OneLogin_Saml2_Auth( $auth_config );
 			// @todo Auth0 doesn't like /wp-login.php as a whitelisted URL, so need to run early.
 			if ( ! empty( $_POST['SAMLResponse'] ) ) {
