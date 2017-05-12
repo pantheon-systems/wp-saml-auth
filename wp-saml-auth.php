@@ -58,7 +58,7 @@ function wpsa_filter_option( $value, $option_name ) {
 		'internal_config'        => array(
 			'strict'       => false, // @todo change
 			'debug'        => defined( 'WP_DEBUG' ) && WP_DEBUG ? true : false,
-			'baseurl'      => wp_login_url(),
+			'baseurl'      => wp_login_url(), // Process SAML response as a part of login scope.
 			'sp'           => array(
 				'entityId' => 'urn:' . parse_url( home_url(), PHP_URL_HOST ),
 				'assertionConsumerService' => array(
