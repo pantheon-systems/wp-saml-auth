@@ -1,4 +1,9 @@
 <?php
+/**
+ * Class WP_SAML_Auth_CLI
+ *
+ * @package WP_SAML_Auth
+ */
 
 /**
  * Configure and manage the WP SAML Auth plugin.
@@ -80,7 +85,7 @@ class WP_SAML_Auth_CLI {
 	/**
 	 * Generate a string representation of a function to be used for configuring the plugin.
 	 *
-	 * @param array
+	 * @param array $assoc_args Associative arguments passed to the command.
 	 * @return string
 	 */
 	protected static function scaffold_config_function( $assoc_args ) {
@@ -100,12 +105,12 @@ class WP_SAML_Auth_CLI {
 		$assoc_args = array_merge( $defaults, $assoc_args );
 
 		foreach ( array( 'auto_provision', 'permit_wp_login' ) as $bool ) {
-			// Support --auto_provision=false passed as an argument
+			// Support --auto_provision=false passed as an argument.
 			$assoc_args[ $bool ] = 'false' === $assoc_args[ $bool ] ? false : (bool) $assoc_args[ $bool ];
 		}
 
 		$values = var_export( $assoc_args, true );
-		// Formatting fixes
+		// Formatting fixes.
 		$search_replace = array(
 			'  '        => "\t\t",
 			'array ('   => 'array(',
