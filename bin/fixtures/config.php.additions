@@ -5,7 +5,6 @@
 # These steps come from https://pantheon.io/docs/shibboleth-sso/
 ####################
 
-require_once $_SERVER['DOCUMENT_ROOT'] . '/wp-load.php';
 $ps = json_decode($_SERVER['PRESSFLOW_SETTINGS'], TRUE);
 $host = $_SERVER['HTTP_HOST'];
 $drop_id = $ps['conf']['pantheon_binding'];
