@@ -23,6 +23,7 @@ $config['certdir'] = 'cert/';
 $config['loggingdir'] = 'log/';
 $config['datadir'] = 'data/';
 $config['tempdir'] = '/srv/bindings/'. $drop_id .'/tmp/simplesaml';
+ini_set( 'session.save_handler', 'files' );
 
 $config['enable.saml20-idp'] = TRUE;
 $config['enable.shib13-idp'] = TRUE;
