@@ -1,11 +1,34 @@
 <?php
+/**
+ * Class WP_SAML_Auth
+ *
+ * @package WP_SAML_Auth
+ */
 
+/**
+ * Main controller class for WP SAML Auth
+ */
 class WP_SAML_Auth {
 
+	/**
+	 * Controller instance as a singleton
+	 *
+	 * @var object
+	 */
 	private static $instance;
 
+	/**
+	 * SAML provider instance
+	 *
+	 * @var object
+	 */
 	private $provider = null;
 
+	/**
+	 * Get the controller instance
+	 *
+	 * @return object
+	 */
 	public static function get_instance() {
 		if ( ! isset( self::$instance ) ) {
 			self::$instance = new WP_SAML_Auth;
@@ -17,7 +40,7 @@ class WP_SAML_Auth {
 	/**
 	 * Get a configuration option for this implementation.
 	 *
-	 * @param string $option_name
+	 * @param string $option_name Configuration option to produce.
 	 * @return mixed
 	 */
 	public static function get_option( $option_name ) {
@@ -33,6 +56,9 @@ class WP_SAML_Auth {
 		return $this->provider;
 	}
 
+	/**
+	 * Initialize the controller logic on the 'init' hook
+	 */
 	public function action_init() {
 
 		$simplesamlphp_path = self::get_option( 'simplesamlphp_autoload' );
@@ -43,6 +69,7 @@ class WP_SAML_Auth {
 		if ( ! class_exists( 'SimpleSAML_Auth_Simple' ) ) {
 			add_action( 'admin_notices', function() {
 				if ( current_user_can( 'manage_options' ) ) {
+					// Translators: Links to the WP SAML Auth plugin.
 					echo '<div class="message error"><p>' . wp_kses_post( sprintf( __( "WP SAML Auth wasn't able to find the <code>SimpleSAML_Auth_Simple</code> class. Please check the <code>simplesamlphp_autoload</code> configuration option, or <a href='%s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ), 'https://wordpress.org/plugins/wp-saml-auth/' ) ) . '</p></div>';
 				}
 			});
@@ -54,10 +81,13 @@ class WP_SAML_Auth {
 		add_action( 'login_message', array( $this, 'action_login_message' ) );
 		add_action( 'wp_logout', array( $this, 'action_wp_logout' ) );
 		add_filter( 'login_body_class', array( $this, 'filter_login_body_class' ) );
-		add_filter( 'authenticate', array( $this, 'filter_authenticate' ), 21, 3 ); // after wp_authenticate_username_password runs
+		add_filter( 'authenticate', array( $this, 'filter_authenticate' ), 21, 3 ); // after wp_authenticate_username_password runs.
 
 	}
 
+	/**
+	 * Render CSS on the login screen
+	 */
 	public function action_login_head() {
 		?>
 <style>
@@ -79,6 +109,9 @@ class WP_SAML_Auth {
 
 	/**
 	 * Such a hack — use a filter to add the button to sign in with SimpleSAMLphp
+	 *
+	 * @param string $message Existing message string.
+	 * @return string
 	 */
 	public function action_login_message( $message ) {
 		if ( ! self::get_option( 'permit_wp_login' ) ) {
@@ -99,6 +132,9 @@ class WP_SAML_Auth {
 
 	/**
 	 * Add body classes for our specific configuration attributes
+	 *
+	 * @param array $classes Body CSS classes.
+	 * @return array
 	 */
 	public function filter_login_body_class( $classes ) {
 
@@ -111,6 +147,11 @@ class WP_SAML_Auth {
 
 	/**
 	 * Check if the user is authenticated against the SimpleSAMLphp instance
+	 *
+	 * @param mixed  $user     WordPress user reference.
+	 * @param string $username Username.
+	 * @param string $password Password supplied by the user.
+	 * @return mixed
 	 */
 	public function filter_authenticate( $user, $username, $password ) {
 
@@ -129,7 +170,9 @@ class WP_SAML_Auth {
 	 * Do the SAML authentication dance
 	 */
 	public function do_saml_authentication() {
-		$this->provider->requireAuth( array( 'ReturnTo' => $_SERVER['REQUEST_URI'] ) );
+		$this->provider->requireAuth( array(
+			'ReturnTo' => $_SERVER['REQUEST_URI'],
+		) );
 		$attributes = $this->provider->getAttributes();
 
 		/**
@@ -148,7 +191,8 @@ class WP_SAML_Auth {
 		$get_user_by = self::get_option( 'get_user_by' );
 		$attribute = self::get_option( "user_{$get_user_by}_attribute" );
 		if ( empty( $attributes[ $attribute ][0] ) ) {
-			return new WP_Error( 'wp_saml_auth_missing_attribute', sprintf( esc_html__( '"%s" attribute is expected, but missing, in SimpleSAMLphp response. Attribute is used to fetch existing user by "%s". Please contact your administrator.', 'wp-saml-auth' ), $attribute, $get_user_by ) );
+			// Translators: Communicates how the user is fetched based on the SAML response.
+			return new WP_Error( 'wp_saml_auth_missing_attribute', sprintf( esc_html__( '"%1$s" attribute is expected, but missing, in SimpleSAMLphp response. Attribute is used to fetch existing user by "%2$s". Please contact your administrator.', 'wp-saml-auth' ), $attribute, $get_user_by ) );
 		}
 		$existing_user = get_user_by( $get_user_by, $attributes[ $attribute ][0] );
 		if ( $existing_user ) {
