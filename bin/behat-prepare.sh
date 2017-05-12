@@ -53,7 +53,7 @@ cp $BASH_DIR/fixtures/style.css  $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE/s
 # Add the copy of this plugin itself to the environment
 ###
 cd $BASH_DIR/..
-rsync -av --exclude='vendor/' --exclude='node_modules/' --exclude='simplesamlphp/' --exclude='tests/' ./* $PREPARE_DIR/wp-content/plugins/wp-saml-auth
+rsync -av --exclude='node_modules/' --exclude='simplesamlphp/' --exclude='tests/' ./* $PREPARE_DIR/wp-content/plugins/wp-saml-auth
 rm -rf $PREPARE_DIR/wp-content/plugins/wp-saml-auth/.git
 
 ###
