@@ -41,20 +41,13 @@ rm -rf $PREPARE_DIR
 git clone -b $TERMINUS_ENV $PANTHEON_GIT_URL $PREPARE_DIR
 
 ###
-# Add WP Native PHP Sessions and child theme to environment
+# Add child theme to environment
 ###
 rm -rf $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE
 # Create a child theme that includes WP SAML Auth configuration details
 mkdir $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE
 cp $BASH_DIR/fixtures/functions.php  $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE/functions.php
 cp $BASH_DIR/fixtures/style.css  $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE/style.css
-
-rm -rf $PREPARE_DIR/wp-content/plugins/wp-native-php-sessions
-# Download the latest WP Native PHP sessions release from WordPress.org
-wget -O $PREPARE_DIR/wp-native-php-sessions.zip https://downloads.wordpress.org/plugin/wp-native-php-sessions.zip
-unzip $PREPARE_DIR/wp-native-php-sessions.zip -d $PREPARE_DIR
-mv $PREPARE_DIR/wp-native-php-sessions $PREPARE_DIR/wp-content/plugins/
-rm $PREPARE_DIR/wp-native-php-sessions.zip
 
 ###
 # Add the copy of this plugin itself to the environment
@@ -130,5 +123,4 @@ sleep 10
 {
   terminus wp $SITE_ENV -- core install --title=$TERMINUS_ENV-$TERMINUS_SITE --url=$PANTHEON_SITE_URL --admin_user=$WORDPRESS_ADMIN_USERNAME --admin_email=$WORDPRESS_ADMIN_EMAIL --admin_password=$WORDPRESS_ADMIN_PASSWORD
 } &> /dev/null
-terminus wp $SITE_ENV -- plugin activate wp-native-php-sessions wp-saml-auth
 terminus wp $SITE_ENV -- theme activate $TERMINUS_SITE
