@@ -15,15 +15,9 @@
     ],
     "minimum-stability": "dev",
     "require-dev": {
-        "squizlabs/php_codesniffer": "2.3.4",
-        "wp-coding-standards/wpcs": "0.9.0",
         "pantheon-systems/pantheon-wordpress-upstream-tests": "dev-master"
     },
     "autoload": {
         "psr-4": { "PantheonSystems\\WPSamlAuth\\Behat\\": "tests/behat/bootstrap/" }
-    },
-    "scripts": {
-        "post-install-cmd": "\"vendor/bin/phpcs\" --config-set installed_paths vendor/wp-coding-standards/wpcs",
-        "post-update-cmd" : "\"vendor/bin/phpcs\" --config-set installed_paths vendor/wp-coding-standards/wpcs"
     }
 }
