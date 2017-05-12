@@ -88,6 +88,8 @@ cat $BASH_DIR/fixtures/config.php.additions      >> $PREPARE_DIR/private/simples
 # Copy identify provider configuration files into their appropriate locations
 cp $BASH_DIR/fixtures/saml20-idp-hosted.php  $PREPARE_DIR/private/simplesamlphp/metadata/saml20-idp-hosted.php
 cp $BASH_DIR/fixtures/shib13-idp-hosted.php  $PREPARE_DIR/private/simplesamlphp/metadata/shib13-idp-hosted.php
+cp $BASH_DIR/fixtures/saml20-idp-remote.php  $PREPARE_DIR/private/simplesamlphp/metadata/saml20-idp-remote.php
+cp $BASH_DIR/fixtures/shib13-idp-remote.php  $PREPARE_DIR/private/simplesamlphp/metadata/shib13-idp-remote.php
 
 # Enable the exampleauth module
 touch $PREPARE_DIR/private/simplesamlphp/modules/exampleauth/enable
