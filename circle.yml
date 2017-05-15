@@ -51,4 +51,4 @@ test:
   override:
     - ./bin/behat-test.sh --strict
   post:
-    - ./bin/behat-cleanup.sh
+    # - ./bin/behat-cleanup.sh
