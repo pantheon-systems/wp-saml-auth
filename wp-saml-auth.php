@@ -130,12 +130,12 @@ class Password_Reset_Removed
 
     function __construct()
     {
-        add_filter( 'show_password_fields', array( $this, 'disable' ) );
-        add_filter( 'allow_password_reset', array( $this, 'disable' ) );
-        add_filter( 'gettext',              array( $this, 'remove' ) );
+        add_filter( 'show_password_fields', array( $this, 'wpsa_disable' ) );
+        add_filter( 'allow_password_reset', array( $this, 'wpsa_disable' ) );
+        add_filter( 'lostpassword_url', array( $this, 'custom_password_reset_url' ) );
     }
 
-    function disable()
+    function wpsa_disable()
     {
         if ( is_admin() ) {
             $userdata = wp_get_current_user();
@@ -146,9 +146,16 @@ class Password_Reset_Removed
         return false;
     }
 
-    function remove($text)
-    {
-        return str_replace( array('Lost your password?', 'Lost your password'), '', trim($text, '?') );
+    function custom_password_reset_url() 
+	{
+		//Add custom Passord Reset URL
+        $password_reset_url = '';
+        if(!empty($password_reset_url) ){
+            return $password_reset_url;
+            exit;
+        } else {
+            return '?action=lostpassword';
+        }
     }
 }
 
