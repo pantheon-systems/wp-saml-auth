@@ -117,9 +117,20 @@ class WP_SAML_Auth {
 		if ( ! self::get_option( 'permit_wp_login' ) ) {
 			return $message;
 		}
-		echo '<h3><em>' . esc_html__( 'Use one-click authentication:', 'wp-saml-auth' ) . '</em></h3>';
-		echo '<div id="wp-saml-auth-cta"><p><a class="button" href="' . esc_url( add_query_arg( 'action', 'simplesamlphp', wp_login_url() ) ) . '">' . esc_html__( 'Sign In', 'wp-saml-auth' ) . '</a></p></div>';
-		echo '<h3><em>' . esc_html__( 'Or, sign in with WordPress:', 'wp-saml-auth' ) . '</em></h3>';
+		$strings = array(
+			'title'     => __( 'Use one-click authentication:', 'wp-saml-auth' ),
+			'button'    => __( 'Sign In', 'wp-saml-auth' ),
+			'alt_title' => __( 'Or, sign in with WordPress:', 'wp-saml-auth' ),
+		);
+		/**
+		 * Permit login screen text strings to be easily customized.
+		 *
+		 * @param array $strings Existing text strings.
+		 */
+		$strings = apply_filters( 'wp_saml_auth_login_strings', $strings );
+		echo '<h3><em>' . esc_html( $strings['title'] ) . '</em></h3>';
+		echo '<div id="wp-saml-auth-cta"><p><a class="button" href="' . esc_url( add_query_arg( 'action', 'simplesamlphp', wp_login_url() ) ) . '">' . esc_html( $strings['button'] ) . '</a></p></div>';
+		echo '<h3><em>' . esc_html( $strings['alt_title'] ) . '</em></h3>';
 		return $message;
 	}
 
