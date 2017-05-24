@@ -127,7 +127,7 @@ class WP_SAML_Auth {
 		 *
 		 * @param array $strings Existing text strings.
 		 */
-		$strings = apply_filters( 'wp_saml_auth_login_text', $strings );
+		$strings = apply_filters( 'wp_saml_auth_login_strings', $strings );
 		echo '<h3><em>' . esc_html( $strings['title'] ) . '</em></h3>';
 		echo '<div id="wp-saml-auth-cta"><p><a class="button" href="' . esc_url( add_query_arg( 'action', 'simplesamlphp', wp_login_url() ) ) . '">' . esc_html( $strings['button'] ) . '</a></p></div>';
 		echo '<h3><em>' . esc_html( $strings['alt_title'] ) . '</em></h3>';
