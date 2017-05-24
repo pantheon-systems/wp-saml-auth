@@ -107,7 +107,6 @@ openssl req -newkey rsa:2048 -new -x509 -days 3652 -nodes -out $PREPARE_DIR/priv
 
 # Modify the login template so Behat can submit the form
 sed -i  -- "s/<button/<button id='submit'/g" $PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.php
-sed -i  -- "s/this.disabled=true; this.form.submit(); return true;//g" $PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.php
 
 cd $PREPARE_DIR
 # Make the SimpleSAMLphp installation publicly accessible
