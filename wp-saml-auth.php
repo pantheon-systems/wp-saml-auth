@@ -121,3 +121,42 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	require_once dirname( __FILE__ ) . '/inc/class-wp-saml-auth-cli.php';
 	WP_CLI::add_command( 'saml-auth', 'WP_SAML_Auth_CLI' );
 }
+
+/**
+ * Password_Reset_Removed.
+ */
+class Password_Reset_Removed
+{
+
+    function __construct()
+    {
+        add_filter( 'show_password_fields', array( $this, 'wpsa_disable' ) );
+        add_filter( 'allow_password_reset', array( $this, 'wpsa_disable' ) );
+        add_filter( 'lostpassword_url', array( $this, 'custom_password_reset_url' ) );
+    }
+
+    function wpsa_disable()
+    {
+        if ( is_admin() ) {
+            $userdata = wp_get_current_user();
+            $user = new WP_User($userdata->ID);
+            if ( !empty( $user->roles ) && is_array( $user->roles ) && $user->roles[0] == 'administrator' )
+                return true;
+        }
+        return false;
+    }
+
+    function custom_password_reset_url() 
+	{
+		//Add custom Passord Reset URL
+        $password_reset_url = '';
+        if(!empty($password_reset_url) ){
+            return $password_reset_url;
+            exit;
+        } else {
+            return '?action=lostpassword';
+        }
+    }
+}
+
+$pass_reset_removed = new Password_Reset_Removed();
