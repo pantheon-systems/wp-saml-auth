@@ -4,8 +4,8 @@
 # Delete the Pantheon site environment after the Behat test suite has run.
 ###
 
-terminus auth:whoami > /dev/null
-if [ $? -ne 0 ]; then
+TERMINUS_USER_ID=$(terminus auth:whoami --field=id 2>&1)
+if [[ ! $TERMINUS_USER_ID =~ ^[A-Za-z0-9-]{36}$ ]]; then
 	echo "Terminus unauthenticated; assuming unauthenticated build"
 	exit 0
 fi
