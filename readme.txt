@@ -47,7 +47,9 @@ Once you have access to a SAML identity provider, you can configure this plugin 
              */
             'connection_type' => 'internal',
             /**
-             * Configuration options for OneLogin library use
+             * Configuration options for OneLogin library use.
+             *
+             * See comments with "Required:" for values you absolutely need to configure.
              *
              * @param array
              */
@@ -55,7 +57,6 @@ Once you have access to a SAML identity provider, you can configure this plugin 
                 // Validation of SAML responses is required.
                 'strict'       => true,
                 'debug'        => defined( 'WP_DEBUG' ) && WP_DEBUG ? true : false,
-                // Processes SAML responses as a part of login scope.
                 'baseurl'      => home_url(),
                 'sp'           => array(
                     'entityId' => 'urn:' . parse_url( home_url(), PHP_URL_HOST ),
@@ -78,6 +79,7 @@ Once you have access to a SAML identity provider, you can configure this plugin 
                         'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
                     ),
                     // Required: Contents of the IDP's public x509 certificate.
+                    // Use file_get_contents() to load certificate contents into scope.
                     'x509cert' => '',
                     // Optional: Instead of using the x509 cert, you can specify the fingerprint and algorithm.
                     'certFingerprint' => '',
