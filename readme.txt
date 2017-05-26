@@ -1,29 +1,28 @@
 === WP SAML Auth ===
 Contributors: getpantheon, danielbachhuber, Outlandish Josh
-Tags: authentication, SAML, SimpleSAMLphp
+Tags: authentication, SAML
 Requires at least: 4.4
 Tested up to: 4.7
 Stable tag: 0.2.2
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-SAML authentication for WordPress, using SimpleSAMLphp.
+SAML authentication for WordPress.
 
 == Description ==
 
 [![Travis CI](https://travis-ci.org/pantheon-systems/wp-saml-auth.svg?branch=master)](https://travis-ci.org/pantheon-systems/wp-saml-auth) [![CircleCI](https://circleci.com/gh/pantheon-systems/wp-saml-auth/tree/master.svg?style=svg)](https://circleci.com/gh/pantheon-systems/wp-saml-auth/tree/master)
 
-SAML authentication for WordPress, using [SimpleSAMLphp](https://simplesamlphp.org/). When activated, and provided access to a functional SimpleSAMLphp installation, this plugin permits authentication using any of the methods supported by SimpleSAMLphp.
+SAML authentication for WordPress, using the bundled OneLogin SAML library or optionally installed [SimpleSAMLphp](https://simplesamlphp.org/). OneLogin provides a SAML authentication bridge; SimpleSAMLphp provides SAML plus a variety of other authentication mechanisms. This plugin acts as a bridge between WordPress and the authentication library.
 
 The standard user flow looks like this:
 
-* User can log in via SimpleSAMLphp using a button added to the standard WordPress login view.
-* When the button is clicked, the `SimpleSAML_Auth_Simple` class is called to determine whether the user is authenticated.
-* If the user isn't authenticated, they're redirected to the SimpleSAMLphp login view.
-* Once the user is authenticated with SimpleSAMLphp, they will be signed into WordPress as their corresponding WordPress user. A new WordPress user will be created if none exists.
-* When the user logs out of WordPress, they are also logged out of SimpleSAMLphp.
+* User can log in via SAML using a button added to the standard WordPress login view.
+* When the button is clicked, the user is handed off to the authentication library. With OneLogin, the user is redirected to the SAML identity provider. With SimpleSAMLphp, the user is redirected to the SimpleSAMLphp install.
+* Once the user is authenticated with the identity provider, they're redirected back to WordPress and signed in to their account. A new WordPress user will be created if none exists (although this behavior can be disabled).
+* When the user logs out of WordPress, they are also logged out of the identity provider.
 
-A set of configuration options allow you to change the plugin's default behavior. For instance, `permit_wp_login=>false` will force all authentication to go through SimpleSAMLphp, bypassing `wp-login.php`. Similiarly, `auto_provision=>false` will disable automatic creation of new WordPress users.
+A set of configuration options allow you to change the plugin's default behavior. For instance, `permit_wp_login=>false` will force all authentication to go through the SAML identity provider, bypassing `wp-login.php`. Similiarly, `auto_provision=>false` will disable automatic creation of new WordPress users.
 
 See installation instructions for full configuration details.
 
