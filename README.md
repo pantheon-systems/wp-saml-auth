@@ -32,6 +32,8 @@ This plugin requires access to a functioning SAML identity provider. If all you 
 
 To install SimpleSAMLphp locally for testing purposes, the [Identity Provider QuickStart](https://simplesamlphp.org/docs/stable/simplesamlphp-idp) is a good place to start. On Pantheon, the SimpleSAMLphp web directory needs to be symlinked to `~/code/simplesaml` to be properly handled by Nginx. [Read the docs](https://pantheon.io/docs/shibboleth-sso/) for more details about configuring SimpleSAMLphp on Pantheon.
 
+Because SAML authentication is handled as a part of the login flow, your SAML identity provider will need to send responses back to `wp-login.php`. For instance, if your domain is `pantheon.io`, then you'd use `http://pantheon.io/wp-login.php` as your `AssertionConsumerService` configuration value.
+
 Once you have access to a SAML identity provider, you can configure this plugin using a filter included in your theme's functions.php file or a mu-plugin:
 
     function wpsax_filter_option( $value, $option_name ) {
