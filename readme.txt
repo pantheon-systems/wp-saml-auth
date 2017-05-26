@@ -39,7 +39,8 @@ Once you have access to a SAML identity provider, you can configure this plugin 
             /**
              * Type of SAML connection bridge to use.
              *
-             * Permits use of SimpleSAMLphp or OneLogin dependency.
+             * 'internal' uses OneLogin bundled library; 'simplesamlphp' uses SimpleSAMLphp.
+             *
              * Defaults to SimpleSAMLphp for backwards compatibility.
              *
              * @param string

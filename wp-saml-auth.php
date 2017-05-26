@@ -23,7 +23,8 @@ function wpsa_filter_option( $value, $option_name ) {
 		/**
 		 * Type of SAML connection bridge to use.
 		 *
-		 * Permits use of SimpleSAMLphp or OneLogin dependency.
+		 * 'internal' uses OneLogin bundled library; 'simplesamlphp' uses SimpleSAMLphp.
+		 *
 		 * Defaults to SimpleSAMLphp for backwards compatibility.
 		 *
 		 * @param string
