@@ -6,8 +6,8 @@
 # such that it can be run a second time if a step fails.
 ###
 
-terminus auth:whoami > /dev/null
-if [ $? -ne 0 ]; then
+TERMINUS_USER_ID=$(terminus auth:whoami --field=id 2>&1)
+if [[ ! $TERMINUS_USER_ID =~ ^[A-Za-z0-9-]{36}$ ]]; then
 	echo "Terminus unauthenticated; assuming unauthenticated build"
 	exit 0
 fi
@@ -70,7 +70,7 @@ rm -rf $PREPARE_DIR/wp-content/plugins/wp-saml-auth/.git
 ###
 rm -rf $PREPARE_DIR/private
 mkdir $PREPARE_DIR/private
-wget https://simplesamlphp.org/download\?latest -O $PREPARE_DIR/simplesamlphp-latest.tar.gz
+wget https://github.com/simplesamlphp/simplesamlphp/releases/download/v1.14.12/simplesamlphp-1.14.12.tar.gz -O $PREPARE_DIR/simplesamlphp-latest.tar.gz
 tar -zxvf $PREPARE_DIR/simplesamlphp-latest.tar.gz -C $PREPARE_DIR/private
 ORIG_SIMPLESAMLPHP_DIR=$(ls $PREPARE_DIR/private)
 mv $PREPARE_DIR/private/$ORIG_SIMPLESAMLPHP_DIR $PREPARE_DIR/private/simplesamlphp
