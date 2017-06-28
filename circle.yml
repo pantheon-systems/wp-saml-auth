@@ -51,5 +51,4 @@ test:
   override:
     - ./bin/behat-test.sh --strict
   post:
-    # - ./bin/behat-cleanup.sh
-    - echo 'disabled'
+    - ./bin/behat-cleanup.sh
