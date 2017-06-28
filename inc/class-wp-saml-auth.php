@@ -63,9 +63,8 @@ class WP_SAML_Auth {
 
 		$connection_type = self::get_option( 'connection_type' );
 		if ( 'internal' === $connection_type ) {
-			$autoload = dirname( __DIR__ ) . '/vendor/autoload.php';
-			if ( file_exists( $autoload ) ) {
-				require_once $autoload;
+			if ( file_exists( WP_SAML_AUTH_AUTOLOADER ) ) {
+				require_once WP_SAML_AUTH_AUTOLOADER;
 			}
 			if ( ! class_exists( 'OneLogin_Saml2_Auth' ) ) {
 				add_action( 'admin_notices', function() {

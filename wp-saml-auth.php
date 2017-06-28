@@ -159,6 +159,10 @@ function wpsa_filter_option( $value, $option_name ) {
 }
 add_filter( 'wp_saml_auth_option', 'wpsa_filter_option', 0, 2 );
 
+if ( ! defined( 'WP_SAML_AUTH_AUTOLOADER' ) ) {
+	define( 'WP_SAML_AUTH_AUTOLOADER', __DIR__ . '/vendor/autoload.php' );
+}
+
 /**
  * Initialize the WP SAML Auth plugin.
  *
