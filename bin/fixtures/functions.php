@@ -22,6 +22,7 @@ add_filter( 'wp_saml_auth_option', function( $value, $option_name ){
         $value['idp']['singleLogoutService']['url'] = home_url( '/simplesaml/saml2/idp/SingleLogoutService.php' );
         return $value;
     }
+    // From https://commons.lbl.gov/display/IDMgmt/Attribute+Definitions#AttributeDefinitions-uiduid
     if ( 'user_login_attribute' === $option_name ) {
         return 'urn:oid:0.9.2342.19200300.100.1.1';
     }
