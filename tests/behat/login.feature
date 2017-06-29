@@ -9,6 +9,7 @@ Feature: SAML Login
     And I fill in "username" with "employee"
     And I fill in "password" with "employeepass"
     And I press "submit"
+    And I press "Submit"
     Then print current URL
     Then the "email" field should contain "test-em@example.com"
 
@@ -18,6 +19,7 @@ Feature: SAML Login
     And I fill in "username" with "student"
     And I fill in "password" with "studentpass"
     And I press "submit"
+    And I press "Submit"
     Then print current URL
     Then the "email" field should contain "test-student@example.com"
 

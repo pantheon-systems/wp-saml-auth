@@ -60,7 +60,7 @@ rm $PREPARE_DIR/wp-native-php-sessions.zip
 # Add the copy of this plugin itself to the environment
 ###
 cd $BASH_DIR/..
-rsync -av --exclude='vendor/' --exclude='node_modules/' --exclude='simplesamlphp/' --exclude='tests/' ./* $PREPARE_DIR/wp-content/plugins/wp-saml-auth
+rsync -av --exclude='node_modules/' --exclude='simplesamlphp/' --exclude='tests/' ./* $PREPARE_DIR/wp-content/plugins/wp-saml-auth
 rm -rf $PREPARE_DIR/wp-content/plugins/wp-saml-auth/.git
 
 ###
@@ -95,6 +95,8 @@ cat $BASH_DIR/fixtures/config.php.additions      >> $PREPARE_DIR/private/simples
 # Copy identify provider configuration files into their appropriate locations
 cp $BASH_DIR/fixtures/saml20-idp-hosted.php  $PREPARE_DIR/private/simplesamlphp/metadata/saml20-idp-hosted.php
 cp $BASH_DIR/fixtures/shib13-idp-hosted.php  $PREPARE_DIR/private/simplesamlphp/metadata/shib13-idp-hosted.php
+cp $BASH_DIR/fixtures/saml20-sp-remote.php  $PREPARE_DIR/private/simplesamlphp/metadata/saml20-sp-remote.php
+cp $BASH_DIR/fixtures/shib13-sp-remote.php  $PREPARE_DIR/private/simplesamlphp/metadata/shib13-sp-remote.php
 
 # Enable the exampleauth module
 touch $PREPARE_DIR/private/simplesamlphp/modules/exampleauth/enable
@@ -105,6 +107,9 @@ openssl req -newkey rsa:2048 -new -x509 -days 3652 -nodes -out $PREPARE_DIR/priv
 
 # Modify the login template so Behat can submit the form
 sed -i  -- "s/<button/<button id='submit'/g" $PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.php
+sed -i  -- "s/this.disabled=true; this.form.submit(); return true;//g" $PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.php
+# Second button instance shouldn't have an id
+sed -i  -- "s/<button id='submit' class=\"btn\" tabindex=\"6\"/<button class=\"btn\" tabindex=\"6\"/g" $PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.php
 
 cd $PREPARE_DIR
 # Make the SimpleSAMLphp installation publicly accessible

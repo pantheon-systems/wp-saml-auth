@@ -1,42 +1,93 @@
 # WP SAML Auth #
 **Contributors:** getpantheon, danielbachhuber, Outlandish Josh  
-**Tags:** authentication, SAML, SimpleSAMLphp  
+**Tags:** authentication, SAML  
 **Requires at least:** 4.4  
 **Tested up to:** 4.8  
 **Stable tag:** 0.2.2  
 **License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html  
 
-SAML authentication for WordPress, using SimpleSAMLphp.
+SAML authentication for WordPress.
 
 ## Description ##
 
 [![Travis CI](https://travis-ci.org/pantheon-systems/wp-saml-auth.svg?branch=master)](https://travis-ci.org/pantheon-systems/wp-saml-auth) [![CircleCI](https://circleci.com/gh/pantheon-systems/wp-saml-auth/tree/master.svg?style=svg)](https://circleci.com/gh/pantheon-systems/wp-saml-auth/tree/master)
 
-SAML authentication for WordPress, using [SimpleSAMLphp](https://simplesamlphp.org/). When activated, and provided access to a functional SimpleSAMLphp installation, this plugin permits authentication using any of the methods supported by SimpleSAMLphp.
+SAML authentication for WordPress, using the bundled OneLogin SAML library or optionally installed [SimpleSAMLphp](https://simplesamlphp.org/). OneLogin provides a SAML authentication bridge; SimpleSAMLphp provides SAML plus a variety of other authentication mechanisms. This plugin acts as a bridge between WordPress and the authentication library.
 
 The standard user flow looks like this:
 
-* User can log in via SimpleSAMLphp using a button added to the standard WordPress login view.
-* When the button is clicked, the `SimpleSAML_Auth_Simple` class is called to determine whether the user is authenticated.
-* If the user isn't authenticated, they're redirected to the SimpleSAMLphp login view.
-* Once the user is authenticated with SimpleSAMLphp, they will be signed into WordPress as their corresponding WordPress user. A new WordPress user will be created if none exists.
-* When the user logs out of WordPress, they are also logged out of SimpleSAMLphp.
+* User can log in via SAML using a button added to the standard WordPress login view.
+* When the button is clicked, the user is handed off to the authentication library. With OneLogin, the user is redirected to the SAML identity provider. With SimpleSAMLphp, the user is redirected to the SimpleSAMLphp install.
+* Once the user is authenticated with the identity provider, they're redirected back to WordPress and signed in to their account. A new WordPress user will be created if none exists (although this behavior can be disabled).
+* When the user logs out of WordPress, they are also logged out of the identity provider.
 
-A set of configuration options allow you to change the plugin's default behavior. For instance, `permit_wp_login=>false` will force all authentication to go through SimpleSAMLphp, bypassing `wp-login.php`. Similiarly, `auto_provision=>false` will disable automatic creation of new WordPress users.
+A set of configuration options allow you to change the plugin's default behavior. For instance, `permit_wp_login=>false` will force all authentication to go through the SAML identity provider, bypassing `wp-login.php`. Similiarly, `auto_provision=>false` will disable automatic creation of new WordPress users.
 
 See installation instructions for full configuration details.
 
 ## Installation ##
 
-This plugin requires access to a SimpleSAMLphp installation running in the same environment. If you are already running SimpleSAMLphp, then you are good to go. Otherwise, you'll need to install and configure SimpleSAMLphp before you can begin using this plugin. For local testing purposes, the [Identity Provider QuickStart](https://simplesamlphp.org/docs/stable/simplesamlphp-idp) is a good place to start.
+This plugin requires access to a functioning SAML identity provider. If all you need is SAML authentication, then you should use the bundled OneLogin SAML library. If you have more complex authentication needs, then you can also use a SimpleSAMLphp installation running in the same environment.
 
-On Pantheon, the SimpleSAMLphp web directory needs to be symlinked to `~/code/simplesaml` to be properly handled by Nginx. [Read the docs](https://pantheon.io/docs/shibboleth-sso/) for more details about configuring SimpleSAMLphp on Pantheon.
+To install SimpleSAMLphp locally for testing purposes, the [Identity Provider QuickStart](https://simplesamlphp.org/docs/stable/simplesamlphp-idp) is a good place to start. On Pantheon, the SimpleSAMLphp web directory needs to be symlinked to `~/code/simplesaml` to be properly handled by Nginx. [Read the docs](https://pantheon.io/docs/shibboleth-sso/) for more details about configuring SimpleSAMLphp on Pantheon.
 
-Once SimpleSAMLphp is installed and running on your server, you can configure this plugin using a filter included in your theme's functions.php file or a mu-plugin:
+Because SAML authentication is handled as a part of the login flow, your SAML identity provider will need to send responses back to `wp-login.php`. For instance, if your domain is `pantheon.io`, then you'd use `http://pantheon.io/wp-login.php` as your `AssertionConsumerService` configuration value.
+
+Once you have access to a SAML identity provider, you can configure this plugin using a filter included in your theme's functions.php file or a mu-plugin:
 
     function wpsax_filter_option( $value, $option_name ) {
         $defaults = array(
+            /**
+             * Type of SAML connection bridge to use.
+             *
+             * 'internal' uses OneLogin bundled library; 'simplesamlphp' uses SimpleSAMLphp.
+             *
+             * Defaults to SimpleSAMLphp for backwards compatibility.
+             *
+             * @param string
+             */
+            'connection_type' => 'internal',
+            /**
+             * Configuration options for OneLogin library use.
+             *
+             * See comments with "Required:" for values you absolutely need to configure.
+             *
+             * @param array
+             */
+            'internal_config'        => array(
+                // Validation of SAML responses is required.
+                'strict'       => true,
+                'debug'        => defined( 'WP_DEBUG' ) && WP_DEBUG ? true : false,
+                'baseurl'      => home_url(),
+                'sp'           => array(
+                    'entityId' => 'urn:' . parse_url( home_url(), PHP_URL_HOST ),
+                    'assertionConsumerService' => array(
+                        'url'  => home_url(),
+                        'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST',
+                    ),
+                ),
+                'idp'          => array(
+                    // Required: Set based on provider's supplied value.
+                    'entityId' => '',
+                    'singleSignOnService' => array(
+                        // Required: Set based on provider's supplied value.
+                        'url'  => '',
+                        'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
+                    ),
+                    'singleLogoutService' => array(
+                        // Required: Set based on provider's supplied value.
+                        'url'  => '',
+                        'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
+                    ),
+                    // Required: Contents of the IDP's public x509 certificate.
+                    // Use file_get_contents() to load certificate contents into scope.
+                    'x509cert' => '',
+                    // Optional: Instead of using the x509 cert, you can specify the fingerprint and algorithm.
+                    'certFingerprint' => '',
+                    'certFingerprintAlgorithm' => '',
+                ),
+            ),
             /**
              * Path to SimpleSAMLphp autoloader.
              *

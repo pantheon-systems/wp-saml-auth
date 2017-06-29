@@ -116,7 +116,7 @@ class Test_Authentication extends WP_UnitTestCase {
 
 	private function saml_signon( $username ) {
 		$this->set_saml_auth_user( $username );
-		$_GET['action'] = 'simplesamlphp';
+		$_GET['action'] = 'wp-saml-auth';
 		return wp_signon();
 	}
 

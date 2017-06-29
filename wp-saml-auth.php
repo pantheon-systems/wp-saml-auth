@@ -21,6 +21,16 @@
 function wpsa_filter_option( $value, $option_name ) {
 	$defaults = array(
 		/**
+		 * Type of SAML connection bridge to use.
+		 *
+		 * 'internal' uses OneLogin bundled library; 'simplesamlphp' uses SimpleSAMLphp.
+		 *
+		 * Defaults to SimpleSAMLphp for backwards compatibility.
+		 *
+		 * @param string
+		 */
+		'connection_type' => 'simplesamlphp',
+		/**
 		 * Path to SimpleSAMLphp autoloader.
 		 *
 		 * Follow the standard implementation by installing SimpleSAMLphp
@@ -41,6 +51,46 @@ function wpsa_filter_option( $value, $option_name ) {
 		 * @param string
 		 */
 		'auth_source'            => 'default-sp',
+		/**
+		 * Configuration options for OneLogin library use.
+		 *
+		 * See comments with "Required:" for values you absolutely need to configure.
+		 *
+		 * @param array
+		 */
+		'internal_config'        => array(
+			// Validation of SAML responses is required.
+			'strict'       => true,
+			'debug'        => defined( 'WP_DEBUG' ) && WP_DEBUG ? true : false,
+			'baseurl'      => home_url(),
+			'sp'           => array(
+				'entityId' => 'urn:' . parse_url( home_url(), PHP_URL_HOST ),
+				'assertionConsumerService' => array(
+					'url'  => home_url(),
+					'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST',
+				),
+			),
+			'idp'          => array(
+				// Required: Set based on provider's supplied value.
+				'entityId' => '',
+				'singleSignOnService' => array(
+					// Required: Set based on provider's supplied value.
+					'url'  => '',
+					'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
+				),
+				'singleLogoutService' => array(
+					// Required: Set based on provider's supplied value.
+					'url'  => '',
+					'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
+				),
+				// Required: Contents of the IDP's public x509 certificate.
+				// Use file_get_contents() to load certificate contents into scope.
+				'x509cert' => '',
+				// Optional: Instead of using the x509 cert, you can specify the fingerprint and algorithm.
+				'certFingerprint' => '',
+				'certFingerprintAlgorithm' => '',
+			),
+		),
 		/**
 		 * Whether or not to automatically provision new WordPress users.
 		 *
@@ -108,6 +158,10 @@ function wpsa_filter_option( $value, $option_name ) {
 	return $value;
 }
 add_filter( 'wp_saml_auth_option', 'wpsa_filter_option', 0, 2 );
+
+if ( ! defined( 'WP_SAML_AUTH_AUTOLOADER' ) ) {
+	define( 'WP_SAML_AUTH_AUTOLOADER', __DIR__ . '/vendor/autoload.php' );
+}
 
 /**
  * Initialize the WP SAML Auth plugin.
