@@ -29,7 +29,7 @@ function wpsa_filter_option( $value, $option_name ) {
 		 *
 		 * @param string
 		 */
-		'connection_type' => 'simplesamlphp',
+		'connection_type'        => 'simplesamlphp',
 		/**
 		 * Path to SimpleSAMLphp autoloader.
 		 *
@@ -60,34 +60,34 @@ function wpsa_filter_option( $value, $option_name ) {
 		 */
 		'internal_config'        => array(
 			// Validation of SAML responses is required.
-			'strict'       => true,
-			'debug'        => defined( 'WP_DEBUG' ) && WP_DEBUG ? true : false,
-			'baseurl'      => home_url(),
-			'sp'           => array(
-				'entityId' => 'urn:' . parse_url( home_url(), PHP_URL_HOST ),
+			'strict'  => true,
+			'debug'   => defined( 'WP_DEBUG' ) && WP_DEBUG ? true : false,
+			'baseurl' => home_url(),
+			'sp'      => array(
+				'entityId'                 => 'urn:' . parse_url( home_url(), PHP_URL_HOST ),
 				'assertionConsumerService' => array(
-					'url'  => home_url(),
+					'url'     => home_url(),
 					'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST',
 				),
 			),
-			'idp'          => array(
+			'idp'     => array(
 				// Required: Set based on provider's supplied value.
-				'entityId' => '',
-				'singleSignOnService' => array(
+				'entityId'                 => '',
+				'singleSignOnService'      => array(
 					// Required: Set based on provider's supplied value.
-					'url'  => '',
+					'url'     => '',
 					'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
 				),
-				'singleLogoutService' => array(
+				'singleLogoutService'      => array(
 					// Required: Set based on provider's supplied value.
-					'url'  => '',
+					'url'     => '',
 					'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
 				),
 				// Required: Contents of the IDP's public x509 certificate.
 				// Use file_get_contents() to load certificate contents into scope.
-				'x509cert' => '',
+				'x509cert'                 => '',
 				// Optional: Instead of using the x509 cert, you can specify the fingerprint and algorithm.
-				'certFingerprint' => '',
+				'certFingerprint'          => '',
 				'certFingerprintAlgorithm' => '',
 			),
 		),
@@ -140,13 +140,13 @@ function wpsa_filter_option( $value, $option_name ) {
 		 *
 		 * @param string
 		 */
-		'first_name_attribute' => 'first_name',
+		'first_name_attribute'   => 'first_name',
 		/**
 		 * SAML attribute which includes the last_name value for a user.
 		 *
 		 * @param string
 		 */
-		'last_name_attribute' => 'last_name',
+		'last_name_attribute'    => 'last_name',
 		/**
 		 * Default WordPress role to grant when provisioning new users.
 		 *
