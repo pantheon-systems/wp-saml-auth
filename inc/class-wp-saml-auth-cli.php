@@ -89,19 +89,19 @@ class WP_SAML_Auth_CLI {
 	 * @return string
 	 */
 	protected static function scaffold_config_function( $assoc_args ) {
-		$defaults = array(
-			'type'                       => 'internal',
-			'simplesamlphp_autoload'     => dirname( dirname( __FILE__ ) ) . '/simplesamlphp/lib/_autoload.php',
-			'auth_source'                => 'default-sp',
-			'auto_provision'             => true,
-			'permit_wp_login'            => true,
-			'get_user_by'                => 'email',
-			'user_login_attribute'       => 'uid',
-			'user_email_attribute'       => 'mail',
-			'display_name_attribute'     => 'display_name',
-			'first_name_attribute'       => 'first_name',
-			'last_name_attribute'        => 'last_name',
-			'default_role'               => get_option( 'default_role' ),
+		$defaults   = array(
+			'type'                   => 'internal',
+			'simplesamlphp_autoload' => dirname( dirname( __FILE__ ) ) . '/simplesamlphp/lib/_autoload.php',
+			'auth_source'            => 'default-sp',
+			'auto_provision'         => true,
+			'permit_wp_login'        => true,
+			'get_user_by'            => 'email',
+			'user_login_attribute'   => 'uid',
+			'user_email_attribute'   => 'mail',
+			'display_name_attribute' => 'display_name',
+			'first_name_attribute'   => 'first_name',
+			'last_name_attribute'    => 'last_name',
+			'default_role'           => get_option( 'default_role' ),
 		);
 		$assoc_args = array_merge( $defaults, $assoc_args );
 
@@ -113,12 +113,12 @@ class WP_SAML_Auth_CLI {
 		$values = var_export( $assoc_args, true );
 		// Formatting fixes.
 		$search_replace = array(
-			'  '        => "\t\t",
-			'array ('   => 'array(',
+			'  '      => "\t\t",
+			'array (' => 'array(',
 		);
-		$values = str_replace( array_keys( $search_replace ), array_values( $search_replace ), $values );
-		$values = rtrim( $values, ')' ) . "\t);";
-		$function = <<<EOT
+		$values         = str_replace( array_keys( $search_replace ), array_values( $search_replace ), $values );
+		$values         = rtrim( $values, ')' ) . "\t);";
+		$function       = <<<EOT
 /**
  * Set WP SAML Auth configuration options
  */

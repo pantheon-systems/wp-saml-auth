@@ -67,15 +67,17 @@ class WP_SAML_Auth {
 				require_once WP_SAML_AUTH_AUTOLOADER;
 			}
 			if ( ! class_exists( 'OneLogin_Saml2_Auth' ) ) {
-				add_action( 'admin_notices', function() {
-					if ( current_user_can( 'manage_options' ) ) {
-						// Translators: Links to the WP SAML Auth plugin.
-						echo '<div class="message error"><p>' . wp_kses_post( sprintf( __( "WP SAML Auth wasn't able to find the <code>OneLogin_Saml2_Auth</code> class. Please verify your Composer autoloader, or <a href='%s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ), 'https://wordpress.org/plugins/wp-saml-auth/' ) ) . '</p></div>';
+				add_action(
+					'admin_notices', function() {
+						if ( current_user_can( 'manage_options' ) ) {
+							// Translators: Links to the WP SAML Auth plugin.
+							echo '<div class="message error"><p>' . wp_kses_post( sprintf( __( "WP SAML Auth wasn't able to find the <code>OneLogin_Saml2_Auth</code> class. Please verify your Composer autoloader, or <a href='%s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ), 'https://wordpress.org/plugins/wp-saml-auth/' ) ) . '</p></div>';
+						}
 					}
-				});
+				);
 				return;
 			}
-			$auth_config = self::get_option( 'internal_config' );
+			$auth_config    = self::get_option( 'internal_config' );
 			$this->provider = new OneLogin_Saml2_Auth( $auth_config );
 		} else {
 			$simplesamlphp_path = self::get_option( 'simplesamlphp_autoload' );
@@ -83,12 +85,14 @@ class WP_SAML_Auth {
 				require_once $simplesamlphp_path;
 			}
 			if ( ! class_exists( 'SimpleSAML_Auth_Simple' ) ) {
-				add_action( 'admin_notices', function() {
-					if ( current_user_can( 'manage_options' ) ) {
-						// Translators: Links to the WP SAML Auth plugin.
-						echo '<div class="message error"><p>' . wp_kses_post( sprintf( __( "WP SAML Auth wasn't able to find the <code>SimpleSAML_Auth_Simple</code> class. Please check the <code>simplesamlphp_autoload</code> configuration option, or <a href='%s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ), 'https://wordpress.org/plugins/wp-saml-auth/' ) ) . '</p></div>';
+				add_action(
+					'admin_notices', function() {
+						if ( current_user_can( 'manage_options' ) ) {
+							// Translators: Links to the WP SAML Auth plugin.
+							echo '<div class="message error"><p>' . wp_kses_post( sprintf( __( "WP SAML Auth wasn't able to find the <code>SimpleSAML_Auth_Simple</code> class. Please check the <code>simplesamlphp_autoload</code> configuration option, or <a href='%s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ), 'https://wordpress.org/plugins/wp-saml-auth/' ) ) . '</p></div>';
+						}
 					}
-				});
+				);
 				return;
 			}
 			$this->provider = new SimpleSAML_Auth_Simple( self::get_option( 'auth_source' ) );
@@ -212,9 +216,11 @@ class WP_SAML_Auth {
 				$this->provider->login( $_SERVER['REQUEST_URI'] );
 			}
 		} elseif ( is_a( $this->provider, 'SimpleSAML_Auth_Simple' ) ) {
-			$this->provider->requireAuth( array(
-				'ReturnTo' => $_SERVER['REQUEST_URI'],
-			) );
+			$this->provider->requireAuth(
+				array(
+					'ReturnTo' => $_SERVER['REQUEST_URI'],
+				)
+			);
 			$attributes = $this->provider->getAttributes();
 		} else {
 			return new WP_Error( 'wp_saml_auth_invalid_provider', __( 'Invalid provider specified for SAML authentication', 'wp-saml-auth' ) );
@@ -234,7 +240,7 @@ class WP_SAML_Auth {
 		}
 
 		$get_user_by = self::get_option( 'get_user_by' );
-		$attribute = self::get_option( "user_{$get_user_by}_attribute" );
+		$attribute   = self::get_option( "user_{$get_user_by}_attribute" );
 		if ( empty( $attributes[ $attribute ][0] ) ) {
 			// Translators: Communicates how the user is fetched based on the SAML response.
 			return new WP_Error( 'wp_saml_auth_missing_attribute', sprintf( esc_html__( '"%1$s" attribute is expected, but missing, in SAML response. Attribute is used to fetch existing user by "%2$s". Please contact your administrator.', 'wp-saml-auth' ), $attribute, $get_user_by ) );
@@ -256,10 +262,10 @@ class WP_SAML_Auth {
 
 		$user_args = array();
 		foreach ( array( 'display_name', 'user_login', 'user_email', 'first_name', 'last_name' ) as $type ) {
-			$attribute = self::get_option( "{$type}_attribute" );
+			$attribute          = self::get_option( "{$type}_attribute" );
 			$user_args[ $type ] = ! empty( $attributes[ $attribute ][0] ) ? $attributes[ $attribute ][0] : '';
 		}
-		$user_args['role'] = self::get_option( 'default_role' );
+		$user_args['role']      = self::get_option( 'default_role' );
 		$user_args['user_pass'] = wp_generate_password();
 		/**
 		 * Runs before a user is created based off a SAML response.
@@ -268,7 +274,7 @@ class WP_SAML_Auth {
 		 * @param array $attributes Attributes from the SAML response.
 		 */
 		$user_args = apply_filters( 'wp_saml_auth_insert_user', $user_args, $attributes );
-		$user_id = wp_insert_user( $user_args );
+		$user_id   = wp_insert_user( $user_args );
 		if ( is_wp_error( $user_id ) ) {
 			return $user_id;
 		}
