@@ -222,8 +222,16 @@ class WP_SAML_Auth {
 					return new WP_Error( 'wp_saml_auth_unauthenticated', sprintf( __( 'User is not authenticated with SAML IdP. Reason: %s', 'wp-saml-auth' ), $this->provider->getLastErrorReason() ) );
 				}
 				$attributes = $this->provider->getAttributes();
+				if ( isset( $_POST['RelayState'] ) ) {
+					$redirect_to = filter_input( INPUT_POST, 'RelayState', FILTER_SANITIZE_URL );
+
+					add_filter( 'login_redirect', function( $login_redirect ) use ( $redirect_to ) {
+						return $redirect_to;
+					}, 1 );
+				}
 			} else {
-				$this->provider->login( $_SERVER['REQUEST_URI'] );
+				$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
+				$this->provider->login( $redirect_to );
 			}
 		} elseif ( is_a( $this->provider, 'SimpleSAML_Auth_Simple' ) ) {
 			$this->provider->requireAuth(
@@ -255,6 +263,7 @@ class WP_SAML_Auth {
 			// Translators: Communicates how the user is fetched based on the SAML response.
 			return new WP_Error( 'wp_saml_auth_missing_attribute', sprintf( esc_html__( '"%1$s" attribute is expected, but missing, in SAML response. Attribute is used to fetch existing user by "%2$s". Please contact your administrator.', 'wp-saml-auth' ), $attribute, $get_user_by ) );
 		}
+
 		$existing_user = get_user_by( $get_user_by, $attributes[ $attribute ][0] );
 		if ( $existing_user ) {
 			/**
