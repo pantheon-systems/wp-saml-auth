@@ -142,6 +142,9 @@ class WP_SAML_Auth {
 			'button'    => __( 'Sign In', 'wp-saml-auth' ),
 			'alt_title' => __( 'Or, sign in with WordPress:', 'wp-saml-auth' ),
 		);
+
+		$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
+
 		/**
 		 * Permit login screen text strings to be easily customized.
 		 *
@@ -149,7 +152,7 @@ class WP_SAML_Auth {
 		 */
 		$strings = apply_filters( 'wp_saml_auth_login_strings', $strings );
 		echo '<h3><em>' . esc_html( $strings['title'] ) . '</em></h3>';
-		echo '<div id="wp-saml-auth-cta"><p><a class="button" href="' . esc_url( add_query_arg( 'action', 'wp-saml-auth', wp_login_url() ) ) . '">' . esc_html( $strings['button'] ) . '</a></p></div>';
+		echo '<div id="wp-saml-auth-cta"><p><a class="button" href="' . esc_url( add_query_arg( array( 'action' => 'wp-saml-auth', 'redirect_to' => rawurlencode( $redirect_to ) ), wp_login_url() ) ) . '">' . esc_html( $strings['button'] ) . '</a></p></div>';
 		echo '<h3><em>' . esc_html( $strings['alt_title'] ) . '</em></h3>';
 		return $message;
 	}
