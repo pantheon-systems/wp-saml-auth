@@ -142,6 +142,15 @@ class WP_SAML_Auth {
 			'button'    => __( 'Sign In', 'wp-saml-auth' ),
 			'alt_title' => __( 'Or, sign in with WordPress:', 'wp-saml-auth' ),
 		);
+
+		$query_args  = array(
+			'action' => 'wp-saml-auth',
+		);
+		$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
+		if ( $redirect_to ) {
+			$query_args['redirect_to'] = rawurlencode( $redirect_to );
+		}
+
 		/**
 		 * Permit login screen text strings to be easily customized.
 		 *
@@ -149,7 +158,7 @@ class WP_SAML_Auth {
 		 */
 		$strings = apply_filters( 'wp_saml_auth_login_strings', $strings );
 		echo '<h3><em>' . esc_html( $strings['title'] ) . '</em></h3>';
-		echo '<div id="wp-saml-auth-cta"><p><a class="button" href="' . esc_url( add_query_arg( 'action', 'wp-saml-auth', wp_login_url() ) ) . '">' . esc_html( $strings['button'] ) . '</a></p></div>';
+		echo '<div id="wp-saml-auth-cta"><p><a class="button" href="' . esc_url( add_query_arg( $query_args, wp_login_url() ) ) . '">' . esc_html( $strings['button'] ) . '</a></p></div>';
 		echo '<h3><em>' . esc_html( $strings['alt_title'] ) . '</em></h3>';
 		return $message;
 	}
@@ -211,9 +220,17 @@ class WP_SAML_Auth {
 					// Translators: Includes error reason from OneLogin.
 					return new WP_Error( 'wp_saml_auth_unauthenticated', sprintf( __( 'User is not authenticated with SAML IdP. Reason: %s', 'wp-saml-auth' ), $this->provider->getLastErrorReason() ) );
 				}
-				$attributes = $this->provider->getAttributes();
+				$attributes  = $this->provider->getAttributes();
+				$redirect_to = filter_input( INPUT_POST, 'RelayState', FILTER_SANITIZE_URL );
+				if ( $redirect_to && false === stripos( $redirect_to, 'wp-login.php' ) ) {
+					add_filter( 'login_redirect', function() use ( $redirect_to ) {
+						return $redirect_to;
+					}, 1 );
+				}
 			} else {
-				$this->provider->login( $_SERVER['REQUEST_URI'] );
+				$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
+				$redirect_to = $redirect_to ? : $_SERVER['REQUEST_URI'];
+				$this->provider->login( $redirect_to );
 			}
 		} elseif ( is_a( $this->provider, 'SimpleSAML_Auth_Simple' ) ) {
 			$this->provider->requireAuth(
@@ -245,6 +262,7 @@ class WP_SAML_Auth {
 			// Translators: Communicates how the user is fetched based on the SAML response.
 			return new WP_Error( 'wp_saml_auth_missing_attribute', sprintf( esc_html__( '"%1$s" attribute is expected, but missing, in SAML response. Attribute is used to fetch existing user by "%2$s". Please contact your administrator.', 'wp-saml-auth' ), $attribute, $get_user_by ) );
 		}
+
 		$existing_user = get_user_by( $get_user_by, $attributes[ $attribute ][0] );
 		if ( $existing_user ) {
 			/**
