@@ -221,16 +221,16 @@ class WP_SAML_Auth {
 					// Translators: Includes error reason from OneLogin.
 					return new WP_Error( 'wp_saml_auth_unauthenticated', sprintf( __( 'User is not authenticated with SAML IdP. Reason: %s', 'wp-saml-auth' ), $this->provider->getLastErrorReason() ) );
 				}
-				$attributes = $this->provider->getAttributes();
-				if ( isset( $_POST['RelayState'] ) ) {
-					$redirect_to = filter_input( INPUT_POST, 'RelayState', FILTER_SANITIZE_URL );
-
-					add_filter( 'login_redirect', function( $login_redirect ) use ( $redirect_to ) {
+				$attributes  = $this->provider->getAttributes();
+				$redirect_to = filter_input( INPUT_POST, 'RelayState', FILTER_SANITIZE_URL );
+				if ( $redirect_to ) {
+					add_filter( 'login_redirect', function() use ( $redirect_to ) {
 						return $redirect_to;
 					}, 1 );
 				}
 			} else {
 				$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
+				$redirect_to = $redirect_to ? : $_SERVER['REQUEST_URI'];
 				$this->provider->login( $redirect_to );
 			}
 		} elseif ( is_a( $this->provider, 'SimpleSAML_Auth_Simple' ) ) {
