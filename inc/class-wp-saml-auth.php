@@ -167,6 +167,12 @@ class WP_SAML_Auth {
 	 * Log the user out of the SAML instance when they log out of WordPress
 	 */
 	public function action_wp_logout() {
+		if ( 'internal' === self::get_option( 'connection_type' ) ) {
+			$internal_config = self::get_option( 'internal_config' );
+			if ( empty( $internal_config['idp']['singleLogoutService']['url'] ) ) {
+				return;
+			}
+		}
 		$this->provider->logout( add_query_arg( 'loggedout', true, wp_login_url() ) );
 	}
 
@@ -223,9 +229,11 @@ class WP_SAML_Auth {
 				$attributes  = $this->provider->getAttributes();
 				$redirect_to = filter_input( INPUT_POST, 'RelayState', FILTER_SANITIZE_URL );
 				if ( $redirect_to && false === stripos( $redirect_to, 'wp-login.php' ) ) {
-					add_filter( 'login_redirect', function() use ( $redirect_to ) {
-						return $redirect_to;
-					}, 1 );
+					add_filter(
+						'login_redirect', function() use ( $redirect_to ) {
+							return $redirect_to;
+						}, 1
+					);
 				}
 			} else {
 				$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
