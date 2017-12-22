@@ -3,7 +3,7 @@
 **Tags:** authentication, SAML  
 **Requires at least:** 4.4  
 **Tested up to:** 4.9  
-**Stable tag:** 0.3.3  
+**Stable tag:** 0.3.4  
 **License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html  
 
@@ -14,6 +14,8 @@ SAML authentication for WordPress.
 [![Travis CI](https://travis-ci.org/pantheon-systems/wp-saml-auth.svg?branch=master)](https://travis-ci.org/pantheon-systems/wp-saml-auth) [![CircleCI](https://circleci.com/gh/pantheon-systems/wp-saml-auth/tree/master.svg?style=svg)](https://circleci.com/gh/pantheon-systems/wp-saml-auth/tree/master)
 
 SAML authentication for WordPress, using the bundled OneLogin SAML library or optionally installed [SimpleSAMLphp](https://simplesamlphp.org/). OneLogin provides a SAML authentication bridge; SimpleSAMLphp provides SAML plus a variety of other authentication mechanisms. This plugin acts as a bridge between WordPress and the authentication library.
+
+If your organization uses Google Apps, [integrating Google Apps with WP SAML Auth](https://pantheon.io/docs/wordpress-google-sso/) takes just a few steps.
 
 The standard user flow looks like this:
 
@@ -250,6 +252,9 @@ Note: the declaration does need to be at the top of `_include.php`, to ensure Wo
 There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Native PHP Sessions active, SimpleSAMLphp and WP SAML Auth will be able to communicate to one another on a multi web node environment.
 
 ## Changelog ##
+
+### 0.3.4 (December 22, 2017) ###
+* Permits `internal` connection type to be used without signout URL, for integration with Google Apps [[#106](https://github.com/pantheon-systems/wp-saml-auth/pull/106)].
 
 ### 0.3.3 (November 28, 2017) ###
 * Forwards 'redirect_to' parameter to SAML Authentication to enable deep links [[#103](https://github.com/pantheon-systems/wp-saml-auth/pull/103)].
