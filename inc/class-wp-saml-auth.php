@@ -228,7 +228,7 @@ class WP_SAML_Auth {
 				}
 				$attributes  = $this->provider->getAttributes();
 				$redirect_to = filter_input( INPUT_POST, 'RelayState', FILTER_SANITIZE_URL );
-				if ( $redirect_to && false === stripos( $redirect_to, parse_url(wp_login_url(), PHP_URL_PATH) ) ) {
+				if ( $redirect_to && false === stripos( $redirect_to, parse_url( wp_login_url(), PHP_URL_PATH ) ) ) {
 					add_filter(
 						'login_redirect', function() use ( $redirect_to ) {
 							return $redirect_to;
