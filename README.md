@@ -3,7 +3,7 @@
 **Tags:** authentication, SAML  
 **Requires at least:** 4.4  
 **Tested up to:** 4.9  
-**Stable tag:** 0.3.5  
+**Stable tag:** 0.3.6  
 **License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html  
 
@@ -252,6 +252,9 @@ Note: the declaration does need to be at the top of `_include.php`, to ensure Wo
 There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Native PHP Sessions active, SimpleSAMLphp and WP SAML Auth will be able to communicate to one another on a multi web node environment.
 
 ## Changelog ##
+
+### 0.3.6 (February 7, 2018) ###
+* Prevents WordPress from dropping authentication cookie when user is redirected to login from `/wp-admin/` URLs [[#112](https://github.com/pantheon-systems/wp-saml-auth/pull/112)].
 
 ### 0.3.5 (January 19, 2018) ###
 * Substitutes `wp-login.php` string with `parse_url( wp_login_url(), PHP_URL_PATH )` for compatibility with plugins and functions that alter the standard login url [[#109](https://github.com/pantheon-systems/wp-saml-auth/pull/109)].
