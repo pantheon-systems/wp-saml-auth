@@ -243,7 +243,9 @@ class WP_SAML_Auth {
 		} elseif ( is_a( $this->provider, 'SimpleSAML_Auth_Simple' ) ) {
 			$this->provider->requireAuth(
 				array(
-					'ReturnTo' => $_SERVER['REQUEST_URI'],
+					// Prevent WordPress from dropping the login cookie
+					// when REQUEST_URI is /wp-admin/.
+					'ReturnTo' => str_replace( '&reauth=1', '', $_SERVER['REQUEST_URI'] ),
 				)
 			);
 			$attributes = $this->provider->getAttributes();
