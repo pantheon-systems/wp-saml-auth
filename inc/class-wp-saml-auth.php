@@ -244,7 +244,7 @@ class WP_SAML_Auth {
 			$this->provider->requireAuth(
 				array(
 					// Prevent WordPress from dropping the login cookie
-					// when REQUEST_URI is /wp-admin/
+					// when REQUEST_URI is /wp-admin/.
 					'ReturnTo' => str_replace( '&reauth=1', '', $_SERVER['REQUEST_URI'] ),
 				)
 			);
