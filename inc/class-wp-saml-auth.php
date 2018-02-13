@@ -241,11 +241,19 @@ class WP_SAML_Auth {
 				$this->provider->login( $redirect_to );
 			}
 		} elseif ( is_a( $this->provider, 'SimpleSAML_Auth_Simple' ) ) {
+			$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
+			if ( $redirect_to ) {
+				$redirect_to = add_query_arg( 'redirect_to', $redirect_to, wp_login_url() );
+			} else {
+				$redirect_to = wp_login_url();
+				// Only persist redirect_to when it's not wp-login.php.
+				if ( false === stripos( $redirect_to, $_SERVER['REQUEST_URI'] ) ) {
+					$redirect_to = add_query_arg( 'redirect_to', $_SERVER['REQUEST_URI'], $redirect_to );
+				}
+			}
 			$this->provider->requireAuth(
 				array(
-					// Prevent WordPress from dropping the login cookie
-					// when REQUEST_URI is /wp-admin/.
-					'ReturnTo' => str_replace( '&reauth=1', '', $_SERVER['REQUEST_URI'] ),
+					'ReturnTo' => $redirect_to,
 				)
 			);
 			$attributes = $this->provider->getAttributes();
