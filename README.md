@@ -3,7 +3,7 @@
 **Tags:** authentication, SAML  
 **Requires at least:** 4.4  
 **Tested up to:** 4.9  
-**Stable tag:** 0.3.7  
+**Stable tag:** 0.3.8  
 **License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html  
 
@@ -252,6 +252,9 @@ Note: the declaration does need to be at the top of `_include.php`, to ensure Wo
 There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Native PHP Sessions active, SimpleSAMLphp and WP SAML Auth will be able to communicate to one another on a multi web node environment.
 
 ## Changelog ##
+
+### 0.3.8 (February 26, 2018) ###
+* Redirects to `action=wp-saml-auth` when `redirect_to` is persisted, to ensure authentication is handled [[#115](https://github.com/pantheon-systems/wp-saml-auth/pull/115)].
 
 ### 0.3.7 (February 13, 2018) ###
 * Persists `redirect_to` value in a more accurate manner, as a follow up to the change in v0.3.6 [[#113](https://github.com/pantheon-systems/wp-saml-auth/pull/113)].

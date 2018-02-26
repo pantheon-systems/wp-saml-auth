@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: WP SAML Auth
- * Version: 0.3.7
+ * Version: 0.3.8
  * Description: SAML authentication for WordPress, using SimpleSAMLphp.
  * Author: Pantheon
  * Author URI: https://pantheon.io
@@ -154,7 +154,7 @@ function wpsa_filter_option( $value, $option_name ) {
 		 */
 		'default_role'           => get_option( 'default_role' ),
 	);
-	$value = isset( $defaults[ $option_name ] ) ? $defaults[ $option_name ] : $value;
+	$value    = isset( $defaults[ $option_name ] ) ? $defaults[ $option_name ] : $value;
 	return $value;
 }
 add_filter( 'wp_saml_auth_option', 'wpsa_filter_option', 0, 2 );

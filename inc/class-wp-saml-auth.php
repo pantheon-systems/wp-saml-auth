@@ -96,7 +96,7 @@ class WP_SAML_Auth {
 				return;
 			}
 			$this->provider = new SimpleSAML_Auth_Simple( self::get_option( 'auth_source' ) );
-		} // End if().
+		}
 		add_action( 'login_head', array( $this, 'action_login_head' ) );
 		add_action( 'login_message', array( $this, 'action_login_message' ) );
 		add_action( 'wp_logout', array( $this, 'action_wp_logout' ) );
@@ -243,7 +243,12 @@ class WP_SAML_Auth {
 		} elseif ( is_a( $this->provider, 'SimpleSAML_Auth_Simple' ) ) {
 			$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
 			if ( $redirect_to ) {
-				$redirect_to = add_query_arg( 'redirect_to', $redirect_to, wp_login_url() );
+				$redirect_to = add_query_arg(
+					array(
+						'redirect_to' => $redirect_to,
+						'action'      => 'wp-saml-auth',
+					), wp_login_url()
+				);
 			} else {
 				$redirect_to = wp_login_url();
 				// Only persist redirect_to when it's not wp-login.php.
