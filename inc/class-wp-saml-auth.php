@@ -25,6 +25,14 @@ class WP_SAML_Auth {
 	private $provider = null;
 
 	/**
+	 * Class name to instantiate for SimpleSAML Auth.
+	 * Replaced with namespaced version if available.
+	 *
+	 * @var string
+	 */
+	private $simplesamlphp_class = 'SimpleSAML_Auth_Simple';
+
+	/**
 	 * Get the controller instance
 	 *
 	 * @return object
@@ -84,18 +92,21 @@ class WP_SAML_Auth {
 			if ( file_exists( $simplesamlphp_path ) ) {
 				require_once $simplesamlphp_path;
 			}
-			if ( ! class_exists( 'SimpleSAML_Auth_Simple' ) ) {
+			if ( class_exists( 'SimpleSAML\Auth\Simple' ) ) {
+				$this->simplesamlphp_class = 'SimpleSAML\Auth\Simple';
+			}
+			if ( ! class_exists( $this->simplesamlphp_class ) ) {
 				add_action(
 					'admin_notices', function() {
 						if ( current_user_can( 'manage_options' ) ) {
 							// Translators: Links to the WP SAML Auth plugin.
-							echo '<div class="message error"><p>' . wp_kses_post( sprintf( __( "WP SAML Auth wasn't able to find the <code>SimpleSAML_Auth_Simple</code> class. Please check the <code>simplesamlphp_autoload</code> configuration option, or <a href='%s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ), 'https://wordpress.org/plugins/wp-saml-auth/' ) ) . '</p></div>';
+							echo '<div class="message error"><p>' . wp_kses_post( sprintf( __( "WP SAML Auth wasn't able to find the <code>%s</code> class. Please check the <code>simplesamlphp_autoload</code> configuration option, or <a href='%s'>visit the plugin page</a> for more information.", $this->simplesamlphp_class, 'wp-saml-auth' ), 'https://wordpress.org/plugins/wp-saml-auth/' ) ) . '</p></div>';
 						}
 					}
 				);
 				return;
 			}
-			$this->provider = new SimpleSAML_Auth_Simple( self::get_option( 'auth_source' ) );
+			$this->provider = new $this->simplesamlphp_class( self::get_option( 'auth_source' ) );
 		}
 		add_action( 'login_head', array( $this, 'action_login_head' ) );
 		add_action( 'login_message', array( $this, 'action_login_message' ) );
@@ -240,7 +251,7 @@ class WP_SAML_Auth {
 				$redirect_to = $redirect_to ? : $_SERVER['REQUEST_URI'];
 				$this->provider->login( $redirect_to );
 			}
-		} elseif ( is_a( $this->provider, 'SimpleSAML_Auth_Simple' ) ) {
+		} elseif ( is_a( $this->provider, $this->simplesamlphp_class ) ) {
 			$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
 			if ( $redirect_to ) {
 				$redirect_to = add_query_arg(
