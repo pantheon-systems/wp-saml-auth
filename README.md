@@ -255,6 +255,7 @@ There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Nati
 
 ### 0.3.9 (March 29, 2018) ###
 * Fixes PHP notice by using namespaced SimpleSAMLphp class if available [[#118](https://github.com/pantheon-systems/wp-saml-auth/pull/118)].
+* Updates `onelogin/php-saml` from `v2.12.0` to `v2.13.0`
 
 ### 0.3.8 (February 26, 2018) ###
 * Redirects to `action=wp-saml-auth` when `redirect_to` is persisted, to ensure authentication is handled [[#115](https://github.com/pantheon-systems/wp-saml-auth/pull/115)].
