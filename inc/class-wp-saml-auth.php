@@ -311,10 +311,11 @@ class WP_SAML_Auth {
 		/**
 		 * Runs before a user is created based off a SAML response.
 		 *
-		 * @param array $user_args Arguments passed to wp_insert_user().
-		 * @param array $attributes Attributes from the SAML response.
+		 * @param array        $user_args  Arguments passed to wp_insert_user().
+		 * @param array        $attributes Attributes from the SAML response.
+		 * @param WP_SAML_Auth $this       This instance of WP_SAML_Auth.
 		 */
-		$user_args = apply_filters( 'wp_saml_auth_insert_user', $user_args, $attributes );
+		$user_args = apply_filters( 'wp_saml_auth_insert_user', $user_args, $attributes, $this );
 		$user_id   = wp_insert_user( $user_args );
 		if ( is_wp_error( $user_id ) ) {
 			return $user_id;
