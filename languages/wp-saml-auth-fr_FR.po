@@ -1,0 +1,85 @@
+# Copyright (C) 2018 Pantheon
+# This file is distributed under the same license as the WP SAML Auth package.
+msgid ""
+msgstr ""
+"Project-Id-Version: WP SAML Auth 0.3.9\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/wp-saml-auth\n"
+"POT-Creation-Date: 2018-04-04 07:55:43+00:00\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2018-04-04 10:22+0200\n"
+"Language-Team: \n"
+"X-Generator: Poedit 2.0.6\n"
+"Last-Translator: \n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"Language: fr_FR\n"
+
+#. Translators: Links to the WP SAML Auth plugin.
+#: inc/class-wp-saml-auth.php:82
+msgid ""
+"WP SAML Auth wasn't able to find the <code>OneLogin_Saml2_Auth</code> class. "
+"Please verify your Composer autoloader, or <a href='%s'>visit the plugin "
+"page</a> for more information."
+msgstr ""
+"Le plugin <code>WP SAML Auth</code> n’a pas trouvé la class "
+"<code>OneLogin_Saml2_Auth</code>. Merci de vérifier l’<code>autoloader</"
+"code> dans votre configuration du <code>Composer</code>, ou <a "
+"href=‘%s’>allez sur la page du plugin</a> pour plus d’informations."
+
+#. Translators: Links to the WP SAML Auth plugin.
+#: inc/class-wp-saml-auth.php:103
+msgid ""
+"WP SAML Auth wasn't able to find the <code>%1$s</code> class. Please check "
+"the <code>simplesamlphp_autoload</code> configuration option, or <a "
+"href='%2$s'>visit the plugin page</a> for more information."
+msgstr ""
+"Le plugin <code>WP SAML Auth</code> n’a pas trouvé la classe <code>%1$s</"
+"code>. Merci de vérifier l’option de configuration "
+"<code>simplesamlphp_autoload</code>, ou <a href=‘%2$s’>allez sur la page du "
+"plugin</a> pour plus d’informations."
+
+#: inc/class-wp-saml-auth.php:152
+msgid "Use one-click authentication:"
+msgstr "Utilisez l’authentification unique:"
+
+#: inc/class-wp-saml-auth.php:153
+msgid "Sign In"
+msgstr "Connectez-vous"
+
+#: inc/class-wp-saml-auth.php:154
+msgid "Or, sign in with WordPress:"
+msgstr "Ou connectez-vous à votre compte WordPress:"
+
+#. Translators: Includes error reason from OneLogin.
+#: inc/class-wp-saml-auth.php:238
+msgid "User is not authenticated with SAML IdP. Reason: %s"
+msgstr ""
+"L’utilisateur n’est pas authentifié par le fournisseur d’identité (IdP) SAML "
+"en raison de : %s"
+
+#: inc/class-wp-saml-auth.php:277
+msgid "Invalid provider specified for SAML authentication"
+msgstr "Le fournisseur renseigné pour l’authentification SAML est invalide"
+
+#. Translators: Communicates how the user is fetched based on the SAML
+#. response.
+#: inc/class-wp-saml-auth.php:297
+msgid ""
+"\"%1$s\" attribute is expected, but missing, in SAML response. Attribute is "
+"used to fetch existing user by \"%2$s\". Please contact your administrator."
+msgstr ""
+"L’attribut « %1$s » est requis mais il est absent dans la réponse SAML. "
+"L’attribut est utilisé pour trouver l’utilisateur existant par « %2$s ». "
+"Merci de contacter l’administrateur du site."
+
+#: inc/class-wp-saml-auth.php:312
+msgid ""
+"No WordPress user exists for your account. Please contact your administrator."
+msgstr ""
+"Utilisateur WordPress introuvable pour votre compte. Merci de contacter "
+"l’administrateur du site."
+
+#. Description of the plugin/theme
+msgid "SAML authentication for WordPress, using SimpleSAMLphp."
+msgstr "Authentification SAML pour WordPress qui utilise SimpleSAMLphp."
