@@ -12,7 +12,7 @@ jobs:
         - v1-dep-{{ .Branch }}-
         - v1-dep-master-
     - run: |
-        sudo apt-get install -y libmcrypt
+        sudo apt-get install -y libmcrypt-dev
         sudo docker-php-ext-install mcrypt
     - run: echo $(openssl rand -hex 8) > /tmp/WORDPRESS_ADMIN_PASSWORD
     - run: |
