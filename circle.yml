@@ -14,6 +14,7 @@ jobs:
     - run: |
         sudo apt-get install -y libmcrypt-dev
         sudo docker-php-ext-install mcrypt
+    - run: echo -e "[Date]\ndate.timezone = UTC" | sudo tee /usr/local/etc/php/php.ini > /dev/null
     - run: echo $(openssl rand -hex 8) > /tmp/WORDPRESS_ADMIN_PASSWORD
     - run: |
         echo 'export PATH=/tmp/terminus/bin:$PATH' >> $BASH_ENV
