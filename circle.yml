@@ -7,10 +7,6 @@ jobs:
     - image: circleci/php:5.6
     steps:
     - checkout
-    - restore_cache:
-        keys:
-        - v1-dep-{{ .Branch }}-
-        - v1-dep-master-
     - run: |
         sudo apt-get install -y libmcrypt-dev
         sudo docker-php-ext-install mcrypt
@@ -44,11 +40,6 @@ jobs:
         git clone --branch master https://github.com/pantheon-systems/terminus.git /tmp/terminus
         cd /tmp/terminus && composer install
         terminus auth:login --machine-token=$TERMINUS_TOKEN
-    - save_cache:
-        key: v1-dep-{{ .Branch }}-{{ epoch }}
-        paths:
-        - ~/.composer/cache
-        - ./node_modules
     - run: ./bin/behat-prepare.sh
     - run: ./bin/behat-test.sh --strict
     - run: ./bin/behat-cleanup.sh
