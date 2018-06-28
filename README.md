@@ -254,7 +254,7 @@ There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Nati
 ## Changelog ##
 
 ### 0.3.10 (June 28, 2018) ###
-* Ensures `redirect_to` URLs don't lose query parameters by encoding with `rawurlencode()` [#124](https://github.com/pantheon-systems/wp-saml-auth/pull/124).
+* Ensures `redirect_to` URLs don't lose query parameters by encoding with `rawurlencode()` [[#124](https://github.com/pantheon-systems/wp-saml-auth/pull/124)].
 * Adds French localization.
 
 ### 0.3.9 (March 29, 2018) ###
