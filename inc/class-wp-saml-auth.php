@@ -256,7 +256,7 @@ class WP_SAML_Auth {
 			if ( $redirect_to ) {
 				$redirect_to = add_query_arg(
 					array(
-						'redirect_to' => $redirect_to,
+						'redirect_to' => rawurlencode( $redirect_to ),
 						'action'      => 'wp-saml-auth',
 					), wp_login_url()
 				);
