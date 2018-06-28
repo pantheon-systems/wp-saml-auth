@@ -135,7 +135,7 @@ class WP_SAML_Auth {
 		display: none;
 	}
 </style>
-<?php
+		<?php
 	}
 
 	/**
