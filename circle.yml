@@ -4,12 +4,14 @@ jobs:
     working_directory: ~/pantheon-systems/wp-saml-auth
     parallelism: 1
     docker:
-    - image: circleci/php:5.6
+    - image: circleci/php:7.2
     steps:
     - checkout
     - run: |
         sudo apt-get install -y libmcrypt-dev
-        sudo docker-php-ext-install mcrypt
+        sudo pecl config-set php_ini "${PHP_INI_DIR}/php.ini"
+        sudo yes '' | sudo pecl install channel://pecl.php.net/mcrypt-1.0.1
+        sudo docker-php-ext-enable mcrypt
     - run: echo -e "[Date]\ndate.timezone = UTC" | sudo tee /usr/local/etc/php/php.ini > /dev/null
     - run: echo $(openssl rand -hex 8) > /tmp/WORDPRESS_ADMIN_PASSWORD
     - run: |
