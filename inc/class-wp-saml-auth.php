@@ -76,7 +76,8 @@ class WP_SAML_Auth {
 			}
 			if ( ! class_exists( 'OneLogin_Saml2_Auth' ) ) {
 				add_action(
-					'admin_notices', function() {
+					'admin_notices',
+					function() {
 						if ( current_user_can( 'manage_options' ) ) {
 							// Translators: Links to the WP SAML Auth plugin.
 							echo '<div class="message error"><p>' . wp_kses_post( sprintf( __( "WP SAML Auth wasn't able to find the <code>OneLogin_Saml2_Auth</code> class. Please verify your Composer autoloader, or <a href='%s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ), 'https://wordpress.org/plugins/wp-saml-auth/' ) ) . '</p></div>';
@@ -97,7 +98,8 @@ class WP_SAML_Auth {
 			}
 			if ( ! class_exists( $this->simplesamlphp_class ) ) {
 				add_action(
-					'admin_notices', function() {
+					'admin_notices',
+					function() {
 						if ( current_user_can( 'manage_options' ) ) {
 							// Translators: Links to the WP SAML Auth plugin.
 							echo '<div class="message error"><p>' . wp_kses_post( sprintf( __( "WP SAML Auth wasn't able to find the <code>%1\$s</code> class. Please check the <code>simplesamlphp_autoload</code> configuration option, or <a href='%2\$s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ), $this->simplesamlphp_class, 'https://wordpress.org/plugins/wp-saml-auth/' ) ) . '</p></div>';
@@ -241,9 +243,11 @@ class WP_SAML_Auth {
 				$redirect_to = filter_input( INPUT_POST, 'RelayState', FILTER_SANITIZE_URL );
 				if ( $redirect_to && false === stripos( $redirect_to, parse_url( wp_login_url(), PHP_URL_PATH ) ) ) {
 					add_filter(
-						'login_redirect', function() use ( $redirect_to ) {
+						'login_redirect',
+						function() use ( $redirect_to ) {
 							return $redirect_to;
-						}, 1
+						},
+						1
 					);
 				}
 			} else {
@@ -258,7 +262,8 @@ class WP_SAML_Auth {
 					array(
 						'redirect_to' => rawurlencode( $redirect_to ),
 						'action'      => 'wp-saml-auth',
-					), wp_login_url()
+					),
+					wp_login_url()
 				);
 			} else {
 				$redirect_to = wp_login_url();
