@@ -236,6 +236,26 @@ Behat requires a Pantheon site. Once you've created the site, you'll need [insta
 
 ## Frequently Asked Questions ##
 
+### Can I update an existing WordPress user's data when they log back in? ###
+
+If you'd like to make sure the user's display name, first name, and last name are updated in WordPress when they log back in, you can use the following code snippet:
+
+    /**
+     * Update user attributes after a user has logged in via SAML.
+     */
+    add_action( 'wp_saml_auth_existing_user_authenticated', function( $existing_user, $attributes ) {
+        $user_args = array(
+            'ID' => $existing_user->ID,
+        );
+        foreach ( array( 'display_name', 'first_name', 'last_name' ) as $type ) {
+            $attribute          = \WP_SAML_Auth::get_option( "{$type}_attribute" );
+            $user_args[ $type ] = ! empty( $attributes[ $attribute ][0] ) ? $attributes[ $attribute ][0] : '';
+        }
+        wp_update_user( $user_args );
+    }, 10, 2 );
+
+The `wp_saml_auth_existing_user_authenticated` action fires after the user has successfully authenticated with the SAML IdP. The code snippet then uses a pattern similar to WP SAML Auth to fetch display name, first name, and last name from the SAML response. Lastly, the code snippet updates the existing WordPress user object.
+
 ### How do I use SimpleSAMLphp and WP SAML Auth on a multi web node environment? ###
 
 Because SimpleSAMLphp uses PHP sessions to manage user authentication, it will work unreliably or not at all on a server configuration with multiple web nodes. This is because PHP's default session handler uses the filesystem, and each web node has a different filesystem. Fortunately, there's a way around this.
