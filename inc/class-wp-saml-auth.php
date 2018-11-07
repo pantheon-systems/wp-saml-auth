@@ -74,20 +74,20 @@ class WP_SAML_Auth {
 			if ( file_exists( WP_SAML_AUTH_AUTOLOADER ) ) {
 				require_once WP_SAML_AUTH_AUTOLOADER;
 			}
-			if ( ! class_exists( 'OneLogin_Saml2_Auth' ) ) {
+			if ( ! class_exists( 'OneLogin\Saml2\Auth' ) ) {
 				add_action(
 					'admin_notices',
 					function() {
 						if ( current_user_can( 'manage_options' ) ) {
 							// Translators: Links to the WP SAML Auth plugin.
-							echo '<div class="message error"><p>' . wp_kses_post( sprintf( __( "WP SAML Auth wasn't able to find the <code>OneLogin_Saml2_Auth</code> class. Please verify your Composer autoloader, or <a href='%s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ), 'https://wordpress.org/plugins/wp-saml-auth/' ) ) . '</p></div>';
+							echo '<div class="message error"><p>' . wp_kses_post( sprintf( __( "WP SAML Auth wasn't able to find the <code>OneLogin\Saml2\Auth</code> class. Please verify your Composer autoloader, or <a href='%s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ), 'https://wordpress.org/plugins/wp-saml-auth/' ) ) . '</p></div>';
 						}
 					}
 				);
 				return;
 			}
 			$auth_config    = self::get_option( 'internal_config' );
-			$this->provider = new OneLogin_Saml2_Auth( $auth_config );
+			$this->provider = new OneLogin\Saml2\Auth( $auth_config );
 		} else {
 			$simplesamlphp_path = self::get_option( 'simplesamlphp_autoload' );
 			if ( file_exists( $simplesamlphp_path ) ) {
@@ -232,7 +232,7 @@ class WP_SAML_Auth {
 	 */
 	public function do_saml_authentication() {
 
-		if ( is_a( $this->provider, 'OneLogin_Saml2_Auth' ) ) {
+		if ( is_a( $this->provider, 'OneLogin\Saml2\Auth' ) ) {
 			if ( ! empty( $_POST['SAMLResponse'] ) ) {
 				$this->provider->processResponse();
 				if ( ! $this->provider->isAuthenticated() ) {
