@@ -65,7 +65,7 @@ Once you have access to a SAML identity provider, you can configure this plugin 
                 'sp'           => array(
                     'entityId' => 'urn:' . parse_url( home_url(), PHP_URL_HOST ),
                     'assertionConsumerService' => array(
-                        'url'  => home_url('/wp-login.php'),
+                        'url'  => wp_login_url(),
                         'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST',
                     ),
                 ),
