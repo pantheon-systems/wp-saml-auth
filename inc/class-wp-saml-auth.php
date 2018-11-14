@@ -283,6 +283,13 @@ class WP_SAML_Auth {
 		}
 
 		/**
+		 * Allows to modify attributes before the SAML authentication.
+		 *
+		 * @param array $attributes All attributes received from the SAML response.
+		 */
+		$attributes = apply_filters( 'wp_saml_auth_attributes', $attributes );
+
+		/**
 		 * Runs before the SAML authentication dance proceeds
 		 *
 		 * Can be used to short-circuit the authentication process.
