@@ -2,9 +2,9 @@
 # This file is distributed under the same license as the WP SAML Auth package.
 msgid ""
 msgstr ""
-"Project-Id-Version: WP SAML Auth 0.5.0\n"
+"Project-Id-Version: WP SAML Auth 0.5.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/wp-saml-auth\n"
-"POT-Creation-Date: 2018-11-07 19:21:09+00:00\n"
+"POT-Creation-Date: 2018-11-15 22:43:09+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -61,13 +61,13 @@ msgstr ""
 msgid "Invalid provider specified for SAML authentication"
 msgstr ""
 
-#: inc/class-wp-saml-auth.php:299
+#: inc/class-wp-saml-auth.php:307
 msgid ""
 "No attributes were present in SAML response. Attributes are used to create "
 "and fetch users. Please contact your administrator"
 msgstr ""
 
-#: inc/class-wp-saml-auth.php:306
+#: inc/class-wp-saml-auth.php:314
 #. Translators: Communicates how the user is fetched based on the SAML
 #. response.
 msgid ""
@@ -75,7 +75,7 @@ msgid ""
 "used to fetch existing user by \"%2$s\". Please contact your administrator."
 msgstr ""
 
-#: inc/class-wp-saml-auth.php:321
+#: inc/class-wp-saml-auth.php:329
 msgid ""
 "No WordPress user exists for your account. Please contact your "
 "administrator."
