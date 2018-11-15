@@ -285,9 +285,10 @@ class WP_SAML_Auth {
 		/**
 		 * Allows to modify attributes before the SAML authentication.
 		 *
-		 * @param array $attributes All attributes received from the SAML response.
+		 * @param array  $attributes All attributes received from the SAML response.
+		 * @param object $provider   Provider instance currently in use.
 		 */
-		$attributes = apply_filters( 'wp_saml_auth_attributes', $attributes );
+		$attributes = apply_filters( 'wp_saml_auth_attributes', $attributes, $this->provider );
 
 		/**
 		 * Runs before the SAML authentication dance proceeds
