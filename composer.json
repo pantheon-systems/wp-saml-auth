@@ -2,7 +2,7 @@
     "name": "pantheon-systems/wp-saml-auth",
     "description": "SAML authentication for WordPress, using SimpleSAMLphp.",
     "type": "wordpress-plugin",
-    "license": "GPLv2 or later",
+    "license": "GPL-2.0-or-later",
     "authors": [
         {
             "name": "Pantheon",
