@@ -97,7 +97,7 @@ class SimpleSAML_Auth_Simple {
 	 *                                   or an array with parameters for the logout. If this parameter is
 	 *                                   NULL, we will return to the current page.
 	 */
-	public function logout( $params = NULL ) {
+	public function logout( $params = null ) {
 		$GLOBALS['wp_saml_auth_current_user'] = false;
 	}
 
