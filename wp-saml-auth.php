@@ -159,6 +159,59 @@ function wpsa_filter_option( $value, $option_name ) {
 }
 add_filter( 'wp_saml_auth_option', 'wpsa_filter_option', 0, 2 );
 
+/**
+ * Options for WP SAML Auth loaded from database.
+ *
+ * @param mixed  $value       Configuration value.
+ * @param string $option_name Configuration option name.
+ */
+function wpsa_wp_options_filter( $value, $option_name ) {
+	$defaults = array(
+		'connection_type'        => get_option( 'wp-saml-auth_general_connection_type' ),
+		'simplesamlphp_autoload' => dirname( __FILE__ ) . '/simplesamlphp/lib/_autoload.php',
+		'auth_source'            => 'default-sp',
+		'internal_config'        => array(
+			'strict'  => true,
+			'debug'   => defined( 'WP_DEBUG' ) && WP_DEBUG ? true : false,
+			'baseurl' => get_option( 'wp-saml-auth_general_baseurl' ),
+			'sp'      => array(
+				'entityId'                 => get_option( 'wp-saml-auth_sp_entityId' ),
+				'assertionConsumerService' => array(
+					'url'     => get_option( 'wp-saml-auth_sp_assertionConsumerService_url' ),
+					'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST',
+				),
+			),
+			'idp'     => array(
+				'entityId'                 => get_option( 'wp-saml-auth_idp_entityId' ),
+				'singleSignOnService'      => array(
+					'url'     => get_option( 'wp-saml-auth_idp_singleSignOnService_url' ),
+					'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
+				),
+				'singleLogoutService'      => array(
+					'url'     => get_option( 'wp-saml-auth_idp_singleLogoutService_url' ),
+					'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
+				),
+				'certFingerprint'          => get_option( 'wp-saml-auth_idp_certFingerprint' ),
+				'certFingerprintAlgorithm' => get_option( 'wp-saml-auth_idp_certFingerprintAlgorithm' ),
+			),
+		),
+		'auto_provision'         => get_option( 'wp-saml-auth_general_auto_provision' ),
+		'permit_wp_login'        => true,
+		'get_user_by'            => 'email',
+		'user_login_attribute'   => get_option( 'wp-saml-auth_attributes_user_login_attribute' , 'uid' ),
+		'user_email_attribute'   => get_option( 'wp-saml-auth_attributes_user_email_attribute' , 'mail' ),
+		'display_name_attribute' => get_option( 'wp-saml-auth_attributes_display_name_attribute' , 'display_name' ),
+		'first_name_attribute'   => get_option( 'wp-saml-auth_attributes_first_name_attribute' , 'first_name' ),
+		'last_name_attribute'    => get_option( 'wp-saml-auth_attributes_last_name_attribute' , 'last_name' ),
+		'default_role'           => get_option( 'default_role' ),
+	);
+	$value = isset( $defaults[ $option_name ] ) ? $defaults[ $option_name ] : $value;
+	return $value;
+}
+if( get_option( 'wp-saml-auth_general_connection_type' ) == 'internal' ) {
+	add_filter( 'wp_saml_auth_option', 'wpsa_wp_options_filter', 10, 2 );
+}
+
 if ( ! defined( 'WP_SAML_AUTH_AUTOLOADER' ) ) {
 	define( 'WP_SAML_AUTH_AUTOLOADER', __DIR__ . '/vendor/autoload.php' );
 }
@@ -174,4 +227,13 @@ WP_SAML_Auth::get_instance();
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	require_once dirname( __FILE__ ) . '/inc/class-wp-saml-auth-cli.php';
 	WP_CLI::add_command( 'saml-auth', 'WP_SAML_Auth_CLI' );
+}
+
+/**
+ * Initialize the WP SAML Auth plugin settings page.
+ *
+ */
+if( is_admin() ) {
+	require_once dirname( __FILE__ ) . '/inc/class-wp-saml-auth-settings.php';
+	add_action( 'init', array( 'WP_SAML_Auth_Settings', 'init' ));
 }
