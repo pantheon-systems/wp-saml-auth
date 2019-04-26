@@ -117,7 +117,7 @@ class WP_SAML_Auth_Settings {
 	/**
 	 * Add each field to the HTML form
 	 *
-	 * @param array $arguments field data passed from add_settings_field()
+	 * @param array $arguments field data passed from add_settings_field().
 	 */
 	public static function field_callback( $arguments ) {
 		$uid   = self::$menu_slug . '[' . $arguments['uid'] . ']';
@@ -391,60 +391,60 @@ class WP_SAML_Auth_Settings {
 				'description' => 'URL of the IdP where the SP will send the SLO Request',
 			),
 			array(
-				'section'     => 'idp',
-				'uid'         => 'certFingerprint',
-				'label'       => 'Certificate Fingerprint',
-				'type'        => 'text',
-				'required'    => true,
+				'section'  => 'idp',
+				'uid'      => 'certFingerprint',
+				'label'    => 'Certificate Fingerprint',
+				'type'     => 'text',
+				'required' => true,
 			),
 			array(
-				'section'     => 'idp',
-				'uid'         => 'certFingerprintAlgorithm',
-				'label'       => 'Certificate Fingerprint Algorithm',
-				'type'        => 'select',
-				'choices'     => array(
+				'section' => 'idp',
+				'uid'     => 'certFingerprintAlgorithm',
+				'label'   => 'Certificate Fingerprint Algorithm',
+				'type'    => 'select',
+				'choices' => array(
 					'sha1'   => 'sha1',
 					'sha256' => 'sha256',
 					'sha384' => 'sha384',
 					'sha512' => 'sha512',
 				),
-				'default'     => 'sha1',
+				'default' => 'sha1',
 			),
 			// attributes section.
 			array(
-				'section'     => 'attributes',
-				'uid'         => 'user_login_attribute',
-				'label'       => 'user_login',
-				'type'        => 'text',
-				'default'     => 'uid',
+				'section' => 'attributes',
+				'uid'     => 'user_login_attribute',
+				'label'   => 'user_login',
+				'type'    => 'text',
+				'default' => 'uid',
 			),
 			array(
-				'section'     => 'attributes',
-				'uid'         => 'user_email_attribute',
-				'label'       => 'user_email',
-				'type'        => 'text',
-				'default'     => 'email',
+				'section' => 'attributes',
+				'uid'     => 'user_email_attribute',
+				'label'   => 'user_email',
+				'type'    => 'text',
+				'default' => 'email',
 			),
 			array(
-				'section'     => 'attributes',
-				'uid'         => 'display_name_attribute',
-				'label'       => 'display_name',
-				'type'        => 'text',
-				'default'     => 'display_name',
+				'section' => 'attributes',
+				'uid'     => 'display_name_attribute',
+				'label'   => 'display_name',
+				'type'    => 'text',
+				'default' => 'display_name',
 			),
 			array(
-				'section'     => 'attributes',
-				'uid'         => 'first_name_attribute',
-				'label'       => 'first_name',
-				'type'        => 'text',
-				'default'     => 'first_name',
+				'section' => 'attributes',
+				'uid'     => 'first_name_attribute',
+				'label'   => 'first_name',
+				'type'    => 'text',
+				'default' => 'first_name',
 			),
 			array(
-				'section'     => 'attributes',
-				'uid'         => 'last_name_attribute',
-				'label'       => 'last_name',
-				'type'        => 'text',
-				'default'     => 'last_name',
+				'section' => 'attributes',
+				'uid'     => 'last_name_attribute',
+				'label'   => 'last_name',
+				'type'    => 'text',
+				'default' => 'last_name',
 			),
 		);
 	}
