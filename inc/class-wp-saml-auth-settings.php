@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Class WP_SAML_Auth_Settings
  *
@@ -10,106 +11,99 @@
  */
 class WP_SAML_Auth_Settings {
 
+	private static $capability = 'manage_options';
+	private static $fields;
 	private static $initiated = false;
+	private static $instance;
+	private static $menu_slug = 'wp-saml-auth-settings';
 	private static $menu_title = 'SAML Authentication';
-	private static $option_prefix = "wp-saml-auth";
+	private static $option_group = 'wp-saml-auth-settings-group';
 	private static $page_title = 'SAML Authentication Settings';
-	private static $slug = 'wp-saml-auth-settings';
-	private $options = array();
+	private static $sections;
 
-	public static function init() {
-		if ( ! self::$initiated ) {
-			self::init_hooks();
+	public static function get_instance() {
+		if ( !isset( self::$instance ) ) {
+			self::$instance = new WP_SAML_Auth_Settings;
+
+			add_action( 'admin_init', array( self::$instance, 'admin_init' ) );
+			add_action( 'admin_menu', array( self::$instance, 'admin_menu' ) );
+	
+			// add link to Settings on plugins page
+			add_filter(
+				'plugin_action_links_'.plugin_basename( dirname( plugin_dir_path( __FILE__ ) ) ).'/wp-saml-auth.php',
+				array( self::$instance, 'plugin_settings_link' )
+			);
 		}
-	}
-
-	public static function init_hooks() {
-		self::$initiated = true;
-
-		add_action( 'admin_init', array( __CLASS__, 'admin_init' ) );
-		add_action( 'admin_menu', array( __CLASS__, 'admin_menu' ) );
-
-		add_filter( 
-			'plugin_action_links_'.plugin_basename( dirname( plugin_dir_path( __FILE__ ) ) ).'/wp-saml-auth.php', 
-			array( __CLASS__, 'plugin_settings_link' ) 
-		);
+		return self::$instance;
 	}
 
 	public static function admin_init() {
-		add_settings_section( 'general', '', null, self::$slug );
-		add_settings_section( 'sp', 'Service Provder Settings', null, self::$slug );
-		add_settings_section( 'idp', 'Identity Provider Settings', null, self::$slug );
-		add_settings_section( 'attributes', 'Attribute Mappings', null, self::$slug );
-		if( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			add_settings_section( 'debug', 'Debug', array( __CLASS__, 'debug' ), self::$slug );
-		}
+		add_option( self::$menu_slug );
+		register_setting( 
+			self::$option_group, 
+			self::$menu_slug, 
+			array( 'sanitize_callback' => array( self::$instance, 'sanitize_callback' ) ) 
+		);
+		self::setup_sections();
 		self::setup_fields();
 	}
 
-	public static function debug() {
-		printf( 'auto_provision: '.get_option( 'wp-saml-auth_general_auto_provision' ).'<br>' );
-		if( get_option( 'wp-saml-auth_general_auto_provision' ) == null ) {
-			printf( 'wp-saml-auth_general_auto_provision == null'.'<br>' );
-		}
-		if( empty( get_option( 'wp-saml-auth_general_auto_provision' ) ) ) {
-			printf( 'wp-saml-auth_general_auto_provision is empty'.'<br>' );
-		}		
-	}
-
 	public static function admin_menu() {
-		add_options_page( self::$page_title, self::$menu_title, 'manage_options', self::$slug, 
-			array( __CLASS__, 'plugin_settings_page_content' ) );
+		add_options_page( 
+			self::$page_title, 
+			self::$menu_title, 
+			self::$capability, 
+			self::$menu_slug, 
+			array( self::$instance, 'render_page_content' ) 
+		);
 	}
 
 	public static function field_callback( $arguments ) {
-		$uid = self::get_uid($arguments);
-		$value = get_option( $uid );
-		if( ! $value && isset( $arguments['default'] ) ) {
-			$value = $arguments['default'];
-		}
-	
-		switch( $arguments['type'] ) {
+		$uid = self::$menu_slug . '[' . $arguments['uid'] . ']';
+		$value = $arguments['value'];
+		switch ( $arguments['type'] ) {
 			case 'checkbox':
-				printf( '<input id="%1$s" name="%1$s" type="checkbox" value="1" %2$s>', $uid, checked( $value, 1, false ) );
+				printf( '<input id="%1$s" name="%1$s" type="checkbox"%2$s>', $uid, checked( $value, "true", false ) );
 				break;
 			case 'select':
-				if( ! empty ( $arguments['options'] ) && is_array( $arguments['options'] ) ) {
-					$options_markup = '';
-					foreach( $arguments['options'] as $key => $label ) {
-						$options_markup .= sprintf( '<option value="%s" %s>%s</option>', $key,
-							selected( $value, $key, false ), $label );
+				if ( !empty ( $arguments['choices'] ) && is_array( $arguments['choices'] ) ) {
+					$markup = '';
+					foreach( $arguments['choices'] as $key => $label ) {
+						$markup .= '<option value="' . $key . '" ' . selected( $value, $key, false ) . '>' . $label .
+									'</option>';
 					}
-					printf( '<select name="%1$s" id="%1$s">%2$s</select>', $uid, $options_markup );
+					printf( '<select name="%1$s" id="%1$s">%2$s</select>', $uid, $markup );
 				}
 				break;
 			case 'text':
+			case 'url':
 				printf(
 					'<input name="%1$s" type="text" id="%1$s" placeholder="%2$s" value="%3$s" class="regular-text" />',
 					$uid, $arguments['placeholder'], $value );
 				break;
 		}
 	
-		if( $helper = $arguments['helper'] ){
+		if ( $helper = $arguments['helper'] ) {
 			printf( '<span class="helper"> %s</span>', $helper );
 		}
 	
-		if( $supplimental = $arguments['supplemental'] ){
-			printf( '<p class="description">%s</p>', $supplimental );
+		if ( $description = $arguments['description'] ) {
+			printf( '<p class="description">%s</p>', $description );
 		}
 	}
 
-	private static function get_uid( $arguments ) {
-		return self::$option_prefix . "_" . $arguments['section'] . "_" . $arguments['uid'];
+	public static function optionName() {
+		return self::$menu_slug;
 	}
 
-	public static function plugin_settings_page_content() {
+	public static function render_page_content() {
 		?>
 		<div class="wrap">
 			<h2><?php echo self::$page_title; ?></h2>
 			<form method="post" action="options.php">
 				<?php
-					settings_fields( self::$slug );
-					do_settings_sections( self::$slug );
+					settings_fields( self::$option_group );
+					do_settings_sections( self::$menu_slug );
 					submit_button();
 				?>
 			</form>
@@ -117,132 +111,212 @@ class WP_SAML_Auth_Settings {
 	}
 
 	public static function plugin_settings_link( $links ) {
-		$settings_link = '<a href="'.admin_url( 'options-general.php?page='.self::$slug ).'">'.
-			__('Settings', 'wp-saml-auth').'</a>';
-		array_push( $links, $settings_link );
+		$a = '<a href="' . admin_url( 'options-general.php?page=' . self::$menu_slug ) . '">Settings</a>';
+		array_push( $links, $a );
 		return $links;
 	}
 
+	public static function sanitize_callback( $input ) {
+		if ( !empty( $input ) && is_array( $input ) ) {
+			foreach ( self::$fields as $field ) {
+				$section = self::$sections[$field['section']];
+				$uid = $field['uid'];
+				$value = $input[$uid];
+
+				// checkboxes
+				if ( $field['type'] == 'checkbox' ) {
+					$input[$uid] = isset( $value ) ? "true" : "false";
+				}
+
+				// required fields
+				if ( isset($field['required']) && $field['required'] ) {
+					if ( empty( $value ) ) {
+						$input['connection_type'] = null;
+						add_settings_error(
+							self::$menu_slug,
+							$uid,
+							trim( $section . ' ' . $field['label'] . ' is a required field.' )
+						);
+					}
+				}
+
+				// text fields
+				if ( $field['type'] == 'text' ) {
+					if ( !empty( $value ) ) {
+						$input[$uid] = sanitize_text_field( $value );
+					}
+				}
+
+				// url fields
+				if ( $field['type'] == 'url' ) {
+					if ( !empty( $value ) ) {
+						if ( filter_var( $value, FILTER_VALIDATE_URL ) ) {
+							$input[$uid] = esc_url_raw( $value, array ( 'http', 'https') );
+						} else {
+							$input['connection_type'] = null;
+							$input[$uid] = null;
+							add_settings_error(
+								self::$menu_slug,
+								$uid,
+								trim( $section . ' ' . $field['label'] . ' is not a valid URL.' )
+							);
+						}
+					}
+				}
+			}
+
+			return $input;
+		}
+	}
+
 	public static function setup_fields() {
-		$fields = array(
+		self::init_fields();
+		// load values from DB
+		$options = get_option( self::$menu_slug );
+		foreach( self::$fields as $field ) {
+			// set field value to value from $options or default
+			if ( !empty ( $options ) && is_array( $options ) && array_key_exists( $field['uid'], $options ) ) {
+				$field['value'] = $options[$field['uid']];
+			} else {
+				$field['value'] = isset( $field['default'] ) ? $field['default'] : null;
+			}
+			add_settings_field(
+				$field['uid'],
+				$field['label'],
+				array( self::$instance, 'field_callback' ),
+				self::$menu_slug,
+				$field['section'],
+				$field
+			);
+		}
+	}
+
+	public static function setup_sections() {
+		self::$sections = array(
+			# id => title
+			'general' => '',
+			'sp' => 'Service Provder Settings',
+			'idp' => 'Identity Provider Settings',
+			'attributes' => 'Attribute Mappings'
+		);
+		foreach( self::$sections as $id => $title) {
+			add_settings_section( $id, $title, null, self::$menu_slug );	
+		}
+	}
+
+	public static function init_fields() {
+		self::$fields = array(
 			// general
-			array(
-				'section' => 'general',
-				'uid' => 'connection_type',
-				'label' => 'Connection Type',
-				'type' => 'select',
-				'options' => array(
-					'internal' => 'internal',
-					'simplesamlphp' => 'simplesamlphp'
-				),
-				'placeholder' => '',
-				'helper' => '',
-				'supplemental' => 'internal is the only option supported by this settings page',
-				'default' => 'internal'
-			),
 			array(
 				'section' => 'general',
 				'uid' => 'auto_provision',
 				'label' => 'Auto Provision',
 				'type' => 'checkbox',
-				'options' => false,
-				'placeholder' => '',
-				'helper' => '',
-				'supplemental' => 'Whether or not to automatically provision new WordPress users',
-				'default' => '1'
+				'description' => 'Whether or not to automatically provision new WordPress users',
+				'default' => 'true'
 			),
 			array(
 				'section' => 'general',
-				'uid' => 'base_url',
+				'uid' => 'permit_wp_login',
+				'label' => 'Permit WordPress login',
+				'type' => 'checkbox',
+				'description' => 'Whether or not to permit logging in with username and password',
+				'default' => 'true'
+			),
+			array(
+				'section' => 'general',
+				'uid' => 'get_user_by',
+				'label' => 'Get user by',
+				'type' => 'select',
+				'choices' => array(
+					'email' => 'email',
+					'login' => 'login'
+				),
+				'description' => 'Attribute by which to get a WordPress user for a SAML user',
+				'default' => 'email'
+			),
+			array(
+				'section' => 'general',
+				'uid' => 'connection_type',
+				'label' => 'Connection Type',
+				'type' => 'select',
+				'choices' => array(
+					'internal' => 'internal',
+					'simplesamlphp' => 'simplesamlphp'
+				),
+				'description' => 'internal is the only option supported by this settings page',
+				'default' => 'internal'
+			),
+			array(
+				'section' => 'general',
+				'uid' => 'baseurl',
 				'label' => 'Base URL',
-				'type' => 'text',
-				'options' => false,
-				'placeholder' => '',
-				'helper' => '',
-				'supplemental' => 'The base url to be used when constructing URLs',
+				'type' => 'url',
+				'description' => 'The base url to be used when constructing URLs',
 				'default' => home_url()
 			),
 			// sp
 			array(
 				'section' => 'sp',
-				'uid' => 'sp_entity_id',
+				'uid' => 'sp_entityId',
 				'label' => 'Entity Id',
 				'type' => 'text',
-				'options' => false,
-				'placeholder' => '',
-				'helper' => '',
-				'supplemental' => 'Identifier of the SP entity',
-				'default' => 'urn:' . parse_url( home_url(), PHP_URL_HOST )
+				'choices' => false,
+				'description' => 'Identifier of the SP entity',
+				'default' => 'urn:' . parse_url( home_url(), PHP_URL_HOST ),
+				'required' => true
 			),
 			array(
 				'section' => 'sp',
-				'uid' => 'assertion_consumer_service_url',
+				'uid' => 'sp_assertionConsumerService_url',
 				'label' => 'Assertion Consumer Service URL',
-				'type' => 'text',
-				'options' => false,
-				'placeholder' => '',
-				'helper' => '',
-				'supplemental' => 'URL where the Response from the IdP will be returned',
-				'default' => home_url( '/wp-login.php' )
+				'type' => 'url',
+				'description' => 'URL where the Response from the IdP will be returned',
+				'default' => home_url( '/wp-login.php' ),
+				'required' => true
 			),
 			// idp
 			array(
 				'section' => 'idp',
-				'uid' => 'idp_entity_id',
+				'uid' => 'idp_entityId',
 				'label' => 'Entity Id',
 				'type' => 'text',
-				'options' => false,
-				'placeholder' => '',
-				'helper' => '',
-				'supplemental' => 'Identifier of the IdP entity',
-				'default' => ''
+				'description' => 'Identifier of the IdP entity',
+				'required' => true
 			),
 			array(
 				'section' => 'idp',
-				'uid' => 'single_sign-on_service_url',
+				'uid' => 'idp_singleSignOnService_url',
 				'label' => 'Single SignOn Service URL',
-				'type' => 'text',
-				'options' => false,
-				'placeholder' => '',
-				'helper' => '',
-				'supplemental' => 'URL of the IdP where the SP will send the Authentication Request',
-				'default' => ''
+				'type' => 'url',
+				'description' => 'URL of the IdP where the SP will send the Authentication Request',
+				'required' => true
 			),
 			array(
 				'section' => 'idp',
-				'uid' => 'single_logout_service_url',
+				'uid' => 'idp_singleLogoutService_url',
 				'label' => 'Single Logout Service URL',
-				'type' => 'text',
-				'options' => false,
-				'placeholder' => '',
-				'helper' => '',
-				'supplemental' => 'URL of the IdP where the SP will send the SLO Request',
-				'default' => ''
+				'type' => 'url',
+				'description' => 'URL of the IdP where the SP will send the SLO Request'
 			),
 			array(
 				'section' => 'idp',
-				'uid' => 'certificate_fingerprint',
+				'uid' => 'certFingerprint',
 				'label' => 'Certificate Fingerprint',
 				'type' => 'text',
-				'options' => false,
-				'placeholder' => '',
-				'helper' => '',
-				'supplemental' => ''
+				'required' => true
 			),
 			array(
 				'section' => 'idp',
-				'uid' => 'certificate_fingerprint_algorithm',
+				'uid' => 'certFingerprintAlgorithm',
 				'label' => 'Certificate Fingerprint Algorithm',
 				'type' => 'select',
-				'options' => array(
+				'choices' => array(
 					'sha1' => 'sha1',
 					'sha256' => 'sha256',
 					'sha384' => 'sha384',
 					'sha512' => 'sha512'
 				),
-				'placeholder' => '',
-				'helper' => '',
-				'supplemental' => '',
 				'default' => 'sha1'
 			),
 			// attributes
@@ -251,10 +325,6 @@ class WP_SAML_Auth_Settings {
 				'uid' => 'user_login_attribute',
 				'label' => 'user_login',
 				'type' => 'text',
-				'options' => false,
-				'placeholder' => '',
-				'helper' => '',
-				'supplemental' => '',
 				'default' => 'uid'
 			),
 			array(
@@ -262,10 +332,6 @@ class WP_SAML_Auth_Settings {
 				'uid' => 'user_email_attribute',
 				'label' => 'user_email',
 				'type' => 'text',
-				'options' => false,
-				'placeholder' => '',
-				'helper' => '',
-				'supplemental' => '',
 				'default' => 'email'
 			),
 			array(
@@ -273,10 +339,6 @@ class WP_SAML_Auth_Settings {
 				'uid' => 'display_name_attribute',
 				'label' => 'display_name',
 				'type' => 'text',
-				'options' => false,
-				'placeholder' => '',
-				'helper' => '',
-				'supplemental' => '',
 				'default' => 'display_name'
 			),
 			array(
@@ -284,10 +346,6 @@ class WP_SAML_Auth_Settings {
 				'uid' => 'first_name_attribute',
 				'label' => 'first_name',
 				'type' => 'text',
-				'options' => false,
-				'placeholder' => '',
-				'helper' => '',
-				'supplemental' => '',
 				'default' => 'first_name'
 			),
 			array(
@@ -295,19 +353,8 @@ class WP_SAML_Auth_Settings {
 				'uid' => 'last_name_attribute',
 				'label' => 'last_name',
 				'type' => 'text',
-				'options' => false,
-				'placeholder' => '',
-				'helper' => '',
-				'supplemental' => '',
 				'default' => 'last_name'
-			),
-		
+			)
 		);
-		foreach( $fields as $field ) {
-			$uid = self::get_uid($field);
-			add_settings_field( $uid, $field['label'], array( __CLASS__, 'field_callback' ), self::$slug, 
-				$field['section'], $field );
-			register_setting( self::$slug, $uid );
-		}
 	}
 }
