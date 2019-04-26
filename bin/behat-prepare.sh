@@ -56,6 +56,12 @@ unzip $PREPARE_DIR/wp-native-php-sessions.zip -d $PREPARE_DIR
 mv $PREPARE_DIR/wp-native-php-sessions $PREPARE_DIR/wp-content/plugins/
 rm $PREPARE_DIR/wp-native-php-sessions.zip
 
+# Download the latest Classic Editor release from WordPress.org
+wget -O $PREPARE_DIR/classic-editor.zip https://downloads.wordpress.org/plugin/classic-editor.zip
+unzip $PREPARE_DIR/classic-editor.zip -d $PREPARE_DIR
+mv $PREPARE_DIR/classic-editor $PREPARE_DIR/wp-content/plugins/
+rm $PREPARE_DIR/classic-editor.zip
+
 ###
 # Add the copy of this plugin itself to the environment
 ###
@@ -135,5 +141,5 @@ sleep 10
 {
   terminus wp $SITE_ENV -- core install --title=$TERMINUS_ENV-$TERMINUS_SITE --url=$PANTHEON_SITE_URL --admin_user=$WORDPRESS_ADMIN_USERNAME --admin_email=$WORDPRESS_ADMIN_EMAIL --admin_password=$WORDPRESS_ADMIN_PASSWORD
 } &> /dev/null
-terminus wp $SITE_ENV -- plugin activate wp-native-php-sessions wp-saml-auth
+terminus wp $SITE_ENV -- plugin activate classic-editor wp-native-php-sessions wp-saml-auth
 terminus wp $SITE_ENV -- theme activate $TERMINUS_SITE
