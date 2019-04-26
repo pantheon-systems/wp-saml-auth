@@ -239,7 +239,7 @@ class WP_SAML_Auth_Settings {
 							$input[ $uid ] = esc_url_raw( $value, array( 'http', 'https' ) );
 						} else {
 							$input['connection_type'] = null;
-							$input[ $uid ] = null;
+							$input[ $uid ]            = null;
 							add_settings_error(
 								self::$menu_slug,
 								$uid,

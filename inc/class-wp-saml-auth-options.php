@@ -83,7 +83,7 @@ class WP_SAML_Auth_Options {
 			),
 			'default_role'    => get_option( 'default_role' ),
 		);
-		$value = isset( self::$options[ $option_name ] ) ? self::$options[ $option_name ] : $defaults[ $option_name ];
+		$value    = isset( self::$options[ $option_name ] ) ? self::$options[ $option_name ] : $defaults[ $option_name ];
 		return $value;
 	}
 }
