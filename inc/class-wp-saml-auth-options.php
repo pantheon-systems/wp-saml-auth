@@ -33,7 +33,7 @@ class WP_SAML_Auth_Options {
 	 * @param mixed  $value       Configuration value.
 	 * @param string $option_name Configuration option name.
 	 */
-	function filter_option( $value, $option_name ) {
+	public static function filter_option( $value, $option_name ) {
 		$defaults = array(
 			'internal_config'        => array(
 				'strict'  => true,
