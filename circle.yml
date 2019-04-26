@@ -38,7 +38,7 @@ jobs:
           echo "TERMINUS_TOKEN environment variables missing; assuming unauthenticated build"
           exit 0
         fi
-        composer install
+        composer install --no-dev
         git clone --branch master https://github.com/pantheon-systems/terminus.git /tmp/terminus
         cd /tmp/terminus && composer install
         terminus auth:login --machine-token=$TERMINUS_TOKEN
