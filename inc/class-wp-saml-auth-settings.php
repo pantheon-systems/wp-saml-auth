@@ -13,7 +13,6 @@ class WP_SAML_Auth_Settings {
 
 	private static $capability = 'manage_options';
 	private static $fields;
-	private static $initiated = false;
 	private static $instance;
 	private static $menu_slug = 'wp-saml-auth-settings';
 	private static $menu_title = 'SAML Authentication';
