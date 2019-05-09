@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5e8967fec9b90ea0f903e732567780d9",
+    "content-hash": "191dc54a9398fd83ce148d21ee6fa628",
     "packages": [
         {
             "name": "onelogin/php-saml",
