@@ -1,7 +1,7 @@
 # WP SAML Auth #
 **Contributors:** getpantheon, danielbachhuber, Outlandish Josh  
 **Tags:** authentication, SAML  
-**Requires at least:** 4.4  
+**Requires at least:** 4.9  
 **Tested up to:** 5.1  
 **Stable tag:** 0.5.2  
 **License:** GPLv2 or later  
