@@ -19,6 +19,8 @@ cache:
 
 matrix:
   include:
+    - php: 7.3
+      env: WP_VERSION=latest
     - php: 7.2
       env: WP_VERSION=latest
     - php: 7.2
@@ -34,16 +36,18 @@ before_script:
   - |
     if [[ ! -z "$WP_VERSION" ]] ; then
       bash bin/install-wp-tests.sh wordpress_test root '' localhost $WP_VERSION
-      composer global require "phpunit/phpunit=5.7.*"
+      if [[ "$WP_VERSION" == "4.4" ]] ; then
+        composer require --dev --update-with-all-dependencies phpunit/phpunit ^5
+      fi
     fi
 
 script:
   - |
     if [[ ! -z "$WP_VERSION" ]] ; then
-      phpunit
-      WP_MULTISITE=1 phpunit
+      composer test
+      WP_MULTISITE=1 composer test
     fi
   - |
     if [[ "$WP_TRAVISCI" == "phpcs" ]] ; then
-      composer phpcs
+      composer lint
     fi
