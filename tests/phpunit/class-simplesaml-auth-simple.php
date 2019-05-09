@@ -23,8 +23,6 @@ class SimpleSAML_Auth_Simple {
 	 * @param string $authSource  The id of the authentication source.
 	 */
 	public function __construct($authSource) {
-		assert('is_string($authSource)');
-
 		$this->authSource = $authSource;
 	}
 
