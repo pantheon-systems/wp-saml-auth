@@ -267,9 +267,13 @@ class WP_SAML_Auth {
 				);
 			} else {
 				$redirect_to = wp_login_url();
+				// Make sure we're only dealing with the URI components and not arguments.
+				$request = explode( '?', $_SERVER['REQUEST_URI'] );
 				// Only persist redirect_to when it's not wp-login.php.
-				if ( false === stripos( $redirect_to, $_SERVER['REQUEST_URI'] ) ) {
+				if ( false === stripos( $redirect_to, reset( $request ) ) ) {
 					$redirect_to = add_query_arg( 'redirect_to', $_SERVER['REQUEST_URI'], $redirect_to );
+				} else {
+					$redirect_to = add_query_arg( array( 'action' => 'wp-saml-auth' ), $redirect_to );
 				}
 			}
 			$this->provider->requireAuth(
