@@ -143,3 +143,4 @@ sleep 10
 } &> /dev/null
 terminus wp $SITE_ENV -- plugin activate classic-editor wp-native-php-sessions wp-saml-auth
 terminus wp $SITE_ENV -- theme activate $TERMINUS_SITE
+terminus wp $SITE_ENV -- rewrite structure '/%year%/%monthnum%/%day%/%postname%/'
