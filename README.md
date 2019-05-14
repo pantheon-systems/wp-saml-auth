@@ -3,7 +3,7 @@
 **Tags:** authentication, SAML  
 **Requires at least:** 4.4  
 **Tested up to:** 5.2  
-**Stable tag:** 0.5.2  
+**Stable tag:** 0.6.0  
 **License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html  
 
@@ -34,7 +34,7 @@ Once you've activated the plugin, and have access to a functioning SAML Identity
 
 If you're connecting directly to an existing IdP, you should use the bundled OneLogin SAML library. The settings can be configured through the WordPress backend under "Settings" -> "WP SAML Auth". Additional explanation of each setting can be found in the code snippet below.
 
-If you have more complex authentication needs, then you can also use a SimpleSAMLphp installation running in the same environment. These settings are not configurable through the WordPress backend; they'll need to be defined with a filter.
+If you have more complex authentication needs, then you can also use a SimpleSAMLphp installation running in the same environment. These settings are not configurable through the WordPress backend; they'll need to be defined with a filter. And, if you have a filter in place, the WordPress backend settings will be removed.
 
 To install SimpleSAMLphp locally for testing purposes, the [Identity Provider QuickStart](https://simplesamlphp.org/docs/stable/simplesamlphp-idp) is a good place to start. On Pantheon, the SimpleSAMLphp web directory needs to be symlinked to `~/code/simplesaml` to be properly handled by Nginx. [Read the docs](https://pantheon.io/docs/shibboleth-sso/) for more details about configuring SimpleSAMLphp on Pantheon.
 
@@ -276,6 +276,10 @@ Note: the declaration does need to be at the top of `_include.php`, to ensure Wo
 There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Native PHP Sessions active, SimpleSAMLphp and WP SAML Auth will be able to communicate to one another on a multi web node environment.
 
 ## Changelog ##
+
+### 0.6.0 (May 14, 2019) ###
+* Adds a settings page for configuring WP SAML Auth [[#151](https://github.com/pantheon-systems/wp-saml-auth/pull/151)].
+* Fixes issue when processing SimpleSAMLphp response [[#145](https://github.com/pantheon-systems/wp-saml-auth/pull/145)].
 
 ### 0.5.2 (April 8, 2019) ###
 * Updates `onelogin/php-saml` to `v3.1.1` for PHP 7.3 support [[#139](https://github.com/pantheon-systems/wp-saml-auth/pull/139)].
