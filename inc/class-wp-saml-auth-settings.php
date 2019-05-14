@@ -79,7 +79,7 @@ class WP_SAML_Auth_Settings {
 	public static function admin_init() {
 		register_setting(
 			self::$option_group,
-			self::$menu_slug,
+			WP_SAML_Auth_Options::get_option_name(),
 			array( 'sanitize_callback' => array( self::$instance, 'sanitize_callback' ) )
 		);
 		self::setup_sections();
@@ -190,7 +190,7 @@ class WP_SAML_Auth_Settings {
 					if ( empty( $value ) ) {
 						$input['connection_type'] = null;
 						add_settings_error(
-							self::$menu_slug,
+							WP_SAML_Auth_Options::get_option_name(),
 							$uid,
 							trim( $section . ' ' . $field['label'] . ' is a required field.' )
 						);
@@ -213,7 +213,7 @@ class WP_SAML_Auth_Settings {
 							$input['connection_type'] = null;
 							$input[ $uid ]            = null;
 							add_settings_error(
-								self::$menu_slug,
+								WP_SAML_Auth_Options::get_option_name(),
 								$uid,
 								trim( $section . ' ' . $field['label'] . ' is not a valid URL.' )
 							);
@@ -242,7 +242,7 @@ class WP_SAML_Auth_Settings {
 				$field['uid'],
 				$field['label'],
 				array( self::$instance, 'field_callback' ),
-				self::$menu_slug,
+				WP_SAML_Auth_Options::get_option_name(),
 				$field['section'],
 				$field
 			);
@@ -260,7 +260,7 @@ class WP_SAML_Auth_Settings {
 			'attributes' => __( 'Attribute Mappings', 'wp-saml-auth' ),
 		);
 		foreach ( self::$sections as $id => $title ) {
-			add_settings_section( $id, $title, null, self::$menu_slug );
+			add_settings_section( $id, $title, null, WP_SAML_Auth_Options::get_option_name() );
 		}
 	}
 
