@@ -39,25 +39,11 @@ class WP_SAML_Auth_Settings {
 	private static $menu_slug = 'wp-saml-auth-settings';
 
 	/**
-	 * Menu title.
-	 *
-	 * @var string
-	 */
-	private static $menu_title = 'SAML Authentication';
-
-	/**
 	 * Option group.
 	 *
 	 * @var string
 	 */
 	private static $option_group = 'wp-saml-auth-settings-group';
-
-	/**
-	 * Page title.
-	 *
-	 * @var string
-	 */
-	private static $page_title = 'SAML Authentication Settings';
 
 	/**
 	 * List of sections.
@@ -106,8 +92,8 @@ class WP_SAML_Auth_Settings {
 	 */
 	public static function admin_menu() {
 		add_options_page(
-			self::$page_title,
-			self::$menu_title,
+			__( 'WP SAML Auth Settings', 'wp-saml-auth' ),
+			__( 'WP SAML Auth', 'wp-saml-auth' ),
 			self::$capability,
 			self::$menu_slug,
 			array( self::$instance, 'render_page_content' )
@@ -171,7 +157,7 @@ class WP_SAML_Auth_Settings {
 	public static function render_page_content() {
 		?>
 		<div class="wrap">
-			<h2><?php echo self::$page_title; ?></h2>
+			<h2><?php esc_html_e( 'WP SAML Auth Settings', 'wp-saml-auth' ); ?></h2>
 			<form method="post" action="options.php">
 				<?php
 					settings_fields( self::$option_group );
