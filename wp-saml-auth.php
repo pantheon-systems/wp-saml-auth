@@ -175,3 +175,26 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	require_once dirname( __FILE__ ) . '/inc/class-wp-saml-auth-cli.php';
 	WP_CLI::add_command( 'saml-auth', 'WP_SAML_Auth_CLI' );
 }
+
+/**
+ * Initialize the WP SAML Auth plugin settings page.
+ */
+if ( is_admin() ) {
+	require_once dirname( __FILE__ ) . '/inc/class-wp-saml-auth-settings.php';
+	WP_SAML_Auth_Settings::get_instance();
+	register_uninstall_hook( __FILE__, 'uninstall_hook' );
+}
+
+/**
+ * Initialize the WP SAML Auth options from WordPress DB.
+ */
+require_once dirname( __FILE__ ) . '/inc/class-wp-saml-auth-options.php';
+WP_SAML_Auth_Options::get_instance();
+
+/**
+ * Delete option from DB on uninstallation.
+ */
+function uninstall_hook() {
+	$settings = WP_SAML_Auth_Settings::get_instance();
+	delete_option( $settings->option_name() );
+}
