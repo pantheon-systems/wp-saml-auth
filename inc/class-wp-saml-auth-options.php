@@ -88,6 +88,11 @@ class WP_SAML_Auth_Options {
 	 */
 	public static function filter_option( $value, $option_name ) {
 		$options  = get_option( self::get_option_name() );
+		$x509cert = '';
+		if ( ! empty( $options['x509cert'] ) ) {
+			$x509cert = str_replace( 'ABSPATH', ABSPATH, $options['x509cert'] );
+			$x509cert = file_exists( $x509cert ) ? file_get_contents( $x509cert ) : '';
+		}
 		$settings = array(
 			'connection_type' => 'internal',
 			'internal_config' => array(
@@ -111,6 +116,7 @@ class WP_SAML_Auth_Options {
 						'url'     => $options['idp_singleLogoutService_url'],
 						'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
 					),
+					'x509cert'                 => $x509cert,
 					'certFingerprint'          => $options['certFingerprint'],
 					'certFingerprintAlgorithm' => $options['certFingerprintAlgorithm'],
 				),

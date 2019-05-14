@@ -359,11 +359,16 @@ class WP_SAML_Auth_Settings {
 				'description' => __( 'URL of the IdP where the SP will send the SLO Request', 'wp-saml-auth' ),
 			),
 			array(
-				'section'  => 'idp',
-				'uid'      => 'certFingerprint',
-				'label'    => __( 'Certificate Fingerprint', 'wp-saml-auth' ),
-				'type'     => 'text',
-				'required' => true,
+				'section' => 'idp',
+				'uid'     => 'x509cert',
+				'label'   => __( 'x509 Cerificate Path', 'wp-saml-auth' ),
+				'type'    => 'text',
+			),
+			array(
+				'section' => 'idp',
+				'uid'     => 'certFingerprint',
+				'label'   => __( 'Certificate Fingerprint', 'wp-saml-auth' ),
+				'type'    => 'text',
 			),
 			array(
 				'section' => 'idp',
@@ -371,12 +376,12 @@ class WP_SAML_Auth_Settings {
 				'label'   => __( 'Certificate Fingerprint Algorithm', 'wp-saml-auth' ),
 				'type'    => 'select',
 				'choices' => array(
+					''       => __( 'N/A', 'wp-saml-auth' ),
 					'sha1'   => 'sha1',
 					'sha256' => 'sha256',
 					'sha384' => 'sha384',
 					'sha512' => 'sha512',
 				),
-				'default' => 'sha512',
 			),
 			// attributes section.
 			array(
