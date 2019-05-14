@@ -237,6 +237,20 @@ class WP_SAML_Auth_Settings {
 						}
 					}
 				}
+
+				if ( 'x509cert' === $field['uid'] ) {
+					if ( ! empty( $value ) ) {
+						$value = str_replace( 'ABSPATH', ABSPATH, $value );
+						if ( ! file_exists( $value ) ) {
+							add_settings_error(
+								WP_SAML_Auth_Options::get_option_name(),
+								$uid,
+								// translators: Field label.
+								sprintf( __( '%s is not a valid certificate path.', 'wp-saml-auth' ), trim( $section . ' ' . $field['label'] ) )
+							);
+						}
+					}
+				}
 			}
 
 			return $input;
@@ -368,16 +382,18 @@ class WP_SAML_Auth_Settings {
 				'description' => __( 'URL of the IdP where the SP (WordPress) will send the signout request.', 'wp-saml-auth' ),
 			),
 			array(
-				'section' => 'idp',
-				'uid'     => 'x509cert',
-				'label'   => __( 'x509 Cerificate Path', 'wp-saml-auth' ),
-				'type'    => 'text',
+				'section'     => 'idp',
+				'uid'         => 'x509cert',
+				'label'       => __( 'x509 Cerificate Path', 'wp-saml-auth' ),
+				'type'        => 'text',
+				'description' => __( 'Path to the x509 certificate file, used for verifying the request.<br/>Include <code>ABSPATH</code> to set path base to WordPress\' ABSPATH constant.', 'wp-saml-auth' ),
 			),
 			array(
-				'section' => 'idp',
-				'uid'     => 'certFingerprint',
-				'label'   => __( 'Certificate Fingerprint', 'wp-saml-auth' ),
-				'type'    => 'text',
+				'section'     => 'idp',
+				'uid'         => 'certFingerprint',
+				'label'       => __( 'Certificate Fingerprint', 'wp-saml-auth' ),
+				'type'        => 'text',
+				'description' => __( 'If not using x509 certificate, paste the certificate fingerprint and specify the fingerprint algorithm below.', 'wp-saml-auth' ),
 			),
 			array(
 				'section' => 'idp',
