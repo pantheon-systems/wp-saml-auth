@@ -150,7 +150,14 @@ class WP_SAML_Auth_Settings {
 				// translators: Link to the plugin settings page.
 				echo sprintf( __( 'Settings are currently defined with a filter and unavailable for editing through the backend. <a href="%s">Visit the plugin page</a> for more information.', 'wp-saml-auth' ), 'https://wordpress.org/plugins/wp-saml-auth/' );
 				?>
+				</p>
 			<?php else : ?>
+				<p>
+				<?php
+				// translators: Link to the plugin settings page.
+				echo sprintf( __( 'Use the following settings to configure WP SAML Auth with the \'internal\' connection type. <a href="%s">Visit the plugin page</a> for more information.', 'wp-saml-auth' ), 'https://wordpress.org/plugins/wp-saml-auth/' );
+				?>
+				</p>
 				<form method="post" action="options.php">
 					<?php
 						settings_fields( self::$option_group );
