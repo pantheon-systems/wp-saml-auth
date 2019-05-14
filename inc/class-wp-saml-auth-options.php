@@ -25,7 +25,7 @@ class WP_SAML_Auth_Options {
 	public static function get_instance() {
 		if ( ! isset( self::$instance ) ) {
 			self::$instance = new WP_SAML_Auth_Options;
-			add_action( 'init', array( self::$instance, 'action_init' ) );
+			add_action( 'init', array( self::$instance, 'action_init_early' ), 9 );
 		}
 		return self::$instance;
 	}
@@ -33,7 +33,7 @@ class WP_SAML_Auth_Options {
 	/**
 	 * Hooks the filter override when there are some options saved.
 	 */
-	public static function action_init() {
+	public static function action_init_early() {
 		if ( self::has_settings_filter() ) {
 			return;
 		}
