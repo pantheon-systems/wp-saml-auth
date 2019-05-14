@@ -300,18 +300,6 @@ class WP_SAML_Auth_Settings {
 			),
 			array(
 				'section'     => 'general',
-				'uid'         => 'connection_type',
-				'label'       => __( 'Connection Type', 'wp-saml-auth' ),
-				'type'        => 'select',
-				'choices'     => array(
-					'internal'      => 'internal',
-					'simplesamlphp' => 'simplesamlphp',
-				),
-				'description' => 'internal is the only option supported by this settings page',
-				'default'     => 'internal',
-			),
-			array(
-				'section'     => 'general',
 				'uid'         => 'baseurl',
 				'label'       => __( 'Base URL', 'wp-saml-auth' ),
 				'type'        => 'url',

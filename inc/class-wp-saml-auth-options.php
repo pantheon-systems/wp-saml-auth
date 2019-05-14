@@ -52,6 +52,7 @@ class WP_SAML_Auth_Options {
 	public static function filter_option( $value, $option_name ) {
 		$options  = get_option( self::get_option_name() );
 		$settings = array(
+			'connection_type' => 'internal',
 			'internal_config' => array(
 				'strict'  => true,
 				'debug'   => defined( 'WP_DEBUG' ) && WP_DEBUG ? true : false,
