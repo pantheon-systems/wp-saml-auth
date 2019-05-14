@@ -115,9 +115,22 @@ class WP_SAML_Auth_Options {
 					'certFingerprintAlgorithm' => $options['certFingerprintAlgorithm'],
 				),
 			),
-			'default_role'    => get_option( 'default_role' ),
 		);
-		$value    = isset( $settings[ $option_name ] ) ? $settings[ $option_name ] : $value;
+
+		$remaining_settings = array(
+			'auto_provision',
+			'permit_wp_login',
+			'get_user_by',
+			'user_login_attribute',
+			'user_email_attribute',
+			'display_name_attribute',
+			'first_name_attribute',
+			'last_name_attribute',
+		);
+		foreach ( $remaining_settings as $setting ) {
+			$settings[ $setting ] = $options[ $setting ];
+		}
+		$value = isset( $settings[ $option_name ] ) ? $settings[ $option_name ] : $value;
 		return $value;
 	}
 }
