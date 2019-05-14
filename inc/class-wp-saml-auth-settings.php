@@ -144,13 +144,21 @@ class WP_SAML_Auth_Settings {
 		?>
 		<div class="wrap">
 			<h2><?php esc_html_e( 'WP SAML Auth Settings', 'wp-saml-auth' ); ?></h2>
-			<form method="post" action="options.php">
+			<?php if ( WP_SAML_Auth_Options::has_settings_filter() ) : ?>
+				<p>
 				<?php
-					settings_fields( self::$option_group );
-					do_settings_sections( self::$menu_slug );
-					submit_button();
+				// translators: Link to the plugin settings page.
+				echo sprintf( __( 'Settings are currently defined with a filter and unavailable for editing through the backend. <a href="%s">Visit the plugin page</a> for more information.', 'wp-saml-auth' ), 'https://wordpress.org/plugins/wp-saml-auth/' );
 				?>
-			</form>
+			<?php else : ?>
+				<form method="post" action="options.php">
+					<?php
+						settings_fields( self::$option_group );
+						do_settings_sections( WP_SAML_Auth_Options::get_option_name() );
+						submit_button();
+					?>
+				</form>
+			<?php endif; ?>
 		</div>
 		<?php
 	}

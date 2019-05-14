@@ -25,13 +25,27 @@ class WP_SAML_Auth_Options {
 	public static function get_instance() {
 		if ( ! isset( self::$instance ) ) {
 			self::$instance = new WP_SAML_Auth_Options;
-
-			$options = get_option( self::get_option_name() );
-			if ( isset( $options['connection_type'] ) && 'internal' === $options['connection_type'] ) {
-				add_filter( 'wp_saml_auth_option', array( self::$instance, 'filter_option' ), 9, 2 );
-			}
+			add_action( 'init', array( self::$instance, 'action_init' ) );
 		}
 		return self::$instance;
+	}
+
+	/**
+	 * Hooks the filter override when there are some options saved.
+	 */
+	public static function action_init() {
+		if ( self::has_settings_filter() ) {
+			return;
+		}
+		$options = get_option( self::get_option_name() );
+		if ( isset( $options['connection_type'] ) && 'internal' === $options['connection_type'] ) {
+			add_filter(
+				'wp_saml_auth_option',
+				array( self::$instance, 'filter_option' ),
+				9,
+				2
+			);
+		}
 	}
 
 	/**
@@ -40,7 +54,30 @@ class WP_SAML_Auth_Options {
 	 * @return string
 	 */
 	public static function get_option_name() {
-		return 'wp-saml-auth-settings';
+		return 'wp_saml_auth_settings';
+	}
+
+	/**
+	 * Whether or not there's a filter overriding these options.
+	 *
+	 * @return boolean
+	 */
+	public function has_settings_filter() {
+		$filter1    = remove_filter( 'wp_saml_auth_option', 'wpsa_filter_option', 0 );
+		$filter2    = remove_filter( 'wp_saml_auth_option', array( self::get_instance(), 'filter_option' ), 9 );
+		$has_filter = has_filter( 'wp_saml_auth_option' );
+		if ( $filter1 ) {
+			add_filter( 'wp_saml_auth_option', 'wpsa_filter_option', 0, 2 );
+		}
+		if ( $filter2 ) {
+			add_filter(
+				'wp_saml_auth_option',
+				array( self::$instance, 'filter_option' ),
+				9,
+				2
+			);
+		}
+		return $has_filter;
 	}
 
 	/**

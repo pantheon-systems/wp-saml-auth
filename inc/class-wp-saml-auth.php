@@ -100,6 +100,10 @@ class WP_SAML_Auth {
 				add_action(
 					'admin_notices',
 					function() {
+						if ( ! empty( $_GET['page'] )
+							&& 'wp-saml-auth-settings' === $_GET['page'] ) {
+							return;
+						}
 						if ( current_user_can( 'manage_options' ) ) {
 							// Translators: Links to the WP SAML Auth plugin.
 							echo '<div class="message error"><p>' . wp_kses_post( sprintf( __( "WP SAML Auth wasn't able to find the <code>%1\$s</code> class. Please check the <code>simplesamlphp_autoload</code> configuration option, or <a href='%2\$s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ), $this->simplesamlphp_class, 'https://wordpress.org/plugins/wp-saml-auth/' ) ) . '</p></div>';
