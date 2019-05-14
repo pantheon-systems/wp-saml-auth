@@ -110,25 +110,25 @@ class WP_SAML_Auth_Settings {
 		$value = $arguments['value'];
 		switch ( $arguments['type'] ) {
 			case 'checkbox':
-				printf( '<input id="%1$s" name="%1$s" type="checkbox"%2$s>', $uid, checked( $value, 'true', false ) );
+				printf( '<input id="%1$s" name="%1$s" type="checkbox"%2$s>', esc_attr( $uid ), checked( $value, 'true', false ) );
 				break;
 			case 'select':
 				if ( ! empty( $arguments['choices'] ) && is_array( $arguments['choices'] ) ) {
 					$markup = '';
 					foreach ( $arguments['choices'] as $key => $label ) {
-						$markup .= '<option value="' . $key . '" ' . selected( $value, $key, false ) . '>' . $label .
+						$markup .= '<option value="' . esc_attr( $key ) . '" ' . selected( $value, $key, false ) . '>' . esc_html( $label ) .
 									'</option>';
 					}
-					printf( '<select name="%1$s" id="%1$s">%2$s</select>', $uid, $markup );
+					printf( '<select name="%1$s" id="%1$s">%2$s</select>', esc_attr( $uid ), $markup );
 				}
 				break;
 			case 'text':
 			case 'url':
 				printf(
 					'<input name="%1$s" type="text" id="%1$s" placeholder="%2$s" value="%3$s" class="regular-text" />',
-					$uid,
-					$arguments['placeholder'],
-					$value
+					esc_attr( $uid ),
+					esc_attr( $arguments['placeholder'] ),
+					esc_attr( $value )
 				);
 				break;
 		}
@@ -138,7 +138,7 @@ class WP_SAML_Auth_Settings {
 		}
 
 		if ( isset( $arguments['description'] ) ) {
-			printf( '<p class="description">%s</p>', $arguments['description'] );
+			printf( '<p class="description">%s</p>', wp_kses_post( $arguments['description'] ) );
 		}
 	}
 
