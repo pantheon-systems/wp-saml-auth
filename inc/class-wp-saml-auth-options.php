@@ -28,7 +28,7 @@ class WP_SAML_Auth_Options {
 
 			$options = get_option( self::get_option_name() );
 			if ( isset( $options['connection_type'] ) && 'internal' === $options['connection_type'] ) {
-				add_filter( 'wp_saml_auth_option', array( self::$instance, 'filter_option' ), 10, 2 );
+				add_filter( 'wp_saml_auth_option', array( self::$instance, 'filter_option' ), 9, 2 );
 			}
 		}
 		return self::$instance;
