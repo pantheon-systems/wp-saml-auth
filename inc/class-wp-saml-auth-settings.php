@@ -200,7 +200,8 @@ class WP_SAML_Auth_Settings {
 						add_settings_error(
 							WP_SAML_Auth_Options::get_option_name(),
 							$uid,
-							trim( $section . ' ' . $field['label'] . ' is a required field.' )
+							// translators: Field label.
+							sprintf( __( '%s is a required field', 'wp-saml-auth' ), trim( $section . ' ' . $field['label'] ) )
 						);
 					}
 				}
@@ -223,7 +224,8 @@ class WP_SAML_Auth_Settings {
 							add_settings_error(
 								WP_SAML_Auth_Options::get_option_name(),
 								$uid,
-								trim( $section . ' ' . $field['label'] . ' is not a valid URL.' )
+								// translators: Field label.
+								sprintf( __( '%s is not a valid URL.', 'wp-saml-auth' ), trim( $section . ' ' . $field['label'] ) )
 							);
 						}
 					}
