@@ -109,7 +109,7 @@ class WP_SAML_Auth_Settings {
 		$value = $arguments['value'];
 		switch ( $arguments['type'] ) {
 			case 'checkbox':
-				printf( '<input id="%1$s" name="%1$s" type="checkbox"%2$s>', esc_attr( $uid ), checked( $value, 'true', false ) );
+				printf( '<input id="%1$s" name="%1$s" type="checkbox"%2$s>', esc_attr( $uid ), checked( $value, true, false ) );
 				break;
 			case 'select':
 				if ( ! empty( $arguments['choices'] ) && is_array( $arguments['choices'] ) ) {
@@ -190,7 +190,7 @@ class WP_SAML_Auth_Settings {
 
 				// checkboxes.
 				if ( 'checkbox' === $field['type'] ) {
-					$input[ $uid ] = isset( $value ) ? 'true' : 'false';
+					$input[ $uid ] = isset( $value ) ? true : false;
 				}
 
 				// required fields.
