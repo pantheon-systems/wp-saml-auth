@@ -172,7 +172,7 @@ class WP_SAML_Auth_Settings {
 	 * @return mixed
 	 */
 	public static function plugin_settings_link( $links ) {
-		$a = '<a href="' . menu_page_url( self::$menu_slug, false ) . '">Settings</a>';
+		$a = '<a href="' . menu_page_url( self::$menu_slug, false ) . '">' . esc_html__( 'Settings', 'wp-saml-auth' ) . '</a>';
 		array_push( $links, $a );
 		return $links;
 	}
