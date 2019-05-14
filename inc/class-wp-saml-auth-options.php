@@ -49,7 +49,7 @@ class WP_SAML_Auth_Options {
 	 */
 	public static function filter_option( $value, $option_name ) {
 		$options  = get_option( self::$option_name );
-		$defaults = array(
+		$settings = array(
 			'internal_config' => array(
 				'strict'  => true,
 				'debug'   => defined( 'WP_DEBUG' ) && WP_DEBUG ? true : false,
@@ -77,7 +77,7 @@ class WP_SAML_Auth_Options {
 			),
 			'default_role'    => get_option( 'default_role' ),
 		);
-		$value    = isset( $options[ $option_name ] ) ? $options[ $option_name ] : $defaults[ $option_name ];
+		$value    = isset( $settings[ $option_name ] ) ? $settings[ $option_name ] : $value;
 		return $value;
 	}
 }
