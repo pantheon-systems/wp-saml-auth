@@ -133,10 +133,6 @@ class WP_SAML_Auth_Settings {
 				break;
 		}
 
-		if ( isset( $arguments['helper'] ) ) {
-			printf( '<span class="helper"> %s</span>', $arguments['helper'] );
-		}
-
 		if ( isset( $arguments['description'] ) ) {
 			printf( '<p class="description">%s</p>', wp_kses_post( $arguments['description'] ) );
 		}
