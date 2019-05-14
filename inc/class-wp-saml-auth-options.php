@@ -64,7 +64,7 @@ class WP_SAML_Auth_Options {
 	 */
 	public function has_settings_filter() {
 		$filter1    = remove_filter( 'wp_saml_auth_option', 'wpsa_filter_option', 0 );
-		$filter2    = remove_filter( 'wp_saml_auth_option', array( self::get_instance(), 'filter_option' ), 9 );
+		$filter2    = remove_filter( 'wp_saml_auth_option', array( self::$instance, 'filter_option' ), 9 );
 		$has_filter = has_filter( 'wp_saml_auth_option' );
 		if ( $filter1 ) {
 			add_filter( 'wp_saml_auth_option', 'wpsa_filter_option', 0, 2 );
