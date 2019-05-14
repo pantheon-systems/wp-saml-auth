@@ -18,13 +18,6 @@ class WP_SAML_Auth_Options {
 	private static $instance;
 
 	/**
-	 * WordPress options name
-	 *
-	 * @var string
-	 */
-	private static $option_name = 'wp-saml-auth-settings';
-
-	/**
 	 * Get the controller instance
 	 *
 	 * @return object
@@ -33,12 +26,21 @@ class WP_SAML_Auth_Options {
 		if ( ! isset( self::$instance ) ) {
 			self::$instance = new WP_SAML_Auth_Options;
 
-			$options = get_option( self::$option_name );
+			$options = get_option( self::get_option_name() );
 			if ( isset( $options['connection_type'] ) && 'internal' === $options['connection_type'] ) {
 				add_filter( 'wp_saml_auth_option', array( self::$instance, 'filter_option' ), 10, 2 );
 			}
 		}
 		return self::$instance;
+	}
+
+	/**
+	 * Gets the name of the option used to store settings.
+	 *
+	 * @return string
+	 */
+	public static function get_option_name() {
+		return 'wp-saml-auth-settings';
 	}
 
 	/**
@@ -48,7 +50,7 @@ class WP_SAML_Auth_Options {
 	 * @param string $option_name Configuration option name.
 	 */
 	public static function filter_option( $value, $option_name ) {
-		$options  = get_option( self::$option_name );
+		$options  = get_option( self::get_option_name() );
 		$settings = array(
 			'internal_config' => array(
 				'strict'  => true,

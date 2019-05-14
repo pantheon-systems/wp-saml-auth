@@ -77,7 +77,6 @@ class WP_SAML_Auth_Settings {
 	 * Initialize plugin
 	 */
 	public static function admin_init() {
-		add_option( self::$menu_slug );
 		register_setting(
 			self::$option_group,
 			self::$menu_slug,
@@ -106,7 +105,7 @@ class WP_SAML_Auth_Settings {
 	 * @param array $arguments field data passed from add_settings_field().
 	 */
 	public static function field_callback( $arguments ) {
-		$uid   = self::$menu_slug . '[' . $arguments['uid'] . ']';
+		$uid   = WP_SAML_Auth_Options::get_option_name() . '[' . $arguments['uid'] . ']';
 		$value = $arguments['value'];
 		switch ( $arguments['type'] ) {
 			case 'checkbox':
@@ -136,15 +135,6 @@ class WP_SAML_Auth_Settings {
 		if ( isset( $arguments['description'] ) ) {
 			printf( '<p class="description">%s</p>', wp_kses_post( $arguments['description'] ) );
 		}
-	}
-
-	/**
-	 * The name used for saving options in the WordPress database
-	 *
-	 * @return string
-	 */
-	public static function option_name() {
-		return self::$menu_slug;
 	}
 
 	/**
@@ -241,7 +231,7 @@ class WP_SAML_Auth_Settings {
 	 */
 	public static function setup_fields() {
 		self::init_fields();
-		$options = get_option( self::$menu_slug );
+		$options = get_option( WP_SAML_Auth_Options::get_option_name() );
 		foreach ( self::$fields as $field ) {
 			if ( ! empty( $options ) && is_array( $options ) && array_key_exists( $field['uid'], $options ) ) {
 				$field['value'] = $options[ $field['uid'] ];
