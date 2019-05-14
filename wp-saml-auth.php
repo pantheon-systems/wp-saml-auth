@@ -182,7 +182,6 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 if ( is_admin() ) {
 	require_once dirname( __FILE__ ) . '/inc/class-wp-saml-auth-settings.php';
 	WP_SAML_Auth_Settings::get_instance();
-	register_uninstall_hook( __FILE__, 'uninstall_hook' );
 }
 
 /**
@@ -190,11 +189,3 @@ if ( is_admin() ) {
  */
 require_once dirname( __FILE__ ) . '/inc/class-wp-saml-auth-options.php';
 WP_SAML_Auth_Options::get_instance();
-
-/**
- * Delete option from DB on uninstallation.
- */
-function uninstall_hook() {
-	$settings = WP_SAML_Auth_Settings::get_instance();
-	delete_option( $settings->option_name() );
-}
