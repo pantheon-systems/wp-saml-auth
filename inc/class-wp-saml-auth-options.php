@@ -96,17 +96,17 @@ class WP_SAML_Auth_Options {
 		$settings = array(
 			'connection_type' => 'internal',
 			'internal_config' => array(
-				'strict'  => true,
-				'debug'   => defined( 'WP_DEBUG' ) && WP_DEBUG ? true : false,
-				'baseurl' => $options['baseurl'],
-				'sp'      => array(
+				'strict'   => true,
+				'debug'    => defined( 'WP_DEBUG' ) && WP_DEBUG ? true : false,
+				'baseurl'  => $options['baseurl'],
+				'sp'       => array(
 					'entityId'                 => $options['sp_entityId'],
 					'assertionConsumerService' => array(
 						'url'     => $options['sp_assertionConsumerService_url'],
 						'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST',
 					),
 				),
-				'idp'     => array(
+				'idp'      => array(
 					'entityId'                 => $options['idp_entityId'],
 					'singleSignOnService'      => array(
 						'url'     => $options['idp_singleSignOnService_url'],
@@ -120,7 +120,7 @@ class WP_SAML_Auth_Options {
 					'certFingerprint'          => $options['certFingerprint'],
 					'certFingerprintAlgorithm' => $options['certFingerprintAlgorithm'],
 				),
-				'security' => array (
+				'security' => array(
 					'requestedAuthnContext' => false,
 				),
 			),
