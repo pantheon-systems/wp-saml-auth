@@ -286,7 +286,7 @@ class WP_SAML_Auth_Settings {
 	public static function setup_sections() {
 		self::$sections = array(
 			'general'    => '',
-			'sp'         => __( 'Service Provder Settings', 'wp-saml-auth' ),
+			'sp'         => __( 'Service Provider Settings', 'wp-saml-auth' ),
 			'idp'        => __( 'Identity Provider Settings', 'wp-saml-auth' ),
 			'attributes' => __( 'Attribute Mappings', 'wp-saml-auth' ),
 		);
