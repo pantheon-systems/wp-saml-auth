@@ -158,6 +158,11 @@ class WP_SAML_Auth_Settings {
 				echo sprintf( __( 'Use the following settings to configure WP SAML Auth with the \'internal\' connection type. <a href="%s">Visit the plugin page</a> for more information.', 'wp-saml-auth' ), 'https://wordpress.org/plugins/wp-saml-auth/' );
 				?>
 				</p>
+				<?php if ( WP_SAML_Auth_Options::do_required_settings_have_values() ) : ?>
+					<div class="notice notice-success"><p><?php esc_html_e( 'Settings are actively applied to WP SAML Auth configuration.', 'wp-saml-auth' ); ?></p></div>
+				<?php else : ?>
+					<div class="notice error"><p><?php esc_html_e( 'Some required settings don\'t have values, so WP SAML Auth isn\'t active.', 'wp-saml-auth' ); ?></p></div>
+				<?php endif; ?>
 				<form method="post" action="options.php">
 					<?php
 						settings_fields( self::$option_group );
@@ -341,7 +346,7 @@ class WP_SAML_Auth_Settings {
 			array(
 				'section'     => 'sp',
 				'uid'         => 'sp_entityId',
-				'label'       => __( 'Entity Id', 'wp-saml-auth' ),
+				'label'       => __( 'Entity Id (Required)', 'wp-saml-auth' ),
 				'type'        => 'text',
 				'choices'     => false,
 				'description' => __( 'SP (WordPress) entity identifier.', 'wp-saml-auth' ),
@@ -351,7 +356,7 @@ class WP_SAML_Auth_Settings {
 			array(
 				'section'     => 'sp',
 				'uid'         => 'sp_assertionConsumerService_url',
-				'label'       => __( 'Assertion Consumer Service URL', 'wp-saml-auth' ),
+				'label'       => __( 'Assertion Consumer Service URL (Required)', 'wp-saml-auth' ),
 				'type'        => 'url',
 				'description' => __( 'URL where the response from the IdP should be returned (usually the login URL).', 'wp-saml-auth' ),
 				'default'     => home_url( '/wp-login.php' ),
@@ -361,7 +366,7 @@ class WP_SAML_Auth_Settings {
 			array(
 				'section'     => 'idp',
 				'uid'         => 'idp_entityId',
-				'label'       => __( 'Entity Id', 'wp-saml-auth' ),
+				'label'       => __( 'Entity Id (Required)', 'wp-saml-auth' ),
 				'type'        => 'text',
 				'description' => __( 'IdP entity identifier.', 'wp-saml-auth' ),
 				'required'    => true,
@@ -369,7 +374,7 @@ class WP_SAML_Auth_Settings {
 			array(
 				'section'     => 'idp',
 				'uid'         => 'idp_singleSignOnService_url',
-				'label'       => __( 'Single SignOn Service URL', 'wp-saml-auth' ),
+				'label'       => __( 'Single SignOn Service URL (Required)', 'wp-saml-auth' ),
 				'type'        => 'url',
 				'description' => __( 'URL of the IdP where the SP (WordPress) will send the authentication request.', 'wp-saml-auth' ),
 				'required'    => true,
@@ -445,5 +450,15 @@ class WP_SAML_Auth_Settings {
 				'default' => 'last_name',
 			),
 		);
+	}
+
+	/**
+	 * Gets all of the fields.
+	 *
+	 * @return array
+	 */
+	public static function get_fields() {
+		self::init_fields();
+		return self::$fields;
 	}
 }

@@ -37,8 +37,7 @@ class WP_SAML_Auth_Options {
 		if ( self::has_settings_filter() ) {
 			return;
 		}
-		$options = get_option( self::get_option_name() );
-		if ( ! empty( $options['baseurl'] ) ) {
+		if ( self::do_required_settings_have_values() ) {
 			add_filter(
 				'wp_saml_auth_option',
 				array( self::$instance, 'filter_option' ),
@@ -78,6 +77,31 @@ class WP_SAML_Auth_Options {
 			);
 		}
 		return $has_filter;
+	}
+
+	/**
+	 * Whether or not all required settings have non-empty values.
+	 *
+	 * @return boolean
+	 */
+	public function do_required_settings_have_values() {
+		$options = get_option( self::get_option_name() );
+		$retval  = null;
+		foreach ( WP_SAML_Auth_Settings::get_fields() as $field ) {
+			if ( empty( $field['required'] ) ) {
+				continue;
+			}
+			// Required option is empty.
+			if ( empty( $options[ $field['uid'] ] ) ) {
+				$retval = false;
+				continue;
+			}
+			// Required option is present and return value hasn't been set.
+			if ( is_null( $retval ) ) {
+				$retval = true;
+			}
+		}
+		return ! is_null( $retval ) ? $retval : false;
 	}
 
 	/**
