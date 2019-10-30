@@ -278,7 +278,7 @@ There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Nati
 == Changelog ==
 
 = 0.7.2 (October 30, 2019) =
-* Fix issue where an empty required settings field would throw load Exception [[#170](https://github.com/pantheon-systems/wp-saml-auth/pull/170)].
+* Fixes issue where an empty required settings field would throw load Exception [[#170](https://github.com/pantheon-systems/wp-saml-auth/pull/170)].
 
 = 0.7.1 (September 26, 2019) =
 * Fixes typo on the settings page [[#163](https://github.com/pantheon-systems/wp-saml-auth/pull/163)].
