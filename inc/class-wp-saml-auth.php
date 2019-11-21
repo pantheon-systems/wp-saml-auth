@@ -256,7 +256,7 @@ class WP_SAML_Auth {
 				}
 			} else {
 				$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
-				$redirect_to = $redirect_to ? : $_SERVER['REQUEST_URI'];
+				$redirect_to = $redirect_to ? $redirect_to : $_SERVER['REQUEST_URI'];
 				$this->provider->login( $redirect_to );
 			}
 		} elseif ( is_a( $this->provider, $this->simplesamlphp_class ) ) {
