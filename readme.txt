@@ -3,7 +3,7 @@ Contributors: getpantheon, danielbachhuber, Outlandish Josh
 Tags: authentication, SAML
 Requires at least: 4.4
 Tested up to: 5.3
-Stable tag: 0.8.0
+Stable tag: 0.8.1
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -277,8 +277,11 @@ There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Nati
 
 == Changelog ==
 
+= 0.8.1 (November 25, 2019) =
+* Updates `onelogin/php-saml` to `v3.4.1` [[#174](https://github.com/pantheon-systems/wp-saml-auth/pull/174)].
+
 = 0.8.0 (November 20, 2019) =
-* Updates onelogin/php-saml to `v3.4.0` [[#173](https://github.com/pantheon-systems/wp-saml-auth/pull/173)].
+* Updates `onelogin/php-saml` to `v3.4.0` [[#173](https://github.com/pantheon-systems/wp-saml-auth/pull/173)].
 
 = 0.7.3 (November 7, 2019) =
 * Updates `onelogin/php-saml` to `v3.3.1` [[#172](https://github.com/pantheon-systems/wp-saml-auth/pull/172)].
