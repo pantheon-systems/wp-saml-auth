@@ -23,7 +23,8 @@
         "wp-coding-standards/wpcs": "^2.1",
         "dealerdirect/phpcodesniffer-composer-installer": "^0.5.0",
         "phpunit/phpunit": "^7",
-        "phpcompatibility/php-compatibility": "^9.3"
+        "phpcompatibility/php-compatibility": "^9.3",
+        "symfony/filesystem": "^4"
     },
     "scripts": {
         "lint": "@phpcs",
