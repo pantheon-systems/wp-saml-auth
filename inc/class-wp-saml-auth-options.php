@@ -61,7 +61,7 @@ class WP_SAML_Auth_Options {
 	 *
 	 * @return boolean
 	 */
-	public function has_settings_filter() {
+	public static function has_settings_filter() {
 		$filter1    = remove_filter( 'wp_saml_auth_option', 'wpsa_filter_option', 0 );
 		$filter2    = remove_filter( 'wp_saml_auth_option', array( self::$instance, 'filter_option' ), 9 );
 		$has_filter = has_filter( 'wp_saml_auth_option' );
@@ -84,7 +84,7 @@ class WP_SAML_Auth_Options {
 	 *
 	 * @return boolean
 	 */
-	public function do_required_settings_have_values() {
+	public static function do_required_settings_have_values() {
 		$options = get_option( self::get_option_name() );
 		$retval  = null;
 		foreach ( WP_SAML_Auth_Settings::get_fields() as $field ) {
