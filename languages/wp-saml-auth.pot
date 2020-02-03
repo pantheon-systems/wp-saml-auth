@@ -1,17 +1,17 @@
-# Copyright (C) 2019 Pantheon
+# Copyright (C) 2020 Pantheon
 # This file is distributed under the same license as the WP SAML Auth plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: WP SAML Auth 0.7.3\n"
+"Project-Id-Version: WP SAML Auth 0.8.3\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/wp-saml-auth\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2019-11-07T18:18:22+00:00\n"
+"POT-Creation-Date: 2020-02-03T23:02:50+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"X-Generator: WP-CLI 2.2.0\n"
+"X-Generator: WP-CLI 2.4.0\n"
 "X-Domain: wp-saml-auth\n"
 
 #. Plugin Name of the plugin
@@ -33,6 +33,153 @@ msgstr ""
 
 #. Author URI of the plugin
 msgid "https://pantheon.io"
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:94
+#: inc/class-wp-saml-auth-settings.php:145
+msgid "WP SAML Auth Settings"
+msgstr ""
+
+#. translators: Link to the plugin settings page.
+#: inc/class-wp-saml-auth-settings.php:150
+msgid "Settings are defined with a filter and unavailable for editing through the backend. <a href=\"%s\">Visit the plugin page</a> for more information."
+msgstr ""
+
+#. translators: Link to the plugin settings page.
+#: inc/class-wp-saml-auth-settings.php:157
+msgid "Use the following settings to configure WP SAML Auth with the 'internal' connection type. <a href=\"%s\">Visit the plugin page</a> for more information."
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:161
+msgid "Settings are actively applied to WP SAML Auth configuration."
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:163
+msgid "Some required settings don't have values, so WP SAML Auth isn't active."
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:184
+msgid "Settings"
+msgstr ""
+
+#. translators: Field label.
+#: inc/class-wp-saml-auth-settings.php:215
+msgid "%s is a required field"
+msgstr ""
+
+#. translators: Field label.
+#: inc/class-wp-saml-auth-settings.php:239
+msgid "%s is not a valid URL."
+msgstr ""
+
+#. translators: Field label.
+#: inc/class-wp-saml-auth-settings.php:253
+msgid "%s is not a valid certificate path."
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:293
+msgid "Service Provider Settings"
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:294
+msgid "Identity Provider Settings"
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:295
+msgid "Attribute Mappings"
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:311
+msgid "Auto Provision"
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:313
+msgid "If checked, create a new WordPress user upon login. <br>If unchecked, WordPress user will already need to exist in order to log in."
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:319
+msgid "Permit WordPress login"
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:321
+msgid "If checked, WordPress user can also log in with the standard username and password flow."
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:327
+msgid "Get User By"
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:333
+msgid "Attribute by which SAML requests are matched to WordPress users."
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:339
+msgid "Base URL"
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:341
+msgid "The base url to be used when constructing URLs."
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:348
+#: inc/class-wp-saml-auth-settings.php:368
+msgid "Entity Id (Required)"
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:351
+msgid "SP (WordPress) entity identifier."
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:358
+msgid "Assertion Consumer Service URL (Required)"
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:360
+msgid "URL where the response from the IdP should be returned (usually the login URL)."
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:370
+msgid "IdP entity identifier."
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:376
+msgid "Single SignOn Service URL (Required)"
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:378
+msgid "URL of the IdP where the SP (WordPress) will send the authentication request."
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:384
+msgid "Single Logout Service URL"
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:386
+msgid "URL of the IdP where the SP (WordPress) will send the signout request."
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:391
+msgid "x509 Cerificate Path"
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:393
+msgid "Path to the x509 certificate file, used for verifying the request.<br/>Include <code>ABSPATH</code> to set path base to WordPress' ABSPATH constant."
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:398
+msgid "Certificate Fingerprint"
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:400
+msgid "If not using x509 certificate, paste the certificate fingerprint and specify the fingerprint algorithm below."
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:405
+msgid "Certificate Fingerprint Algorithm"
+msgstr ""
+
+#: inc/class-wp-saml-auth-settings.php:408
+msgid "N/A"
 msgstr ""
 
 #. Translators: Links to the WP SAML Auth plugin.
@@ -77,151 +224,4 @@ msgstr ""
 
 #: inc/class-wp-saml-auth.php:337
 msgid "No WordPress user exists for your account. Please contact your administrator."
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:94
-#: inc/class-wp-saml-auth-settings.php:146
-msgid "WP SAML Auth Settings"
-msgstr ""
-
-#. translators: Link to the plugin settings page.
-#: inc/class-wp-saml-auth-settings.php:151
-msgid "Settings are defined with a filter and unavailable for editing through the backend. <a href=\"%s\">Visit the plugin page</a> for more information."
-msgstr ""
-
-#. translators: Link to the plugin settings page.
-#: inc/class-wp-saml-auth-settings.php:158
-msgid "Use the following settings to configure WP SAML Auth with the 'internal' connection type. <a href=\"%s\">Visit the plugin page</a> for more information."
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:162
-msgid "Settings are actively applied to WP SAML Auth configuration."
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:164
-msgid "Some required settings don't have values, so WP SAML Auth isn't active."
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:185
-msgid "Settings"
-msgstr ""
-
-#. translators: Field label.
-#: inc/class-wp-saml-auth-settings.php:216
-msgid "%s is a required field"
-msgstr ""
-
-#. translators: Field label.
-#: inc/class-wp-saml-auth-settings.php:240
-msgid "%s is not a valid URL."
-msgstr ""
-
-#. translators: Field label.
-#: inc/class-wp-saml-auth-settings.php:254
-msgid "%s is not a valid certificate path."
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:294
-msgid "Service Provider Settings"
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:295
-msgid "Identity Provider Settings"
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:296
-msgid "Attribute Mappings"
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:312
-msgid "Auto Provision"
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:314
-msgid "If checked, create a new WordPress user upon login. <br>If unchecked, WordPress user will already need to exist in order to log in."
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:320
-msgid "Permit WordPress login"
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:322
-msgid "If checked, WordPress user can also log in with the standard username and password flow."
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:328
-msgid "Get User By"
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:334
-msgid "Attribute by which SAML requests are matched to WordPress users."
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:340
-msgid "Base URL"
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:342
-msgid "The base url to be used when constructing URLs."
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:349
-#: inc/class-wp-saml-auth-settings.php:369
-msgid "Entity Id (Required)"
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:352
-msgid "SP (WordPress) entity identifier."
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:359
-msgid "Assertion Consumer Service URL (Required)"
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:361
-msgid "URL where the response from the IdP should be returned (usually the login URL)."
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:371
-msgid "IdP entity identifier."
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:377
-msgid "Single SignOn Service URL (Required)"
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:379
-msgid "URL of the IdP where the SP (WordPress) will send the authentication request."
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:385
-msgid "Single Logout Service URL"
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:387
-msgid "URL of the IdP where the SP (WordPress) will send the signout request."
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:392
-msgid "x509 Cerificate Path"
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:394
-msgid "Path to the x509 certificate file, used for verifying the request.<br/>Include <code>ABSPATH</code> to set path base to WordPress' ABSPATH constant."
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:399
-msgid "Certificate Fingerprint"
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:401
-msgid "If not using x509 certificate, paste the certificate fingerprint and specify the fingerprint algorithm below."
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:406
-msgid "Certificate Fingerprint Algorithm"
-msgstr ""
-
-#: inc/class-wp-saml-auth-settings.php:409
-msgid "N/A"
 msgstr ""
