@@ -124,9 +124,8 @@ class WP_SAML_Auth_Settings {
 			case 'text':
 			case 'url':
 				printf(
-					'<input name="%1$s" type="text" id="%1$s" placeholder="%2$s" value="%3$s" class="regular-text" />',
+					'<input name="%1$s" type="text" id="%1$s" value="%2$s" class="regular-text" />',
 					esc_attr( $uid ),
-					esc_attr( $arguments['placeholder'] ),
 					esc_attr( $value )
 				);
 				break;
