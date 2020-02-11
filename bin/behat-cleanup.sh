@@ -17,8 +17,6 @@ if [ -z "$TERMINUS_SITE" ] || [ -z "$TERMINUS_ENV" ]; then
 	exit 1
 fi
 
-return
-
 ###
 # Delete the environment used for this test run.
 ###
