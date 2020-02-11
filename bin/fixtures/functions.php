@@ -16,7 +16,7 @@ add_filter( 'wp_saml_auth_option', function( $value, $option_name ){
         return 'internal';
     }
     if ( 'internal_config' === $option_name ) {
-        $value['idp']['entityId'] = 'https://' . $_SERVER['HTTP_HOST'] . ':11169/simplesaml/saml2/idp/metadata.php';
+        $value['idp']['entityId'] = home_url( '/simplesaml/saml2/idp/metadata.php' );
         $value['idp']['singleSignOnService']['url'] = home_url( '/simplesaml/saml2/idp/SSOService.php' );
         $value['idp']['x509cert'] = file_get_contents( ABSPATH . '/private/simplesamlphp/cert/saml.crt' );
         $value['idp']['singleLogoutService']['url'] = home_url( '/simplesaml/saml2/idp/SingleLogoutService.php' );
