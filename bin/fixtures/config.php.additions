@@ -19,11 +19,14 @@ $config['technicalcontact_email'] = 'test@example.com';
 // needs to be set as the storage mechanism.
 // So why do tests pass without that?
 // https://pantheon.io/docs/shibboleth-sso/
-$config['baseurlpath'] = 'http://'. $host .'/simplesaml/';
+$config['baseurlpath'] = 'https://'. $host .'/simplesaml/';
 $config['certdir'] = 'cert/';
 $config['loggingdir'] = 'log/';
 $config['datadir'] = 'data/';
 $config['tempdir'] = '/srv/bindings/'. $drop_id .'/tmp/simplesaml';
+
+$config['store.type'] = 'sql';
+$config['store.sql.dsn'] = 'sqlite:/tmp/sqlitedatabase.sq3';
 
 $config['enable.saml20-idp'] = TRUE;
 $config['enable.shib13-idp'] = TRUE;

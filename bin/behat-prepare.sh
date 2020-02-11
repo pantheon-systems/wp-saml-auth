@@ -76,7 +76,7 @@ rm -rf $PREPARE_DIR/wp-content/plugins/wp-saml-auth/.git
 ###
 rm -rf $PREPARE_DIR/private
 mkdir $PREPARE_DIR/private
-wget https://github.com/simplesamlphp/simplesamlphp/releases/download/v1.14.12/simplesamlphp-1.14.12.tar.gz -O $PREPARE_DIR/simplesamlphp-latest.tar.gz
+wget https://github.com/simplesamlphp/simplesamlphp/releases/download/v1.18.4/simplesamlphp-1.18.4.tar.gz -O $PREPARE_DIR/simplesamlphp-latest.tar.gz
 tar -zxvf $PREPARE_DIR/simplesamlphp-latest.tar.gz -C $PREPARE_DIR/private
 ORIG_SIMPLESAMLPHP_DIR=$(ls $PREPARE_DIR/private)
 mv $PREPARE_DIR/private/$ORIG_SIMPLESAMLPHP_DIR $PREPARE_DIR/private/simplesamlphp
@@ -112,10 +112,10 @@ touch $PREPARE_DIR/private/simplesamlphp/modules/exampleauth/enable
 openssl req -newkey rsa:2048 -new -x509 -days 3652 -nodes -out $PREPARE_DIR/private/simplesamlphp/cert/saml.crt -keyout $PREPARE_DIR/private/simplesamlphp/cert/saml.pem -batch
 
 # Modify the login template so Behat can submit the form
-sed -i  -- "s/<button/<button id='submit'/g" $PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.php
-sed -i  -- "s/this.disabled=true; this.form.submit(); return true;//g" $PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.php
+sed -i  -- "s/<button/<button id='submit'/g" $PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php
+sed -i  -- "s/this.disabled=true; this.form.submit(); return true;//g" $PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php
 # Second button instance shouldn't have an id
-sed -i  -- "s/<button id='submit' class=\"btn\" tabindex=\"6\"/<button class=\"btn\" tabindex=\"6\"/g" $PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.php
+sed -i  -- "s/<button id='submit' class=\"btn\" tabindex=\"6\"/<button class=\"btn\" tabindex=\"6\"/g" $PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php
 
 cd $PREPARE_DIR
 # Make the SimpleSAMLphp installation publicly accessible
@@ -141,6 +141,8 @@ sleep 10
 {
   terminus wp $SITE_ENV -- core install --title=$TERMINUS_ENV-$TERMINUS_SITE --url=$PANTHEON_SITE_URL --admin_user=$WORDPRESS_ADMIN_USERNAME --admin_email=$WORDPRESS_ADMIN_EMAIL --admin_password=$WORDPRESS_ADMIN_PASSWORD
 } &> /dev/null
+terminus wp $SITE_ENV -- option update home "https://$PANTHEON_SITE_URL"
+terminus wp $SITE_ENV -- option update siteurl "https://$PANTHEON_SITE_URL"
 terminus wp $SITE_ENV -- plugin activate classic-editor wp-native-php-sessions wp-saml-auth
 terminus wp $SITE_ENV -- theme activate $TERMINUS_SITE
 terminus wp $SITE_ENV -- rewrite structure '/%year%/%monthnum%/%day%/%postname%/'
