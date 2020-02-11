@@ -29,7 +29,7 @@ terminus env:wipe $SITE_ENV --yes
 # Get all necessary environment details.
 ###
 PANTHEON_GIT_URL=$(terminus connection:info $SITE_ENV --field=git_url)
-PANTHEON_SITE_URL="https://$TERMINUS_ENV-$TERMINUS_SITE.pantheonsite.io"
+PANTHEON_SITE_URL="$TERMINUS_ENV-$TERMINUS_SITE.pantheonsite.io"
 PREPARE_DIR="/tmp/$TERMINUS_ENV-$TERMINUS_SITE"
 BASH_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
@@ -141,6 +141,8 @@ sleep 10
 {
   terminus wp $SITE_ENV -- core install --title=$TERMINUS_ENV-$TERMINUS_SITE --url=$PANTHEON_SITE_URL --admin_user=$WORDPRESS_ADMIN_USERNAME --admin_email=$WORDPRESS_ADMIN_EMAIL --admin_password=$WORDPRESS_ADMIN_PASSWORD
 } &> /dev/null
+terminus wp $SITE_ENV -- option update home "https://$PANTHEON_SITE_URL"
+terminus wp $SITE_ENV -- option update siteurl "https://$PANTHEON_SITE_URL"
 terminus wp $SITE_ENV -- plugin activate classic-editor wp-native-php-sessions wp-saml-auth
 terminus wp $SITE_ENV -- theme activate $TERMINUS_SITE
 terminus wp $SITE_ENV -- rewrite structure '/%year%/%monthnum%/%day%/%postname%/'
