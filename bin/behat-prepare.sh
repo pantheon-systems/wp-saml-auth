@@ -29,7 +29,7 @@ terminus env:wipe $SITE_ENV --yes
 # Get all necessary environment details.
 ###
 PANTHEON_GIT_URL=$(terminus connection:info $SITE_ENV --field=git_url)
-PANTHEON_SITE_URL="$TERMINUS_ENV-$TERMINUS_SITE.pantheonsite.io"
+PANTHEON_SITE_URL="https://$TERMINUS_ENV-$TERMINUS_SITE.pantheonsite.io"
 PREPARE_DIR="/tmp/$TERMINUS_ENV-$TERMINUS_SITE"
 BASH_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
