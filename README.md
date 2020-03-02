@@ -3,7 +3,7 @@
 **Tags:** authentication, SAML  
 **Requires at least:** 4.4  
 **Tested up to:** 5.3  
-**Stable tag:** 0.8.3  
+**Stable tag:** 1.0.0  
 **License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html  
 
@@ -276,6 +276,9 @@ Note: the declaration does need to be at the top of `_include.php`, to ensure Wo
 There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Native PHP Sessions active, SimpleSAMLphp and WP SAML Auth will be able to communicate to one another on a multi web node environment.
 
 ## Changelog ##
+
+### 1.0.0 (March 2, 2020) ###
+* Plugin is stable.
 
 ### 0.8.3 (February 3, 2020) ###
 * Removes unused `placeholder` value that's causing PHP notices [[#178](https://github.com/pantheon-systems/wp-saml-auth/pull/178)].
