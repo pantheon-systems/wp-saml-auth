@@ -91,7 +91,9 @@ class WP_SAML_Auth {
 		} else {
 			$simplesamlphp_path = self::get_option( 'simplesamlphp_autoload' );
 			if ( file_exists( $simplesamlphp_path ) ) {
-				require_once $simplesamlphp_path;
+				if ( $GLOBALS['pagenow'] === 'wp-login.php' || is_user_logged_in( ) ) {
+                    require_once $simplesamlphp_path;
+                }
 			}
 			if ( class_exists( 'SimpleSAML\Auth\Simple' ) ) {
 				$this->simplesamlphp_class = 'SimpleSAML\Auth\Simple';
