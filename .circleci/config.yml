@@ -53,3 +53,4 @@ jobs:
     - run: ./bin/behat-test.sh --strict
     - run:
         command: ./bin/behat-cleanup.sh
+        when: always
