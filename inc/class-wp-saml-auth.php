@@ -243,16 +243,23 @@ class WP_SAML_Auth {
 					// Translators: Includes error reason from OneLogin.
 					return new WP_Error( 'wp_saml_auth_unauthenticated', sprintf( __( 'User is not authenticated with SAML IdP. Reason: %s', 'wp-saml-auth' ), $this->provider->getLastErrorReason() ) );
 				}
-				$attributes  = $this->provider->getAttributes();
-				$redirect_to = filter_input( INPUT_POST, 'RelayState', FILTER_SANITIZE_URL );
-				if ( $redirect_to && false === stripos( $redirect_to, 'action=wp-saml-auth' ) ) {
-					add_filter(
-						'login_redirect',
-						function() use ( $redirect_to ) {
-							return $redirect_to;
-						},
-						1
-					);
+				$attributes      = $this->provider->getAttributes();
+				$redirect_to     = filter_input( INPUT_POST, 'RelayState', FILTER_SANITIZE_URL );
+				$permit_wp_login = self::get_option( 'permit_wp_login' );
+				if ( $redirect_to ) {
+					// When $permit_wp_login=true, we only care about accidentially triggering the redirect
+					// to the IDP. However, when $permit_wp_login=false, hitting wp-login will always
+					// trigger the IDP redirect.
+					if ( ( $permit_wp_login && false === stripos( $redirect_to, 'action=wp-saml-auth' ) )
+						|| ( ! $permit_wp_login && false === stripos( $redirect_to, parse_url( wp_login_url(), PHP_URL_PATH ) ) ) ) {
+						add_filter(
+							'login_redirect',
+							function() use ( $redirect_to ) {
+								return $redirect_to;
+							},
+							1
+						);
+					}
 				}
 			} else {
 				$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
