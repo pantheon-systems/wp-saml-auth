@@ -277,6 +277,9 @@ There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Nati
 
 == Changelog ==
 
+= 1.0.1 (May 26, 2020) =
+* Allows redirecting back to `wp-login.php` while avoiding redirect loop [[#192](https://github.com/pantheon-systems/wp-saml-auth/pull/192)].
+
 = 1.0.0 (March 2, 2020) =
 * Plugin is stable.
 

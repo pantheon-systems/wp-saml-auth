@@ -2,14 +2,14 @@
 # This file is distributed under the same license as the WP SAML Auth plugin.
 msgid ""
 msgstr ""
-"Project-Id-Version: WP SAML Auth 0.8.3\n"
+"Project-Id-Version: WP SAML Auth 1.0.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/wp-saml-auth\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2020-02-03T23:02:50+00:00\n"
+"POT-Creation-Date: 2020-05-26T12:03:20+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.4.0\n"
 "X-Domain: wp-saml-auth\n"
@@ -209,19 +209,19 @@ msgstr ""
 msgid "User is not authenticated with SAML IdP. Reason: %s"
 msgstr ""
 
-#: inc/class-wp-saml-auth.php:290
+#: inc/class-wp-saml-auth.php:297
 msgid "Invalid provider specified for SAML authentication"
 msgstr ""
 
-#: inc/class-wp-saml-auth.php:315
+#: inc/class-wp-saml-auth.php:322
 msgid "No attributes were present in SAML response. Attributes are used to create and fetch users. Please contact your administrator"
 msgstr ""
 
 #. Translators: Communicates how the user is fetched based on the SAML response.
-#: inc/class-wp-saml-auth.php:322
+#: inc/class-wp-saml-auth.php:329
 msgid "\"%1$s\" attribute is expected, but missing, in SAML response. Attribute is used to fetch existing user by \"%2$s\". Please contact your administrator."
 msgstr ""
 
-#: inc/class-wp-saml-auth.php:337
+#: inc/class-wp-saml-auth.php:344
 msgid "No WordPress user exists for your account. Please contact your administrator."
 msgstr ""
