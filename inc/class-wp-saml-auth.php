@@ -61,14 +61,18 @@ class WP_SAML_Auth {
 	 * @return mixed
 	 */
 	public function get_provider() {
+		if(is_null($this->provider)) {
+			$this->set_provider();
+		}
 		return $this->provider;
 	}
 
 	/**
-	 * Initialize the controller logic on the 'init' hook
+	 * Determines the provider class to use and loads an instance of it, stores it to ->provider
+	 * @return void
 	 */
-	public function action_init() {
-
+	protected function set_provider()
+	{
 		$connection_type = self::get_option( 'connection_type' );
 		if ( 'internal' === $connection_type ) {
 			if ( file_exists( WP_SAML_AUTH_AUTOLOADER ) ) {
@@ -114,6 +118,12 @@ class WP_SAML_Auth {
 			}
 			$this->provider = new $this->simplesamlphp_class( self::get_option( 'auth_source' ) );
 		}
+	}
+
+	/**
+	 * Initialize the controller logic on the 'init' hook
+	 */
+	public function action_init() {
 		add_action( 'login_head', array( $this, 'action_login_head' ) );
 		add_action( 'login_message', array( $this, 'action_login_message' ) );
 		add_action( 'wp_logout', array( $this, 'action_wp_logout' ) );
@@ -127,20 +137,20 @@ class WP_SAML_Auth {
 	 */
 	public function action_login_head() {
 		?>
-<style>
-	#wp-saml-auth-cta {
-		background: #fff;
-		-webkit-box-shadow: 0 1px 3px rgba(0,0,0,.13);
-		box-shadow: 0 1px 3px rgba(0,0,0,.13);
-		padding: 26px 24px 26px;
-		margin-top: 24px;
-		margin-bottom: 24px;
-	}
-	.wp-saml-auth-deny-wp-login #loginform,
-	.wp-saml-auth-deny-wp-login #nav {
-		display: none;
-	}
-</style>
+		<style>
+			#wp-saml-auth-cta {
+				background: #fff;
+				-webkit-box-shadow: 0 1px 3px rgba(0,0,0,.13);
+				box-shadow: 0 1px 3px rgba(0,0,0,.13);
+				padding: 26px 24px 26px;
+				margin-top: 24px;
+				margin-bottom: 24px;
+			}
+			.wp-saml-auth-deny-wp-login #loginform,
+			.wp-saml-auth-deny-wp-login #nav {
+				display: none;
+			}
+		</style>
 		<?php
 	}
 
@@ -184,13 +194,14 @@ class WP_SAML_Auth {
 	 * Log the user out of the SAML instance when they log out of WordPress
 	 */
 	public function action_wp_logout() {
+		$provider = $this->get_provider();
 		if ( 'internal' === self::get_option( 'connection_type' ) ) {
 			$internal_config = self::get_option( 'internal_config' );
 			if ( empty( $internal_config['idp']['singleLogoutService']['url'] ) ) {
 				return;
 			}
 		}
-		$this->provider->logout( add_query_arg( 'loggedout', true, wp_login_url() ) );
+		$provider->logout( add_query_arg( 'loggedout', true, wp_login_url() ) );
 	}
 
 	/**
@@ -235,38 +246,31 @@ class WP_SAML_Auth {
 	 * Do the SAML authentication dance
 	 */
 	public function do_saml_authentication() {
-
-		if ( is_a( $this->provider, 'OneLogin\Saml2\Auth' ) ) {
+		$provider = $this->get_provider();
+		if ( is_a( $provider, 'OneLogin\Saml2\Auth' ) ) {
 			if ( ! empty( $_POST['SAMLResponse'] ) ) {
-				$this->provider->processResponse();
-				if ( ! $this->provider->isAuthenticated() ) {
+				$provider->processResponse();
+				if ( ! $provider->isAuthenticated() ) {
 					// Translators: Includes error reason from OneLogin.
-					return new WP_Error( 'wp_saml_auth_unauthenticated', sprintf( __( 'User is not authenticated with SAML IdP. Reason: %s', 'wp-saml-auth' ), $this->provider->getLastErrorReason() ) );
+					return new WP_Error( 'wp_saml_auth_unauthenticated', sprintf( __( 'User is not authenticated with SAML IdP. Reason: %s', 'wp-saml-auth' ), $provider->getLastErrorReason() ) );
 				}
-				$attributes      = $this->provider->getAttributes();
-				$redirect_to     = filter_input( INPUT_POST, 'RelayState', FILTER_SANITIZE_URL );
-				$permit_wp_login = self::get_option( 'permit_wp_login' );
-				if ( $redirect_to ) {
-					// When $permit_wp_login=true, we only care about accidentially triggering the redirect
-					// to the IDP. However, when $permit_wp_login=false, hitting wp-login will always
-					// trigger the IDP redirect.
-					if ( ( $permit_wp_login && false === stripos( $redirect_to, 'action=wp-saml-auth' ) )
-						|| ( ! $permit_wp_login && false === stripos( $redirect_to, parse_url( wp_login_url(), PHP_URL_PATH ) ) ) ) {
-						add_filter(
-							'login_redirect',
-							function() use ( $redirect_to ) {
-								return $redirect_to;
-							},
-							1
-						);
-					}
+				$attributes  = $provider->getAttributes();
+				$redirect_to = filter_input( INPUT_POST, 'RelayState', FILTER_SANITIZE_URL );
+				if ( $redirect_to && false === stripos( $redirect_to, parse_url( wp_login_url(), PHP_URL_PATH ) ) ) {
+					add_filter(
+						'login_redirect',
+						function() use ( $redirect_to ) {
+							return $redirect_to;
+						},
+						1
+					);
 				}
 			} else {
 				$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
 				$redirect_to = $redirect_to ? $redirect_to : $_SERVER['REQUEST_URI'];
-				$this->provider->login( $redirect_to );
+				$provider->login( $redirect_to );
 			}
-		} elseif ( is_a( $this->provider, $this->simplesamlphp_class ) ) {
+		} elseif ( is_a( $provider, $this->simplesamlphp_class ) ) {
 			$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
 			if ( $redirect_to ) {
 				$redirect_to = add_query_arg(
@@ -287,12 +291,12 @@ class WP_SAML_Auth {
 					$redirect_to = add_query_arg( array( 'action' => 'wp-saml-auth' ), $redirect_to );
 				}
 			}
-			$this->provider->requireAuth(
+			$provider->requireAuth(
 				array(
 					'ReturnTo' => $redirect_to,
 				)
 			);
-			$attributes = $this->provider->getAttributes();
+			$attributes = $provider->getAttributes();
 		} else {
 			return new WP_Error( 'wp_saml_auth_invalid_provider', __( 'Invalid provider specified for SAML authentication', 'wp-saml-auth' ) );
 		}
@@ -303,7 +307,7 @@ class WP_SAML_Auth {
 		 * @param array  $attributes All attributes received from the SAML response.
 		 * @param object $provider   Provider instance currently in use.
 		 */
-		$attributes = apply_filters( 'wp_saml_auth_attributes', $attributes, $this->provider );
+		$attributes = apply_filters( 'wp_saml_auth_attributes', $attributes, $provider );
 
 		/**
 		 * Runs before the SAML authentication dance proceeds
