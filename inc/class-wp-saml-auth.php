@@ -79,15 +79,6 @@ class WP_SAML_Auth {
 				require_once WP_SAML_AUTH_AUTOLOADER;
 			}
 			if ( ! class_exists( 'OneLogin\Saml2\Auth' ) ) {
-				add_action(
-					'admin_notices',
-					function() {
-						if ( current_user_can( 'manage_options' ) ) {
-							// Translators: Links to the WP SAML Auth plugin.
-							echo '<div class="message error"><p>' . wp_kses_post( sprintf( __( "WP SAML Auth wasn't able to find the <code>OneLogin\Saml2\Auth</code> class. Please verify your Composer autoloader, or <a href='%s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ), 'https://wordpress.org/plugins/wp-saml-auth/' ) ) . '</p></div>';
-						}
-					}
-				);
 				return;
 			}
 			$auth_config    = self::get_option( 'internal_config' );
@@ -101,19 +92,6 @@ class WP_SAML_Auth {
 				$this->simplesamlphp_class = 'SimpleSAML\Auth\Simple';
 			}
 			if ( ! class_exists( $this->simplesamlphp_class ) ) {
-				add_action(
-					'admin_notices',
-					function() {
-						if ( ! empty( $_GET['page'] )
-							&& 'wp-saml-auth-settings' === $_GET['page'] ) {
-							return;
-						}
-						if ( current_user_can( 'manage_options' ) ) {
-							// Translators: Links to the WP SAML Auth plugin.
-							echo '<div class="message error"><p>' . wp_kses_post( sprintf( __( "WP SAML Auth wasn't able to find the <code>%1\$s</code> class. Please check the <code>simplesamlphp_autoload</code> configuration option, or <a href='%2\$s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ), $this->simplesamlphp_class, 'https://wordpress.org/plugins/wp-saml-auth/' ) ) . '</p></div>';
-						}
-					}
-				);
 				return;
 			}
 			$this->provider = new $this->simplesamlphp_class( self::get_option( 'auth_source' ) );
@@ -129,6 +107,7 @@ class WP_SAML_Auth {
 		add_action( 'wp_logout', array( $this, 'action_wp_logout' ) );
 		add_filter( 'login_body_class', array( $this, 'filter_login_body_class' ) );
 		add_filter( 'authenticate', array( $this, 'filter_authenticate' ), 21, 3 ); // after wp_authenticate_username_password runs.
+		add_action( 'admin_notices', array( $this, 'action_admin_notices' ) );
 
 	}
 
@@ -384,6 +363,40 @@ class WP_SAML_Auth {
 		 */
 		do_action( 'wp_saml_auth_new_user_authenticated', $user, $attributes );
 		return $user;
+	}
+
+	/**
+	 * Displays notices in the admin if certain configuration properties aren't correct.
+	 */
+	public function action_admin_notices() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+		if ( ! empty( $_GET['page'] )
+			&& 'wp-saml-auth-settings' === $_GET['page'] ) {
+			return;
+		}
+		$connection_type = self::get_option( 'connection_type' );
+		if ( 'internal' === $connection_type ) {
+			if ( file_exists( WP_SAML_AUTH_AUTOLOADER ) ) {
+				require_once WP_SAML_AUTH_AUTOLOADER;
+			}
+			if ( ! class_exists( 'OneLogin\Saml2\Auth' ) ) {
+				// Translators: Links to the WP SAML Auth plugin.
+				echo '<div class="message error"><p>' . wp_kses_post( sprintf( __( "WP SAML Auth wasn't able to find the <code>OneLogin\Saml2\Auth</code> class. Please verify your Composer autoloader, or <a href='%s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ), 'https://wordpress.org/plugins/wp-saml-auth/' ) ) . '</p></div>';
+			}
+		} else {
+			$simplesamlphp_path = self::get_option( 'simplesamlphp_autoload' );
+			if ( file_exists( $simplesamlphp_path ) ) {
+				require_once $simplesamlphp_path;
+			}
+			if ( class_exists( 'SimpleSAML\Auth\Simple' ) ) {
+				$this->simplesamlphp_class = 'SimpleSAML\Auth\Simple';
+			}
+			if ( ! class_exists( $this->simplesamlphp_class ) ) {
+				echo '<div class="message error"><p>' . wp_kses_post( sprintf( __( "WP SAML Auth wasn't able to find the <code>%1\$s</code> class. Please check the <code>simplesamlphp_autoload</code> configuration option, or <a href='%2\$s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ), $this->simplesamlphp_class, 'https://wordpress.org/plugins/wp-saml-auth/' ) ) . '</p></div>';
+			}
+		}
 	}
 
 }
