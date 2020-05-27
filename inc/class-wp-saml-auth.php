@@ -69,10 +69,10 @@ class WP_SAML_Auth {
 
 	/**
 	 * Determines the provider class to use and loads an instance of it, stores it to ->provider
+	 *
 	 * @return void
 	 */
-	protected function set_provider()
-	{
+	protected function set_provider() {
 		$connection_type = self::get_option( 'connection_type' );
 		if ( 'internal' === $connection_type ) {
 			if ( file_exists( WP_SAML_AUTH_AUTOLOADER ) ) {
