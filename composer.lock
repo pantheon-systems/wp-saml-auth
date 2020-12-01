@@ -4,25 +4,25 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7bd9f4969e707b554d9073cb7eb344e1",
+    "content-hash": "eff33d1a770cf9352bd44e9ceb815419",
     "packages": [
         {
             "name": "onelogin/php-saml",
-            "version": "3.4.1",
+            "version": "3.5.0.x-dev",
             "source": {
                 "type": "git",
                 "url": "https://github.com/onelogin/php-saml.git",
-                "reference": "5fbf3486704ac9835b68184023ab54862c95f213"
+                "reference": "e5365b78637fc2bd8b4e7aeb441972cbd9ef1a2e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/onelogin/php-saml/zipball/5fbf3486704ac9835b68184023ab54862c95f213",
-                "reference": "5fbf3486704ac9835b68184023ab54862c95f213",
+                "url": "https://api.github.com/repos/onelogin/php-saml/zipball/e5365b78637fc2bd8b4e7aeb441972cbd9ef1a2e",
+                "reference": "e5365b78637fc2bd8b4e7aeb441972cbd9ef1a2e",
                 "shasum": ""
             },
             "require": {
                 "php": ">=5.4",
-                "robrichards/xmlseclibs": ">=3.0.4"
+                "robrichards/xmlseclibs": ">=3.1.1"
             },
             "require-dev": {
                 "pdepend/pdepend": "^2.5.0",
@@ -59,7 +59,7 @@
                 "issues": "https://github.com/onelogin/php-saml/issues",
                 "source": "https://github.com/onelogin/php-saml/"
             },
-            "time": "2019-11-25T17:30:07+00:00"
+            "time": "2020-11-26T18:47:43+00:00"
         },
         {
             "name": "robrichards/xmlseclibs",
