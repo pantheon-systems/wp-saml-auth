@@ -24,7 +24,7 @@
         "dealerdirect/phpcodesniffer-composer-installer": "^0.7.0",
         "phpunit/phpunit": "^7",
         "phpcompatibility/php-compatibility": "^9.3",
-        "symfony/filesystem": "^4",
+        "symfony/filesystem": "^5",
         "symfony/service-contracts": "^2",
         "symfony/translation-contracts": "^2"
     },
