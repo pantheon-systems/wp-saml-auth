@@ -1,9 +1,9 @@
 # WP SAML Auth #
-**Contributors:** getpantheon, danielbachhuber, Outlandish Josh  
+**Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber), [Outlandish Josh](https://profiles.wordpress.org/Outlandish Josh)  
 **Tags:** authentication, SAML  
 **Requires at least:** 4.4  
 **Tested up to:** 5.6  
-**Stable tag:** 1.1.0  
+**Stable tag:** 1.1.1  
 **License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html  
 
@@ -276,6 +276,9 @@ Note: the declaration does need to be at the top of `_include.php`, to ensure Wo
 There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Native PHP Sessions active, SimpleSAMLphp and WP SAML Auth will be able to communicate to one another on a multi web node environment.
 
 ## Changelog ##
+
+### 1.1.1 (Feb 3, 2021) ###
+* Updates French localization and ensures localizations are loaded [[#230](https://github.com/pantheon-systems/wp-saml-auth/pull/230)].
 
 ### 1.1.0 (Dec 1, 2020) ###
 * Updates `onelogin/php-saml` to `v3.5.0` [[#218](https://github.com/pantheon-systems/wp-saml-auth/pull/218)].
