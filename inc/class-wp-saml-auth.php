@@ -402,7 +402,7 @@ class WP_SAML_Auth {
 	/**
 	 * Loads Plugin translation files.
 	 *
-	 * @since 1.?.?
+	 * @since 1.1.1
 	 */
 	public function load_textdomain() {
 		load_plugin_textdomain( 'wp-saml-auth', false, dirname( plugin_basename( __FILE__ ), 2 ) . '/languages' );

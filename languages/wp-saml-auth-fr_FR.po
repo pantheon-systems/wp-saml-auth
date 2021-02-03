@@ -5,14 +5,14 @@ msgstr ""
 "Project-Id-Version: WP SAML Auth 0.3.9\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/wp-saml-auth\n"
 "POT-Creation-Date: 2020-12-01T13:07:52+00:00\n"
-"PO-Revision-Date: 2021-02-03 08:16+0100\n"
+"PO-Revision-Date: 2021-02-03 15:33+0100\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: fr_FR\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 1.7.4\n"
+"X-Generator: Poedit 1.5.7\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "X-Poedit-SourceCharset: UTF-8\n"
 
@@ -116,7 +116,7 @@ msgid ""
 msgstr ""
 "Si coché, tout nouvel utilisateur WordPress se connectant sera créé suite à "
 "son authentification. <br>Si non coché, l’utilisateur WordPress devra "
-"exister pour pouvoir s'authentifier."
+"exister pour pouvoir s’authentifier."
 
 #: inc/class-wp-saml-auth-settings.php:319
 msgid "Permit WordPress login"
@@ -132,63 +132,71 @@ msgstr ""
 
 #: inc/class-wp-saml-auth-settings.php:327
 msgid "Get User By"
-msgstr ""
+msgstr "Définir l’utilisateur selon"
 
 #: inc/class-wp-saml-auth-settings.php:333
 msgid "Attribute by which SAML requests are matched to WordPress users."
 msgstr ""
+"Attribut que les requêtes SAML doivent utiliser pour déterminer les "
+"utilisateurs WordPress."
 
 #: inc/class-wp-saml-auth-settings.php:339
 msgid "Base URL"
-msgstr ""
+msgstr "URL de base"
 
 #: inc/class-wp-saml-auth-settings.php:341
 msgid "The base url to be used when constructing URLs."
-msgstr ""
+msgstr "L’URL de base à utiliser pour construire les URLs."
 
 #: inc/class-wp-saml-auth-settings.php:348
 #: inc/class-wp-saml-auth-settings.php:368
 msgid "Entity Id (Required)"
-msgstr ""
+msgstr "Identifiant d’entité (obligatoire)"
 
 #: inc/class-wp-saml-auth-settings.php:351
 msgid "SP (WordPress) entity identifier."
-msgstr ""
+msgstr "Identifiant d’entité du fournisseur de service SP (WordPress)"
 
 #: inc/class-wp-saml-auth-settings.php:358
 msgid "Assertion Consumer Service URL (Required)"
-msgstr ""
+msgstr "URL du service consommateur des assertions (obligatoire)"
 
 #: inc/class-wp-saml-auth-settings.php:360
 msgid ""
 "URL where the response from the IdP should be returned (usually the login "
 "URL)."
 msgstr ""
+"URL à utiliser pour la réception des réponses du fournisseur d’identité IdP "
+"(habituellement l’URL de connexion). "
 
 #: inc/class-wp-saml-auth-settings.php:370
 msgid "IdP entity identifier."
-msgstr ""
+msgstr "Identifiant du fournisseur d’identité (IdP)"
 
 #: inc/class-wp-saml-auth-settings.php:376
 msgid "Single SignOn Service URL (Required)"
-msgstr ""
+msgstr "URL du service d’authentification unique (obligatoire)"
 
 #: inc/class-wp-saml-auth-settings.php:378
 msgid ""
 "URL of the IdP where the SP (WordPress) will send the authentication request."
 msgstr ""
+"URL du fournisseur d’identité - IdP auprès de laquelle le fournisseur de "
+"service - SP (WordPress) doit envoyer la requête d’authentification"
 
 #: inc/class-wp-saml-auth-settings.php:384
 msgid "Single Logout Service URL"
-msgstr ""
+msgstr "URL du service de déconnexion unique"
 
 #: inc/class-wp-saml-auth-settings.php:386
 msgid "URL of the IdP where the SP (WordPress) will send the signout request."
 msgstr ""
+"URL du fournisseur d’identité - IdP auprès de laquelle le fournisseur de "
+"service - SP (WordPress) doit envoyer la requête de déconnexion."
 
 #: inc/class-wp-saml-auth-settings.php:391
 msgid "x509 Cerificate Path"
-msgstr ""
+msgstr "Chemin du certificat x509"
 
 #: inc/class-wp-saml-auth-settings.php:393
 msgid ""
@@ -196,24 +204,29 @@ msgid ""
 ">Include <code>ABSPATH</code> to set path base to WordPress' ABSPATH "
 "constant."
 msgstr ""
+"Chemin pour accéder au fichier contenant le certificat x509, lequel est "
+"utilisé pour vérifier la requête.<br/>Utilisez <code>ABSPATH</code> pour "
+"baser votre chemin sur la constante ABSPATH de WordPress."
 
 #: inc/class-wp-saml-auth-settings.php:398
 msgid "Certificate Fingerprint"
-msgstr ""
+msgstr "Emprunte du certificat"
 
 #: inc/class-wp-saml-auth-settings.php:400
 msgid ""
 "If not using x509 certificate, paste the certificate fingerprint and specify "
 "the fingerprint algorithm below."
 msgstr ""
+"Si vous n’utilisez pas un certificat x509, copier l’empreinte du certificat "
+"en spécifiant son algorythme ci-dessous."
 
 #: inc/class-wp-saml-auth-settings.php:405
 msgid "Certificate Fingerprint Algorithm"
-msgstr ""
+msgstr "Algorythme de l’empreinte du certificat"
 
 #: inc/class-wp-saml-auth-settings.php:408
 msgid "N/A"
-msgstr ""
+msgstr "N/A"
 
 #: inc/class-wp-saml-auth.php:147
 msgid "Use one-click authentication:"
@@ -243,6 +256,9 @@ msgid ""
 "No attributes were present in SAML response. Attributes are used to create "
 "and fetch users. Please contact your administrator"
 msgstr ""
+"Aucun attribut n’était présent dans la réponse SAML. Les attributs sont "
+"utilisés pour créer et rappatrier les utilisateurs. Merci de contacter votre "
+"administrateur"
 
 #. Translators: Communicates how the user is fetched based on the SAML response.
 #: inc/class-wp-saml-auth.php:319
@@ -268,6 +284,10 @@ msgid ""
 "class. Please verify your Composer autoloader, or <a href='%s'>visit the "
 "plugin page</a> for more information."
 msgstr ""
+"WP SAML n’a pas été en mesure de trouver la classe <code>OneLogin"
+"\\Saml2\\Auth</code>. Merci de vérifier le chargeur automatique (autoloader) "
+"de votre Composer, ou <a href=\"%s\">de consulter la page de l’extension</a> "
+"pour plus d’information."
 
 #: inc/class-wp-saml-auth.php:397
 msgid ""
