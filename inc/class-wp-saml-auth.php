@@ -41,6 +41,7 @@ class WP_SAML_Auth {
 		if ( ! isset( self::$instance ) ) {
 			self::$instance = new WP_SAML_Auth;
 			add_action( 'init', array( self::$instance, 'action_init' ) );
+			add_action( 'plugins_loaded', array( self::$instance, 'load_textdomain' ) );
 		}
 		return self::$instance;
 	}
@@ -108,7 +109,6 @@ class WP_SAML_Auth {
 		add_filter( 'login_body_class', array( $this, 'filter_login_body_class' ) );
 		add_filter( 'authenticate', array( $this, 'filter_authenticate' ), 21, 3 ); // after wp_authenticate_username_password runs.
 		add_action( 'admin_notices', array( $this, 'action_admin_notices' ) );
-
 	}
 
 	/**
@@ -399,4 +399,12 @@ class WP_SAML_Auth {
 		}
 	}
 
+	/**
+	 * Loads Plugin translation files.
+	 *
+	 * @since 1.1.1
+	 */
+	public function load_textdomain() {
+		load_plugin_textdomain( 'wp-saml-auth', false, dirname( plugin_basename( __FILE__ ), 2 ) . '/languages' );
+	}
 }
