@@ -8,6 +8,10 @@ updates:
     day: tuesday
   open-pull-requests-limit: 99
   ignore:
+  - dependency-name: onelogin/php-saml
+    versions:
+    - ">= 4"
+    - "< 5"
   - dependency-name: phpunit/phpunit
     versions:
     - ">= 8.a"
