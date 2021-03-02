@@ -8,16 +8,16 @@
     "packages": [
         {
             "name": "onelogin/php-saml",
-            "version": "3.6.0",
+            "version": "3.6.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/onelogin/php-saml.git",
-                "reference": "888e33356d0d7b529991a431fce3ee20c0307988"
+                "reference": "a7328b11887660ad248ea10952dd67a5aa73ba3b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/onelogin/php-saml/zipball/888e33356d0d7b529991a431fce3ee20c0307988",
-                "reference": "888e33356d0d7b529991a431fce3ee20c0307988",
+                "url": "https://api.github.com/repos/onelogin/php-saml/zipball/a7328b11887660ad248ea10952dd67a5aa73ba3b",
+                "reference": "a7328b11887660ad248ea10952dd67a5aa73ba3b",
                 "shasum": ""
             },
             "require": {
@@ -59,7 +59,7 @@
                 "issues": "https://github.com/onelogin/php-saml/issues",
                 "source": "https://github.com/onelogin/php-saml/"
             },
-            "time": "2021-02-19T00:40:47+00:00"
+            "time": "2021-03-02T10:13:07+00:00"
         },
         {
             "name": "robrichards/xmlseclibs",
