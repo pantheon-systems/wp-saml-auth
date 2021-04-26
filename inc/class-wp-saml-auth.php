@@ -115,6 +115,10 @@ class WP_SAML_Auth {
 	 * Render CSS on the login screen
 	 */
 	public function action_login_head() {
+		if ( ! did_action( 'login_form_login') ) {
+			return;
+		}
+
 		?>
 <style>
 	#wp-saml-auth-cta {
@@ -140,7 +144,7 @@ class WP_SAML_Auth {
 	 * @return string
 	 */
 	public function action_login_message( $message ) {
-		if ( ! self::get_option( 'permit_wp_login' ) ) {
+		if ( ! self::get_option( 'permit_wp_login' ) || ! did_action( 'login_form_login') ) {
 			return $message;
 		}
 		$strings = array(
