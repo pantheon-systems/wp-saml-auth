@@ -2,7 +2,7 @@
 **Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber), [Outlandish Josh](https://profiles.wordpress.org/Outlandish Josh)  
 **Tags:** authentication, SAML  
 **Requires at least:** 4.4  
-**Tested up to:** 5.7  
+**Tested up to:** 5.8  
 **Stable tag:** 1.2.3  
 **License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html  
