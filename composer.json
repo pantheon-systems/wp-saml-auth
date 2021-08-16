@@ -26,7 +26,8 @@
         "phpcompatibility/php-compatibility": "^9.3",
         "symfony/filesystem": "^5",
         "symfony/service-contracts": "^2",
-        "symfony/translation-contracts": "^2"
+        "symfony/translation-contracts": "^2",
+        "yoast/phpunit-polyfills": "^1.0"
     },
     "scripts": {
         "lint": "@phpcs",
