@@ -183,8 +183,26 @@ class WP_SAML_Auth {
 			if ( empty( $internal_config['idp']['singleLogoutService']['url'] ) ) {
 				return;
 			}
+			$args = array(
+				'parameters' => array(),
+				'nameId'     => null,
+				'sessionId'  => null,
+			);
+			/**
+			 * Permit the arguments passed to the logout() method to be customized.
+			 *
+			 * @param array $args Existing arguments to be passed.
+			 */
+			$args = apply_filters( 'wp_saml_auth_internal_logout_args', $args );
+			$provider->logout(
+				add_query_arg( 'loggedout', true, wp_login_url() ),
+				$args['parameters'],
+				$args['nameId'],
+				$args['sessionIndex']
+			);
+		} else {
+			$provider->logout( add_query_arg( 'loggedout', true, wp_login_url() ) );
 		}
-		$provider->logout( add_query_arg( 'loggedout', true, wp_login_url() ) );
 	}
 
 	/**
