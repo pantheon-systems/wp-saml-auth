@@ -184,9 +184,9 @@ class WP_SAML_Auth {
 				return;
 			}
 			$args = array(
-				'parameters' => array(),
-				'nameId'     => null,
-				'sessionIndex'  => null,
+				'parameters'   => array(),
+				'nameId'       => null,
+				'sessionIndex' => null,
 			);
 			/**
 			 * Permit the arguments passed to the logout() method to be customized.
