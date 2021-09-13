@@ -154,6 +154,11 @@ function wpsa_filter_option( $value, $option_name ) {
 		 */
 		'default_role'           => get_option( 'default_role' ),
 	);
+	$custom_attributes = wp_get_user_contact_methods();
+	foreach($custom_attributes as $attr => $label) {
+		$defaults[$attr.'_attribute'] = $attr;
+	}
+
 	$value = isset( $defaults[ $option_name ] ) ? $defaults[ $option_name ] : $value;
 	return $value;
 }
