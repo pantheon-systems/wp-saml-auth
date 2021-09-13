@@ -454,7 +454,7 @@ class WP_SAML_Auth_Settings {
 			array_push(self::$fields, array(
 				'section' => 'attributes',
 				'uid'     => $attr.'_attribute',
-				'label'   => $label,
+				'label'   => $attr,
 				'type'    => 'text',
 				'default' => '',
 			));
