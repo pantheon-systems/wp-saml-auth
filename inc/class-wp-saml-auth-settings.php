@@ -449,6 +449,16 @@ class WP_SAML_Auth_Settings {
 				'default' => 'last_name',
 			),
 		);
+		$custom_attributes = wp_get_user_contact_methods();
+		foreach($custom_attributes as $attr => $label) {
+			array_push(self::$fields, array(
+				'section' => 'attributes',
+				'uid'     => $attr.'_attribute',
+				'label'   => $label,
+				'type'    => 'text',
+				'default' => '',
+			));
+		}
 	}
 
 	/**
