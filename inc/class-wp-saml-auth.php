@@ -363,7 +363,8 @@ class WP_SAML_Auth {
 		}
 
 		$user_args = array();
-		foreach ( array( 'display_name', 'user_login', 'user_email', 'first_name', 'last_name' ) as $type ) {
+		$attributeTypes = explode(',', self::get_option( "attributeTypes" ));
+		foreach ( $attributeTypes as $type ) {
 			$attribute          = self::get_option( "{$type}_attribute" );
 			$user_args[ $type ] = ! empty( $attributes[ $attribute ][0] ) ? $attributes[ $attribute ][0] : '';
 		}
