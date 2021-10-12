@@ -282,7 +282,15 @@ class WP_SAML_Auth {
 				 * @param boolean $force_auth forceAuthn behavior.
 				 */
 				$force_authn = apply_filters( 'wp_saml_auth_force_authn', false );
-				$provider->login( $redirect_to, array(), $force_authn );
+
+				/**
+				 * Allows login parameters to be customized.
+				 *
+				 * @param array $parameters 
+				 */
+				$parameters = apply_filters( 'wp_saml_auth_login_parameters', array() );
+
+				$provider->login( $redirect_to, $parameters, $force_authn );
 			}
 		} elseif ( is_a( $provider, $this->simplesamlphp_class ) ) {
 			$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
