@@ -286,7 +286,7 @@ class WP_SAML_Auth {
 				/**
 				 * Allows login parameters to be customized.
 				 *
-				 * @param array $parameters 
+				 * @param array $parameters
 				 */
 				$parameters = apply_filters( 'wp_saml_auth_login_parameters', array() );
 
