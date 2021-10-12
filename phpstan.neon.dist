@@ -1,0 +1,22 @@
+#$ composer require --dev php-stubs/wp-cli-stubs szepeviktor/phpstan-wordpress
+
+includes:
+    - vendor/szepeviktor/phpstan-wordpress/extension.neon
+parameters:
+    level: 5
+    inferPrivatePropertyTypeFromConstructor: true
+    scanFiles:
+        - vendor/php-stubs/wp-cli-stubs/wp-cli-stubs.php
+    paths:
+        - wp-saml-auth.php
+        - inc/
+    earlyTerminatingMethodCalls:
+        OneLogin\Saml2\Auth:
+            - login
+    ignoreErrors:
+        # Uses func_get_args()
+        - '#^Function apply_filters(_ref_array)? invoked with [34567] parameters, 2 required\.$#'
+        # WP-CLI PHPDoc problem
+        - '#^Parameter \#2 \$callable of static method WP_CLI::add_command\(\) expects callable\(\): mixed,#'
+        # No callback for add_settings_section()?
+        - '#^Parameter \#3 \$callback of function add_settings_section expects callable\(\): mixed, null given\.$#'
