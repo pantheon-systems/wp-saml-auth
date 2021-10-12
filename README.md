@@ -1,5 +1,5 @@
 # WP SAML Auth #
-**Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber), [Outlandish Josh](https://profiles.wordpress.org/Outlandish Josh)  
+**Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [Outlandish Josh](https://profiles.wordpress.org/outlandish-josh/)  
 **Tags:** authentication, SAML  
 **Requires at least:** 4.4  
 **Tested up to:** 5.8  
