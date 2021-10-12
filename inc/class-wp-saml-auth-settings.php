@@ -193,72 +193,74 @@ class WP_SAML_Auth_Settings {
 	 * @return array
 	 */
 	public static function sanitize_callback( $input ) {
-		if ( ! empty( $input ) && is_array( $input ) ) {
-			foreach ( self::$fields as $field ) {
-				$section = self::$sections[ $field['section'] ];
-				$uid     = $field['uid'];
-				$value   = $input[ $uid ];
+		if ( empty( $input ) || ! is_array( $input ) ) {
+			return array();
+		}
 
-				// checkboxes.
-				if ( 'checkbox' === $field['type'] ) {
-					$input[ $uid ] = isset( $value ) ? true : false;
+		foreach ( self::$fields as $field ) {
+			$section = self::$sections[ $field['section'] ];
+			$uid     = $field['uid'];
+			$value   = $input[ $uid ];
+
+			// checkboxes.
+			if ( 'checkbox' === $field['type'] ) {
+				$input[ $uid ] = isset( $value ) ? true : false;
+			}
+
+			// required fields.
+			if ( isset( $field['required'] ) && $field['required'] ) {
+				if ( empty( $value ) ) {
+					$input['connection_type'] = null;
+					add_settings_error(
+						WP_SAML_Auth_Options::get_option_name(),
+						$uid,
+						// translators: Field label.
+						sprintf( __( '%s is a required field', 'wp-saml-auth' ), trim( $section . ' ' . $field['label'] ) )
+					);
 				}
+			}
 
-				// required fields.
-				if ( isset( $field['required'] ) && $field['required'] ) {
-					if ( empty( $value ) ) {
+			// text fields.
+			if ( 'text' === $field['type'] ) {
+				if ( ! empty( $value ) ) {
+					$input[ $uid ] = sanitize_text_field( $value );
+				}
+			}
+
+			// url fields.
+			if ( 'url' === $field['type'] ) {
+				if ( ! empty( $value ) ) {
+					if ( filter_var( $value, FILTER_VALIDATE_URL ) ) {
+						$input[ $uid ] = esc_url_raw( $value, array( 'http', 'https' ) );
+					} else {
 						$input['connection_type'] = null;
+						$input[ $uid ]            = null;
 						add_settings_error(
 							WP_SAML_Auth_Options::get_option_name(),
 							$uid,
 							// translators: Field label.
-							sprintf( __( '%s is a required field', 'wp-saml-auth' ), trim( $section . ' ' . $field['label'] ) )
+							sprintf( __( '%s is not a valid URL.', 'wp-saml-auth' ), trim( $section . ' ' . $field['label'] ) )
 						);
-					}
-				}
-
-				// text fields.
-				if ( 'text' === $field['type'] ) {
-					if ( ! empty( $value ) ) {
-						$input[ $uid ] = sanitize_text_field( $value );
-					}
-				}
-
-				// url fields.
-				if ( 'url' === $field['type'] ) {
-					if ( ! empty( $value ) ) {
-						if ( filter_var( $value, FILTER_VALIDATE_URL ) ) {
-							$input[ $uid ] = esc_url_raw( $value, array( 'http', 'https' ) );
-						} else {
-							$input['connection_type'] = null;
-							$input[ $uid ]            = null;
-							add_settings_error(
-								WP_SAML_Auth_Options::get_option_name(),
-								$uid,
-								// translators: Field label.
-								sprintf( __( '%s is not a valid URL.', 'wp-saml-auth' ), trim( $section . ' ' . $field['label'] ) )
-							);
-						}
-					}
-				}
-
-				if ( 'x509cert' === $field['uid'] ) {
-					if ( ! empty( $value ) ) {
-						$value = str_replace( 'ABSPATH', ABSPATH, $value );
-						if ( ! file_exists( $value ) ) {
-							add_settings_error(
-								WP_SAML_Auth_Options::get_option_name(),
-								$uid,
-								// translators: Field label.
-								sprintf( __( '%s is not a valid certificate path.', 'wp-saml-auth' ), trim( $section . ' ' . $field['label'] ) )
-							);
-						}
 					}
 				}
 			}
 
-			return $input;
+			if ( 'x509cert' === $field['uid'] ) {
+				if ( ! empty( $value ) ) {
+					$value = str_replace( 'ABSPATH', ABSPATH, $value );
+					if ( ! file_exists( $value ) ) {
+						add_settings_error(
+							WP_SAML_Auth_Options::get_option_name(),
+							$uid,
+							// translators: Field label.
+							sprintf( __( '%s is not a valid certificate path.', 'wp-saml-auth' ), trim( $section . ' ' . $field['label'] ) )
+						);
+					}
+				}
+			}
 		}
+
+		return $input;
 	}
 
 	/**
