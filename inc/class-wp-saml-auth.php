@@ -20,7 +20,7 @@ class WP_SAML_Auth {
 	/**
 	 * SAML provider instance
 	 *
-	 * @var object
+	 * @var object|null
 	 */
 	private $provider = null;
 
