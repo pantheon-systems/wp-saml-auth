@@ -1,5 +1,5 @@
 === WP SAML Auth ===
-Contributors: getpantheon, danielbachhuber, Outlandish Josh
+Contributors: getpantheon, danielbachhuber, outlandish-josh
 Tags: authentication, SAML
 Requires at least: 4.4
 Tested up to: 5.8
