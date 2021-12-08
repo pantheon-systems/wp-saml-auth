@@ -177,6 +177,10 @@ class WP_SAML_Auth {
 	 * Log the user out of the SAML instance when they log out of WordPress
 	 */
 	public function action_wp_logout() {
+		/**
+		 * Fires before the user is logged out.
+		 */
+		do_action( 'wp_saml_auth_pre_logout' );
 		$provider = $this->get_provider();
 		if ( 'internal' === self::get_option( 'connection_type' ) ) {
 			$internal_config = self::get_option( 'internal_config' );
