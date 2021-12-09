@@ -1,9 +1,9 @@
 # WP SAML Auth #
-**Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [Outlandish Josh](https://profiles.wordpress.org/outlandish-josh/)  
+**Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [outlandish-josh](https://profiles.wordpress.org/outlandish-josh/)  
 **Tags:** authentication, SAML  
 **Requires at least:** 4.4  
 **Tested up to:** 5.8  
-**Stable tag:** 1.2.6  
+**Stable tag:** 1.2.7  
 **License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html  
 
@@ -276,6 +276,9 @@ Note: the declaration does need to be at the top of `_include.php`, to ensure Wo
 There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Native PHP Sessions active, SimpleSAMLphp and WP SAML Auth will be able to communicate to one another on a multi web node environment.
 
 ## Changelog ##
+
+### 1.2.7 (December 9, 2021) ###
+* Adds a `wp_saml_auth_pre_logout` action that fires before logout [[#274](https://github.com/pantheon-systems/wp-saml-auth/pull/274)].
 
 ### 1.2.6 (October 12, 2021) ###
 * Adds a `wp_saml_auth_login_parameters` filter to allow login parameters to be filtered [[#262](https://github.com/pantheon-systems/wp-saml-auth/pull/262)].
