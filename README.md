@@ -3,7 +3,7 @@
 **Tags:** authentication, SAML  
 **Requires at least:** 4.4  
 **Tested up to:** 5.8  
-**Requires PHP:** 7.4  
+**Requires PHP:** 7.3  
 **Stable tag:** 2.0.0  
 **License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html  
@@ -279,12 +279,12 @@ There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Nati
 ## Upgrade Notice ##
 
 ### 2.0.0 ###
-Minimum supported PHP version is 7.4.
+Minimum supported PHP version is 7.3.
 
 ## Changelog ##
 
 ### 2.0.0 (January 6, 2022) ###
-* **BREAKING**: Updates `onelogin/php-saml` to `v4.0.0`, which requires PHP 7.4 or higher [[#275](https://github.com/pantheon-systems/wp-saml-auth/pull/275)].
+* **BREAKING**: Updates `onelogin/php-saml` to `v4.0.0`, which requires PHP 7.3 or higher [[#275](https://github.com/pantheon-systems/wp-saml-auth/pull/275)].
 
 ### 1.2.7 (December 9, 2021) ###
 * Adds a `wp_saml_auth_pre_logout` action that fires before logout [[#274](https://github.com/pantheon-systems/wp-saml-auth/pull/274)].
