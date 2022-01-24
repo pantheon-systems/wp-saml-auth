@@ -2,9 +2,9 @@
 Contributors: getpantheon, danielbachhuber, Outlandish Josh
 Tags: authentication, SAML
 Requires at least: 4.4
-Tested up to: 5.8
+Tested up to: 5.9
 Requires PHP: 7.3
-Stable tag: 2.0.0
+Stable tag: 2.0.1
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -282,6 +282,9 @@ There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Nati
 Minimum supported PHP version is 7.3.
 
 == Changelog ==
+
+= 2.0.1 (January 24, 2022) =
+* Rebuilds platform dependencies to accommodate PHP 7.3 [[#278](https://github.com/pantheon-systems/wp-saml-auth/pull/278)].
 
 = 2.0.0 (January 6, 2022) =
 * **BREAKING**: Updates `onelogin/php-saml` to `v4.0.0`, which requires PHP 7.3 or higher [[#275](https://github.com/pantheon-systems/wp-saml-auth/pull/275)].
