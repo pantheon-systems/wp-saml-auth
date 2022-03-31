@@ -33,11 +33,16 @@ See installation instructions for full configuration details.
 
 ## Installation ##
 
-Once you've activated the plugin, and have access to a functioning SAML Identity Provider (IdP), there are a couple of ways WP SAML Auth can be configured.
+Once you've activated the plugin, and have access to a functioning SAML Identity Provider (IdP), there are a couple of ways WP SAML Auth can be configured:
 
-If you're connecting directly to an existing IdP, you should use the bundled OneLogin SAML library. The settings can be configured through the WordPress backend under "Settings" -> "WP SAML Auth". Additional explanation of each setting can be found in the code snippet below.
+1. **Settings page in the WordPress backend.** The settings page offers the most common configuration options, but not all. It's located at "Settings" -> "WP SAML Auth".
+2. **Code snippet applied with a filter.** The code snippet approach, documented below, allows access to all configuration settings. The settings page is disabled entirely when a code snippet is present.
+
+If you're connecting directly to an existing IdP, you should use the bundled OneLogin SAML library. The necessary and most common settings are available in the WordPress backend.
 
 If you have more complex authentication needs, then you can also use a SimpleSAMLphp installation running in the same environment. These settings are not configurable through the WordPress backend; they'll need to be defined with a filter. And, if you have a filter in place, the WordPress backend settings will be removed.
+
+Additional explanation of each setting can be found in the code snippet below.
 
 To install SimpleSAMLphp locally for testing purposes, the [Identity Provider QuickStart](https://simplesamlphp.org/docs/stable/simplesamlphp-idp) is a good place to start. On Pantheon, the SimpleSAMLphp web directory needs to be symlinked to `~/code/simplesaml` to be properly handled by Nginx. [Read the docs](https://pantheon.io/docs/shibboleth-sso/) for more details about configuring SimpleSAMLphp on Pantheon.
 
