@@ -337,6 +337,14 @@ class WP_SAML_Auth_Settings {
 			),
 			array(
 				'section'     => 'general',
+				'uid'         => 'forceAuthn',
+				'label'       => __( 'Force Authn', 'wp-saml-auth' ),
+				'type'        => 'checkbox',
+				'description' => __( 'If checked, sets the forceAuthn field in the request, which should promt the user for interaction and <i>might</i> help with G-Suite Logins', 'wp-saml-auth' ),
+				'default'     => 'false',
+			),
+			array(
+				'section'     => 'general',
 				'uid'         => 'baseurl',
 				'label'       => __( 'Base URL', 'wp-saml-auth' ),
 				'type'        => 'url',
