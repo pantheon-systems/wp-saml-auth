@@ -275,7 +275,7 @@ Minimum supported PHP version is 7.3.
 
 ## Changelog ##
 
-### 2.0.2 (November XX, 2022) ###
+### 2.0.2 (November 17, 2022) ###
 * Adds Github Actions for building tag and deploying to wp.org. Add CONTRIBUTING.md. [[#309](https://github.com/pantheon-systems/wp-saml-auth/pull/309)].
 
 ### 2.0.1 (January 24, 2022) ###
