@@ -1,6 +1,6 @@
 {
   "name": "wp-saml-auth",
-  "version": "2.0.2",
+  "version": "2.0.1",
   "main": "Gruntfile.js",
   "author": "Pantheon",
   "devDependencies": {
