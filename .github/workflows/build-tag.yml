@@ -1,0 +1,32 @@
+name: Build and Tag
+on:
+  push:
+    branches:
+      - 'master'
+
+jobs:
+  wordpress:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Build
+      run: |
+        composer install --no-dev -o
+    - name: Setup
+      run: 'echo "VERSION=$(jq -r .version ./package.json)" >> $GITHUB_ENV'
+
+    - name: Tag
+      run: |
+        echo "Releasing version $VERSION ..."
+        git config user.name Pantheon Automation
+        git config user.email bot@getpantheon.com
+        git checkout -b "release-$VERSION"
+        git add -f vendor/*
+        git commit -m "Release $VERSION"
+        git tag "$VERSION"
+        git push --tags
+      env:
+        TOKEN: ${{ secrets.GITHUB_TOKEN }}
