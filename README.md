@@ -6,7 +6,7 @@
 **Requires at least:** 4.4  
 **Tested up to:** 5.9  
 **Requires PHP:** 7.3  
-**Stable tag:** 2.0.1  
+**Stable tag:** 2.1.0  
 **License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html  
 
@@ -274,6 +274,9 @@ There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Nati
 Minimum supported PHP version is 7.3.
 
 ## Changelog ##
+
+## 2.1.0 (November 29, 2022) ##
+* Adds Github Actions for building tag and deploying to wp.org. Add CONTRIBUTING.md. [[#311](https://github.com/pantheon-systems/wp-saml-auth/pull/311)]
 
 ### 2.0.1 (January 24, 2022) ###
 * Rebuilds platform dependencies to accommodate PHP 7.3 [[#278](https://github.com/pantheon-systems/wp-saml-auth/pull/278)].
