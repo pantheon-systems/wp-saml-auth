@@ -24,7 +24,7 @@ class WP_SAML_Auth_Options {
 	 */
 	public static function get_instance() {
 		if ( ! isset( self::$instance ) ) {
-			self::$instance = new WP_SAML_Auth_Options;
+			self::$instance = new WP_SAML_Auth_Options();
 			add_action( 'init', array( self::$instance, 'action_init_early' ), 9 );
 		}
 		return self::$instance;
