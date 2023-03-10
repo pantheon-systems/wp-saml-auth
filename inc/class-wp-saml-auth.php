@@ -39,7 +39,7 @@ class WP_SAML_Auth {
 	 */
 	public static function get_instance() {
 		if ( ! isset( self::$instance ) ) {
-			self::$instance = new WP_SAML_Auth;
+			self::$instance = new WP_SAML_Auth();
 			add_action( 'init', array( self::$instance, 'action_init' ) );
 			add_action( 'plugins_loaded', array( self::$instance, 'load_textdomain' ) );
 		}

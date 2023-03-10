@@ -3,11 +3,12 @@
 /**
  * Test all variations of authentication.
  */
+#[AllowDynamicProperties]
 class Test_Authentication extends WP_UnitTestCase {
 
 	private $option = array();
 
-	public function setUp() {
+	public function setUp(): void {
 		parent::setUp();
 		$this->options = array();
 		$GLOBALS['wp_saml_auth_current_user'] = null;
@@ -150,7 +151,7 @@ class Test_Authentication extends WP_UnitTestCase {
 		return $value;
 	}
 
-	public function tearDown() {
+	public function tearDown(): void {
 		remove_filter( 'wp_saml_auth_option', array( $this, 'filter_wp_saml_auth_option' ) );
 		parent::tearDown();
 	}

@@ -59,7 +59,7 @@ class WP_SAML_Auth_Settings {
 	 */
 	public static function get_instance() {
 		if ( ! isset( self::$instance ) ) {
-			self::$instance = new WP_SAML_Auth_Settings;
+			self::$instance = new WP_SAML_Auth_Settings();
 
 			add_action( 'admin_init', array( self::$instance, 'admin_init' ) );
 			add_action( 'admin_menu', array( self::$instance, 'admin_menu' ) );
