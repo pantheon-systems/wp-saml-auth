@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: WP SAML Auth
- * Version: 2.1.0
+ * Version: 2.1.1
  * Description: SAML authentication for WordPress, using SimpleSAMLphp.
  * Author: Pantheon
  * Author URI: https://pantheon.io
@@ -40,7 +40,7 @@ function wpsa_filter_option( $value, $option_name ) {
 		 *
 		 * @param string
 		 */
-		'simplesamlphp_autoload' => dirname( __FILE__ ) . '/simplesamlphp/lib/_autoload.php',
+		'simplesamlphp_autoload' => __DIR__ . '/simplesamlphp/lib/_autoload.php',
 		/**
 		 * Authentication source to pass to SimpleSAMLphp
 		 *
@@ -168,18 +168,18 @@ if ( ! defined( 'WP_SAML_AUTH_AUTOLOADER' ) ) {
  *
  * Core logic for the plugin is in the WP_SAML_Auth class.
  */
-require_once dirname( __FILE__ ) . '/inc/class-wp-saml-auth.php';
+require_once __DIR__ . '/inc/class-wp-saml-auth.php';
 WP_SAML_Auth::get_instance();
 
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
-	require_once dirname( __FILE__ ) . '/inc/class-wp-saml-auth-cli.php';
+	require_once __DIR__ . '/inc/class-wp-saml-auth-cli.php';
 	WP_CLI::add_command( 'saml-auth', 'WP_SAML_Auth_CLI' );
 }
 
 /**
  * Initialize the WP SAML Auth plugin settings page.
  */
-require_once dirname( __FILE__ ) . '/inc/class-wp-saml-auth-settings.php';
+require_once __DIR__ . '/inc/class-wp-saml-auth-settings.php';
 if ( is_admin() ) {
 	WP_SAML_Auth_Settings::get_instance();
 }
@@ -187,5 +187,5 @@ if ( is_admin() ) {
 /**
  * Initialize the WP SAML Auth options from WordPress DB.
  */
-require_once dirname( __FILE__ ) . '/inc/class-wp-saml-auth-options.php';
+require_once __DIR__ . '/inc/class-wp-saml-auth-options.php';
 WP_SAML_Auth_Options::get_instance();
