@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: WP SAML Auth
- * Version: 2.1.0
+ * Version: 2.1.1
  * Description: SAML authentication for WordPress, using SimpleSAMLphp.
  * Author: Pantheon
  * Author URI: https://pantheon.io
