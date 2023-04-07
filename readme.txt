@@ -1,10 +1,10 @@
 === WP SAML Auth ===
-Contributors: getpantheon, danielbachhuber, Outlandish Josh
+Contributors: getpantheon, danielbachhuber, Outlandish Josh, jspellman, jazzs3quence
 Tags: authentication, SAML
 Requires at least: 4.4
-Tested up to: 5.9
+Tested up to: 6.2
 Requires PHP: 7.3
-Stable tag: 2.1.0
+Stable tag: 2.1.2
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -208,19 +208,19 @@ This plugin implements a variety of [WP-CLI](https://wp-cli.org) commands. All c
     $ wp help saml-auth
 
     NAME
-    
+
       wp saml-auth
-    
+
     DESCRIPTION
-    
+
       Configure and manage the WP SAML Auth plugin.
-    
+
     SYNOPSIS
-    
+
       wp saml-auth <command>
-    
+
     SUBCOMMANDS
-    
+
       scaffold-config      Scaffold a configuration filter to customize WP SAML Auth usage.
 
 Use `wp help saml-auth <command>` to learn more about each command.
@@ -272,6 +272,16 @@ There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Nati
 Minimum supported PHP version is 7.3.
 
 == Changelog ==
+
+= 2.1.2 (April 7, 2023) =
+* Bump yoast/phpunit-polyfills from 1.0.4 to 1.0.5 [[#334](https://github.com/pantheon-systems/wp-saml-auth/pull/334)]
+* Updates tested up to version
+* Removes unused NPM dependencies
+
+= 2.1.1 (March 15, 2023) =
+* Adds PHP 8.2 compatibility [[#332](https://github.com/pantheon-systems/wp-saml-auth/pull/332)].
+* Make dependabot target develop branch [[#313](https://github.com/pantheon-systems/wp-saml-auth/pull/313)].
+* Bump dependencies [[#308](https://github.com/pantheon-systems/wp-saml-auth/pull/308)] [[#310](https://github.com/pantheon-systems/wp-saml-auth/pull/310)] [[#314](https://github.com/pantheon-systems/wp-saml-auth/pull/314)] [[#319](https://github.com/pantheon-systems/wp-saml-auth/pull/319)] [[#322](https://github.com/pantheon-systems/wp-saml-auth/pull/322)] [[#323](https://github.com/pantheon-systems/wp-saml-auth/pull/323)] [[#324](https://github.com/pantheon-systems/wp-saml-auth/pull/324)] [[#325](https://github.com/pantheon-systems/wp-saml-auth/pull/325)] [[#326](https://github.com/pantheon-systems/wp-saml-auth/pull/326)] [[#330](https://github.com/pantheon-systems/wp-saml-auth/pull/330)].
 
 = 2.1.0 (November 29, 2022) =
 * Adds Github Actions for building tag and deploying to wp.org. Add CONTRIBUTING.md. [[#311](https://github.com/pantheon-systems/wp-saml-auth/pull/311)]
