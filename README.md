@@ -273,6 +273,12 @@ Minimum supported PHP version is 7.3.
 
 ## Changelog ##
 
+## 2.1.2 (April 10, 2023) ##
+* Bump yoast/phpunit-polyfills from 1.0.4 to 1.0.5 [[#334](https://github.com/pantheon-systems/wp-saml-auth/pull/334)]
+* Updates tested up to version
+* Removes unused NPM dependencies 
+
+
 ## 2.1.1 (March 15, 2023) ##
 * Adds PHP 8.2 compatibility [[#332](https://github.com/pantheon-systems/wp-saml-auth/pull/332)].
 * Make dependabot target develop branch [[#313](https://github.com/pantheon-systems/wp-saml-auth/pull/313)].
