@@ -4,9 +4,9 @@
 **Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [outlandish-josh](https://profiles.wordpress.org/outlandish-josh/)  
 **Tags:** authentication, SAML  
 **Requires at least:** 4.4  
-**Tested up to:** 5.9  
+**Tested up to:** 6.2  
 **Requires PHP:** 7.3  
-**Stable tag:** 2.1.1  
+**Stable tag:** 2.1.2  
 **License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html  
 
