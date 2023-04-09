@@ -16,11 +16,15 @@ jobs:
       run: |
         composer install --no-dev -o
     - name: Setup
-      run: 'echo "VERSION=$(jq -r .version ./package.json)" >> $GITHUB_ENV'
+      run: |
+        VERSION=$(cat readme.txt| grep 'Stable tag:' | awk '{print $3}')
+        [[ "$VERSION" != "" ]] || exit 1
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
 
     - name: Tag
       run: |
         echo "Releasing version $VERSION ..."
+        [[ "$VERSION" != "" ]] || exit 1
         git config user.name Pantheon Automation
         git config user.email bot@getpantheon.com
         git checkout -b "release-$VERSION"
