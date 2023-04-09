@@ -17,7 +17,7 @@ jobs:
         composer install --no-dev -o
     - name: Setup
       run: |
-        VERSION=$(cat readme.txt| grep 'Stable tag:' | awk '{print $3}')
+        VERSION=$(cat README.md| grep 'Stable tag:' | awk '{print $3}')
         [[ "$VERSION" != "" ]] || exit 1
         echo "VERSION=$VERSION" >> $GITHUB_ENV
 
