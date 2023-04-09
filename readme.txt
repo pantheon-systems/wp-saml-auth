@@ -4,7 +4,7 @@ Tags: authentication, SAML
 Requires at least: 4.4
 Tested up to: 6.2
 Requires PHP: 7.3
-Stable tag: 2.1.2
+Stable tag: 2.1.3
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -272,6 +272,9 @@ There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Nati
 Minimum supported PHP version is 7.3.
 
 == Changelog ==
+
+= 2.1.3 (April 8, 2023) =
+* Fixes missing vendor/ directory in previous release [[#336](https://github.com/pantheon-systems/wp-saml-auth/pull/336)]
 
 = 2.1.2 (April 7, 2023) =
 * Bump yoast/phpunit-polyfills from 1.0.4 to 1.0.5 [[#334](https://github.com/pantheon-systems/wp-saml-auth/pull/334)]
