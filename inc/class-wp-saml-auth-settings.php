@@ -61,13 +61,13 @@ class WP_SAML_Auth_Settings {
 		if ( ! isset( self::$instance ) ) {
 			self::$instance = new WP_SAML_Auth_Settings();
 
-			add_action( 'admin_init', array( self::$instance, 'admin_init' ) );
-			add_action( 'admin_menu', array( self::$instance, 'admin_menu' ) );
+			add_action( 'admin_init', [ self::$instance, 'admin_init' ] );
+			add_action( 'admin_menu', [ self::$instance, 'admin_menu' ] );
 
 			add_filter(
 				'plugin_action_links_' . plugin_basename( dirname( plugin_dir_path( __FILE__ ) ) ) .
 					'/wp-saml-auth.php',
-				array( self::$instance, 'plugin_settings_link' )
+				[ self::$instance, 'plugin_settings_link' ]
 			);
 		}
 		return self::$instance;
@@ -80,7 +80,7 @@ class WP_SAML_Auth_Settings {
 		register_setting(
 			self::$option_group,
 			WP_SAML_Auth_Options::get_option_name(),
-			array( 'sanitize_callback' => array( self::$instance, 'sanitize_callback' ) )
+			[ 'sanitize_callback' => [ self::$instance, 'sanitize_callback' ] ]
 		);
 		self::setup_sections();
 		self::setup_fields();
@@ -95,7 +95,7 @@ class WP_SAML_Auth_Settings {
 			__( 'WP SAML Auth', 'wp-saml-auth' ),
 			self::$capability,
 			self::$menu_slug,
-			array( self::$instance, 'render_page_content' )
+			[ self::$instance, 'render_page_content' ]
 		);
 	}
 
@@ -194,7 +194,7 @@ class WP_SAML_Auth_Settings {
 	 */
 	public static function sanitize_callback( $input ) {
 		if ( empty( $input ) || ! is_array( $input ) ) {
-			return array();
+			return [];
 		}
 
 		foreach ( self::$fields as $field ) {
@@ -231,7 +231,7 @@ class WP_SAML_Auth_Settings {
 			if ( 'url' === $field['type'] ) {
 				if ( ! empty( $value ) ) {
 					if ( filter_var( $value, FILTER_VALIDATE_URL ) ) {
-						$input[ $uid ] = esc_url_raw( $value, array( 'http', 'https' ) );
+						$input[ $uid ] = esc_url_raw( $value, [ 'http', 'https' ] );
 					} else {
 						$input['connection_type'] = null;
 						$input[ $uid ]            = null;
@@ -278,7 +278,7 @@ class WP_SAML_Auth_Settings {
 			add_settings_field(
 				$field['uid'],
 				$field['label'],
-				array( self::$instance, 'field_callback' ),
+				[ self::$instance, 'field_callback' ],
 				WP_SAML_Auth_Options::get_option_name(),
 				$field['section'],
 				$field
@@ -290,12 +290,12 @@ class WP_SAML_Auth_Settings {
 	 * Initialize the sections array and add settings sections
 	 */
 	public static function setup_sections() {
-		self::$sections = array(
+		self::$sections = [
 			'general'    => '',
 			'sp'         => __( 'Service Provider Settings', 'wp-saml-auth' ),
 			'idp'        => __( 'Identity Provider Settings', 'wp-saml-auth' ),
 			'attributes' => __( 'Attribute Mappings', 'wp-saml-auth' ),
-		);
+		];
 		foreach ( self::$sections as $id => $title ) {
 			add_settings_section( $id, $title, null, WP_SAML_Auth_Options::get_option_name() );
 		}
@@ -305,46 +305,46 @@ class WP_SAML_Auth_Settings {
 	 * Initialize the fields array
 	 */
 	public static function init_fields() {
-		self::$fields = array(
+		self::$fields = [
 			// general section.
-			array(
+			[
 				'section'     => 'general',
 				'uid'         => 'auto_provision',
 				'label'       => __( 'Auto Provision', 'wp-saml-auth' ),
 				'type'        => 'checkbox',
 				'description' => __( 'If checked, create a new WordPress user upon login. <br>If unchecked, WordPress user will already need to exist in order to log in.', 'wp-saml-auth' ),
 				'default'     => 'true',
-			),
-			array(
+			],
+			[
 				'section'     => 'general',
 				'uid'         => 'permit_wp_login',
 				'label'       => __( 'Permit WordPress login', 'wp-saml-auth' ),
 				'type'        => 'checkbox',
 				'description' => __( 'If checked, WordPress user can also log in with the standard username and password flow.', 'wp-saml-auth' ),
 				'default'     => 'true',
-			),
-			array(
+			],
+			[
 				'section'     => 'general',
 				'uid'         => 'get_user_by',
 				'label'       => __( 'Get User By', 'wp-saml-auth' ),
 				'type'        => 'select',
-				'choices'     => array(
+				'choices'     => [
 					'email' => 'email',
 					'login' => 'login',
-				),
+				],
 				'description' => __( 'Attribute by which SAML requests are matched to WordPress users.', 'wp-saml-auth' ),
 				'default'     => 'email',
-			),
-			array(
+			],
+			[
 				'section'     => 'general',
 				'uid'         => 'baseurl',
 				'label'       => __( 'Base URL', 'wp-saml-auth' ),
 				'type'        => 'url',
 				'description' => __( 'The base url to be used when constructing URLs.', 'wp-saml-auth' ),
 				'default'     => home_url(),
-			),
+			],
 			// sp section.
-			array(
+			[
 				'section'     => 'sp',
 				'uid'         => 'sp_entityId',
 				'label'       => __( 'Entity Id (Required)', 'wp-saml-auth' ),
@@ -353,8 +353,8 @@ class WP_SAML_Auth_Settings {
 				'description' => __( 'SP (WordPress) entity identifier.', 'wp-saml-auth' ),
 				'default'     => 'urn:' . parse_url( home_url(), PHP_URL_HOST ),
 				'required'    => true,
-			),
-			array(
+			],
+			[
 				'section'     => 'sp',
 				'uid'         => 'sp_assertionConsumerService_url',
 				'label'       => __( 'Assertion Consumer Service URL (Required)', 'wp-saml-auth' ),
@@ -362,95 +362,95 @@ class WP_SAML_Auth_Settings {
 				'description' => __( 'URL where the response from the IdP should be returned (usually the login URL).', 'wp-saml-auth' ),
 				'default'     => home_url( '/wp-login.php' ),
 				'required'    => true,
-			),
+			],
 			// idp section.
-			array(
+			[
 				'section'     => 'idp',
 				'uid'         => 'idp_entityId',
 				'label'       => __( 'Entity Id (Required)', 'wp-saml-auth' ),
 				'type'        => 'text',
 				'description' => __( 'IdP entity identifier.', 'wp-saml-auth' ),
 				'required'    => true,
-			),
-			array(
+			],
+			[
 				'section'     => 'idp',
 				'uid'         => 'idp_singleSignOnService_url',
 				'label'       => __( 'Single SignOn Service URL (Required)', 'wp-saml-auth' ),
 				'type'        => 'url',
 				'description' => __( 'URL of the IdP where the SP (WordPress) will send the authentication request.', 'wp-saml-auth' ),
 				'required'    => true,
-			),
-			array(
+			],
+			[
 				'section'     => 'idp',
 				'uid'         => 'idp_singleLogoutService_url',
 				'label'       => __( 'Single Logout Service URL', 'wp-saml-auth' ),
 				'type'        => 'url',
 				'description' => __( 'URL of the IdP where the SP (WordPress) will send the signout request.', 'wp-saml-auth' ),
-			),
-			array(
+			],
+			[
 				'section'     => 'idp',
 				'uid'         => 'x509cert',
 				'label'       => __( 'x509 Cerificate Path', 'wp-saml-auth' ),
 				'type'        => 'text',
 				'description' => __( 'Path to the x509 certificate file, used for verifying the request.<br/>Include <code>ABSPATH</code> to set path base to WordPress\' ABSPATH constant.', 'wp-saml-auth' ),
-			),
-			array(
+			],
+			[
 				'section'     => 'idp',
 				'uid'         => 'certFingerprint',
 				'label'       => __( 'Certificate Fingerprint', 'wp-saml-auth' ),
 				'type'        => 'text',
 				'description' => __( 'If not using x509 certificate, paste the certificate fingerprint and specify the fingerprint algorithm below.', 'wp-saml-auth' ),
-			),
-			array(
+			],
+			[
 				'section' => 'idp',
 				'uid'     => 'certFingerprintAlgorithm',
 				'label'   => __( 'Certificate Fingerprint Algorithm', 'wp-saml-auth' ),
 				'type'    => 'select',
-				'choices' => array(
+				'choices' => [
 					''       => __( 'N/A', 'wp-saml-auth' ),
 					'sha1'   => 'sha1',
 					'sha256' => 'sha256',
 					'sha384' => 'sha384',
 					'sha512' => 'sha512',
-				),
-			),
+				],
+			],
 			// attributes section.
-			array(
+			[
 				'section' => 'attributes',
 				'uid'     => 'user_login_attribute',
 				'label'   => 'user_login',
 				'type'    => 'text',
 				'default' => 'uid',
-			),
-			array(
+			],
+			[
 				'section' => 'attributes',
 				'uid'     => 'user_email_attribute',
 				'label'   => 'user_email',
 				'type'    => 'text',
 				'default' => 'email',
-			),
-			array(
+			],
+			[
 				'section' => 'attributes',
 				'uid'     => 'display_name_attribute',
 				'label'   => 'display_name',
 				'type'    => 'text',
 				'default' => 'display_name',
-			),
-			array(
+			],
+			[
 				'section' => 'attributes',
 				'uid'     => 'first_name_attribute',
 				'label'   => 'first_name',
 				'type'    => 'text',
 				'default' => 'first_name',
-			),
-			array(
+			],
+			[
 				'section' => 'attributes',
 				'uid'     => 'last_name_attribute',
 				'label'   => 'last_name',
 				'type'    => 'text',
 				'default' => 'last_name',
-			),
-		);
+			],
+		];
 	}
 
 	/**
