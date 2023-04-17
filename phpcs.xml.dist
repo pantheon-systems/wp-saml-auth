@@ -9,7 +9,7 @@
 	<!-- Show sniff codes in all reports -->
 	<arg value="ps"/>
 
-	<rule ref="WordPress-Core" />
+	<rule ref="Pantheon-WP" />
 	<rule ref="WordPress-Docs" />
 	<rule ref="PHPCompatibility"/>
 
