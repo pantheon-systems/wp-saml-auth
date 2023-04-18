@@ -232,7 +232,7 @@ class WP_SAML_Auth {
 	 * @param string $password Password supplied by the user.
 	 * @return mixed
 	 */
-	public function filter_authenticate( $user, $username, $password ) {
+	public function filter_authenticate( $user, $username, $password ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 
 		$permit_wp_login = self::get_option( 'permit_wp_login' );
 		if ( is_a( $user, 'WP_User' ) && $permit_wp_login ) {

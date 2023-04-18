@@ -110,7 +110,7 @@ class WP_SAML_Auth_CLI {
 			$assoc_args[ $bool ] = 'false' === $assoc_args[ $bool ] ? false : (bool) $assoc_args[ $bool ];
 		}
 
-		$values = var_export( $assoc_args, true );
+		$values = var_export( $assoc_args, true ); //phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export
 		// Formatting fixes.
 		$search_replace = [
 			'  '      => "\t\t",

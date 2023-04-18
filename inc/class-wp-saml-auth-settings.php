@@ -118,7 +118,7 @@ class WP_SAML_Auth_Settings {
 						$markup .= '<option value="' . esc_attr( $key ) . '" ' . selected( $value, $key, false ) . '>' . esc_html( $label ) .
 									'</option>';
 					}
-					printf( '<select name="%1$s" id="%1$s">%2$s</select>', esc_attr( $uid ), $markup );
+					printf( '<select name="%1$s" id="%1$s">%2$s</select>', esc_attr( $uid ), $markup ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 				}
 				break;
 			case 'text':
