@@ -279,7 +279,7 @@ class WP_SAML_Auth {
 				}
 			} else {
 				$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
-				$redirect_to = $redirect_to ? $redirect_to : $_SERVER['REQUEST_URI'];
+				$redirect_to = $redirect_to ? $redirect_to : ( isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( $_SERVER['REQUEST_URI'] ) : null );
 				/**
 				 * Allows forceAuthn="true" to be enabled.
 				 *
@@ -309,10 +309,10 @@ class WP_SAML_Auth {
 			} else {
 				$redirect_to = wp_login_url();
 				// Make sure we're only dealing with the URI components and not arguments.
-				$request = explode( '?', $_SERVER['REQUEST_URI'] );
+				$request = explode( '?', sanitize_text_field( $_SERVER['REQUEST_URI'] ) );
 				// Only persist redirect_to when it's not wp-login.php.
 				if ( false === stripos( $redirect_to, reset( $request ) ) ) {
-					$redirect_to = add_query_arg( 'redirect_to', $_SERVER['REQUEST_URI'], $redirect_to );
+					$redirect_to = add_query_arg( 'redirect_to', sanitize_text_field( $_SERVER['REQUEST_URI'] ), $redirect_to );
 				} else {
 					$redirect_to = add_query_arg( [ 'action' => 'wp-saml-auth' ], $redirect_to );
 				}
