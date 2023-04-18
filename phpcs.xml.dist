@@ -9,7 +9,20 @@
 	<!-- Show sniff codes in all reports -->
 	<arg value="ps"/>
 
-	<rule ref="Pantheon-WP" />
+	<rule ref="Pantheon-WP">
+		<!-- Ignore VIP rule about including files using custom constants. -->
+		<exclude name="WordPressVIPMinimum.Files.IncludingFile.UsingCustomConstant">
+			<file>*/inc/class-wp-saml-auth-cli.php</file>
+		</exclude>
+		<!-- Ignore Nonce verification checks for authentication requests -->
+		<exclude name="WordPress.Security.NonceVerification">
+			<file>*/inc/class-wp-saml-auth.php</file>
+		</exclude>
+		<!-- Ignore docblock rules for WP-CLI functions -->
+		<exclude name="Squiz.Commenting.FunctionComment.MissingParamTag">
+			<file>*/inc/class-wp-saml-auth-cli.php</file>
+		</exclude>
+	</rule>
 	<rule ref="WordPress-Docs" />
 	<rule ref="PHPCompatibility"/>
 
