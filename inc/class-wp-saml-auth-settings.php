@@ -140,6 +140,11 @@ class WP_SAML_Auth_Settings {
 	 * Render the settings page
 	 */
 	public static function render_page_content() {
+		$allowed_html = [
+			'a' => [
+				'href' => [],
+			],
+		];
 		?>
 		<div class="wrap">
 			<h2><?php esc_html_e( 'WP SAML Auth Settings', 'wp-saml-auth' ); ?></h2>
@@ -147,14 +152,14 @@ class WP_SAML_Auth_Settings {
 				<p>
 				<?php
 				// translators: Link to the plugin settings page.
-				echo sprintf( __( 'Settings are defined with a filter and unavailable for editing through the backend. <a href="%s">Visit the plugin page</a> for more information.', 'wp-saml-auth' ), 'https://wordpress.org/plugins/wp-saml-auth/' );
+				echo sprintf( wp_kses( __( 'Settings are defined with a filter and unavailable for editing through the backend. <a href="%s">Visit the plugin page</a> for more information.', 'wp-saml-auth' ), $allowed_html ), 'https://wordpress.org/plugins/wp-saml-auth/' );
 				?>
 				</p>
 			<?php else : ?>
 				<p>
 				<?php
 				// translators: Link to the plugin settings page.
-				echo sprintf( __( 'Use the following settings to configure WP SAML Auth with the \'internal\' connection type. <a href="%s">Visit the plugin page</a> for more information.', 'wp-saml-auth' ), 'https://wordpress.org/plugins/wp-saml-auth/' );
+				echo sprintf( wp_kses( __( 'Use the following settings to configure WP SAML Auth with the \'internal\' connection type. <a href="%s">Visit the plugin page</a> for more information.', 'wp-saml-auth' ), $allowed_html ), 'https://wordpress.org/plugins/wp-saml-auth/' );
 				?>
 				</p>
 				<?php if ( WP_SAML_Auth_Options::do_required_settings_have_values() ) : ?>
