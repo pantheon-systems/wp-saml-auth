@@ -274,7 +274,7 @@ Minimum supported PHP version is 7.3.
 == Changelog ==
 
 = Latest =
-* Updates CONTRIBUTING.md [[#335](https://github.com/pantheon-systems/wp-saml-auth/pull/335)].
+* Updates CONTRIBUTING.md [[#342](https://github.com/pantheon-systems/wp-saml-auth/pull/342)].
 
 = 2.1.2 (April 7, 2023) =
 * Bump yoast/phpunit-polyfills from 1.0.4 to 1.0.5 [[#334](https://github.com/pantheon-systems/wp-saml-auth/pull/334)].
