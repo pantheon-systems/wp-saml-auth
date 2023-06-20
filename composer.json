@@ -28,7 +28,7 @@
         "symfony/filesystem": "^5",
         "symfony/service-contracts": "^2",
         "symfony/translation-contracts": "^2",
-        "yoast/phpunit-polyfills": "^1.0"
+        "yoast/phpunit-polyfills": "^2.0"
     },
     "scripts": {
         "lint": "@phpcs",
