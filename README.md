@@ -1,12 +1,12 @@
 # WP SAML Auth #
-**Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [outlandish-josh](https://profiles.wordpress.org/outlandish-josh/), [jazzs3quence](https://profiles.wordpress.org/jazzs3quence/)  
-**Tags:** authentication, SAML  
-**Requires at least:** 4.4  
-**Tested up to:** 6.2  
-**Requires PHP:** 7.3  
-**Stable tag:** 2.1.4-dev  
-**License:** GPLv2 or later  
-**License URI:** http://www.gnu.org/licenses/gpl-2.0.html  
+**Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [outlandish-josh](https://profiles.wordpress.org/outlandish-josh/), [jazzs3quence](https://profiles.wordpress.org/jazzs3quence/)
+**Tags:** authentication, SAML
+**Requires at least:** 4.4
+**Tested up to:** 6.2
+**Requires PHP:** 7.3
+**Stable tag:** 2.1.4-dev
+**License:** GPLv2 or later
+**License URI:** http://www.gnu.org/licenses/gpl-2.0.html
 
 SAML authentication for WordPress.
 
@@ -208,19 +208,19 @@ This plugin implements a variety of [WP-CLI](https://wp-cli.org) commands. All c
     $ wp help saml-auth
 
     NAME
-    
+
       wp saml-auth
-    
+
     DESCRIPTION
-    
+
       Configure and manage the WP SAML Auth plugin.
-    
+
     SYNOPSIS
-    
+
       wp saml-auth <command>
-    
+
     SUBCOMMANDS
-    
+
       scaffold-config      Scaffold a configuration filter to customize WP SAML Auth usage.
 
 Use `wp help saml-auth <command>` to learn more about each command.
@@ -276,6 +276,7 @@ Minimum supported PHP version is 7.3.
 ### Latest ###
 * Updates CONTRIBUTING.md [[#342](https://github.com/pantheon-systems/wp-saml-auth/pull/342)].
 * Bump dependencies [[#343](https://github.com/pantheon-systems/wp-saml-auth/pull/343)]
+* Adds WP.org Validation GitHub action [[#350](https://github.com/pantheon-systems/wp-saml-auth/pull/350)]
 
 ### 2.1.3 (April 8, 2023) ###
 * Fixes missing vendor/ directory in previous release [[#336](https://github.com/pantheon-systems/wp-saml-auth/pull/336)]
@@ -283,7 +284,7 @@ Minimum supported PHP version is 7.3.
 ### 2.1.2 (April 7, 2023) ###
 * Bump yoast/phpunit-polyfills from 1.0.4 to 1.0.5 [[#334](https://github.com/pantheon-systems/wp-saml-auth/pull/334)]
 * Updates tested up to version
-* Removes unused NPM dependencies 
+* Removes unused NPM dependencies
 
 ### 2.1.1 (March 15, 2023) ###
 * Adds PHP 8.2 compatibility [[#332](https://github.com/pantheon-systems/wp-saml-auth/pull/332)].
