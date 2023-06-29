@@ -280,6 +280,7 @@ Minimum supported PHP version is 7.3.
 ### Latest ###
 * Updates CONTRIBUTING.md [[#342](https://github.com/pantheon-systems/wp-saml-auth/pull/342)].
 * Bump dependencies [[#343](https://github.com/pantheon-systems/wp-saml-auth/pull/343)]
+* Updates security policy [[#349](https://github.com/pantheon-systems/wp-saml-auth/pull/349)]
 
 ### 2.1.3 (April 8, 2023) ###
 * Fixes missing vendor/ directory in previous release [[#336](https://github.com/pantheon-systems/wp-saml-auth/pull/336)]
