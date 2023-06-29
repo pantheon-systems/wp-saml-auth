@@ -266,6 +266,10 @@ Note: the declaration does need to be at the top of `_include.php`, to ensure Wo
 
 There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Native PHP Sessions active, SimpleSAMLphp and WP SAML Auth will be able to communicate to one another on a multi web node environment.
 
+= Where do I report security bugs found in this plugin? =
+
+Please report security bugs found in the source code of the WP SAML Auth plugin through the [Patchstack Vulnerability Disclosure Program](https://patchstack.com/database/vdp/wp-saml-auth). The Patchstack team will assist you with verification, CVE assignment, and notify the developers of this plugin.
+
 == Upgrade Notice ==
 
 = 2.0.0 =
@@ -276,6 +280,7 @@ Minimum supported PHP version is 7.3.
 = Latest =
 * Updates CONTRIBUTING.md [[#342](https://github.com/pantheon-systems/wp-saml-auth/pull/342)].
 * Bump dependencies [[#343](https://github.com/pantheon-systems/wp-saml-auth/pull/343)]
+* Updates security policy [[#]()]
 
 = 2.1.3 (April 8, 2023) =
 * Fixes missing vendor/ directory in previous release [[#336](https://github.com/pantheon-systems/wp-saml-auth/pull/336)]

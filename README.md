@@ -1,12 +1,12 @@
 # WP SAML Auth #
-**Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [outlandish-josh](https://profiles.wordpress.org/outlandish-josh/), [jazzs3quence](https://profiles.wordpress.org/jazzs3quence/)  
-**Tags:** authentication, SAML  
-**Requires at least:** 4.4  
-**Tested up to:** 6.2  
-**Requires PHP:** 7.3  
-**Stable tag:** 2.1.4-dev  
-**License:** GPLv2 or later  
-**License URI:** http://www.gnu.org/licenses/gpl-2.0.html  
+**Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [outlandish-josh](https://profiles.wordpress.org/outlandish-josh/), [jazzs3quence](https://profiles.wordpress.org/jazzs3quence/)
+**Tags:** authentication, SAML
+**Requires at least:** 4.4
+**Tested up to:** 6.2
+**Requires PHP:** 7.3
+**Stable tag:** 2.1.4-dev
+**License:** GPLv2 or later
+**License URI:** http://www.gnu.org/licenses/gpl-2.0.html
 
 SAML authentication for WordPress.
 
@@ -208,19 +208,19 @@ This plugin implements a variety of [WP-CLI](https://wp-cli.org) commands. All c
     $ wp help saml-auth
 
     NAME
-    
+
       wp saml-auth
-    
+
     DESCRIPTION
-    
+
       Configure and manage the WP SAML Auth plugin.
-    
+
     SYNOPSIS
-    
+
       wp saml-auth <command>
-    
+
     SUBCOMMANDS
-    
+
       scaffold-config      Scaffold a configuration filter to customize WP SAML Auth usage.
 
 Use `wp help saml-auth <command>` to learn more about each command.
@@ -228,6 +228,10 @@ Use `wp help saml-auth <command>` to learn more about each command.
 ## Contributing ##
 
 See [CONTRIBUTING.md](https://github.com/pantheon-systems/wp-saml-auth/blob/master/CONTRIBUTING.md) for information on contributing.
+
+## Security Policy ##
+### Reporting Security Bugs
+Please report security bugs found in the WP SAML Auth plugin's source code through the [Patchstack Vulnerability Disclosure Program](https://patchstack.com/database/vdp/wp-saml-auth). The Patchstack team will assist you with verification, CVE assignment, and notify the developers of this plugin.
 
 ## Frequently Asked Questions ##
 
@@ -283,7 +287,7 @@ Minimum supported PHP version is 7.3.
 ### 2.1.2 (April 7, 2023) ###
 * Bump yoast/phpunit-polyfills from 1.0.4 to 1.0.5 [[#334](https://github.com/pantheon-systems/wp-saml-auth/pull/334)]
 * Updates tested up to version
-* Removes unused NPM dependencies 
+* Removes unused NPM dependencies
 
 ### 2.1.1 (March 15, 2023) ###
 * Adds PHP 8.2 compatibility [[#332](https://github.com/pantheon-systems/wp-saml-auth/pull/332)].
