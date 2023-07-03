@@ -90,6 +90,9 @@ function wpsa_filter_option( $value, $option_name ) {
 				'certFingerprint'          => '',
 				'certFingerprintAlgorithm' => '',
 			),
+			'security' => array(
+				'requestedAuthnContext' => false,
+			)
 		),
 		/**
 		 * Whether or not to automatically provision new WordPress users.
