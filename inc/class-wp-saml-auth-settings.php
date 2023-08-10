@@ -395,7 +395,7 @@ class WP_SAML_Auth_Settings {
 			[
 				'section'     => 'idp',
 				'uid'         => 'x509cert',
-				'label'       => __( 'x509 Cerificate Path', 'wp-saml-auth' ),
+				'label'       => __( 'x509 Certificate Path', 'wp-saml-auth' ),
 				'type'        => 'text',
 				'description' => __( 'Path to the x509 certificate file, used for verifying the request.<br/>Include <code>ABSPATH</code> to set path base to WordPress\' ABSPATH constant.', 'wp-saml-auth' ),
 			],
