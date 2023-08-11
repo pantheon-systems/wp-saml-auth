@@ -273,7 +273,6 @@ Minimum supported PHP version is 7.3.
 
 == Changelog ==
 
-
 = 2.1.4-dev =
 * Fix typo in the label for the certificate path [[#352](https://github.com/pantheon-systems/wp-saml-auth/pull/352)]
 
