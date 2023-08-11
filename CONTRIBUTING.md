@@ -30,7 +30,6 @@ Behat requires a Pantheon site. Once you've created the site, you'll need [insta
 1. From `develop`, checkout a new branch `release_X.Y.Z`.
 1. Make a release commit:
     * Drop the `-dev` from the version number in `README.md`, `readme.txt`, and `wp-saml-auth.php`.
-    * Update the "Latest" heading in the changelog to the new version number with the date
     * Commit these changes with the message `Release X.Y.Z`
     * Push the release branch up.
 1. Open a Pull Request to merge `release_X.Y.Z` into `main`. Your PR should consist of all commits to `develop` since the last release, and one commit to update the version number. The PR name should also be `Release X.Y.Z`.
@@ -44,7 +43,7 @@ Behat requires a Pantheon site. Once you've created the site, you'll need [insta
     * `git checkout develop`
     * `git rebase master`
     * Update the version number in all locations, incrementing the version by one patch version, and add the `-dev` flag (e.g. after releasing `1.2.3`, the new verison will be `1.2.4-dev`)
-    * Add a new `** Latest **` heading to the changelog
+    * Add a new `** X.Y.X-dev **` heading to the changelogs
     * `git add -A .`
     * `git commit -m "Prepare X.Y.X-dev"`
     * `git push origin develop`
