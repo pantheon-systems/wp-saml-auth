@@ -10,6 +10,8 @@ Pull requests and issues are welcome!
 
 The `develop` branch is the development branch which means it contains the next version to be released. `master` contains the corresponding stable development version. Always work on the `develop` branch and open up PRs against `develop`.
 
+We prefer to squash commits (i.e. avoid merge PRs) from a feature branch into `develop` when merging, and to include the PR # in the commit message. PRs to `develop` should also include any relevent updates to the changelog in readme.txt. For example, if a feature constitutes a minor or major version bump, that version update should be discussed and made as part of approving and merging the feature into `develop`. We do not update the README changelogs for development or process related PRs (i.e. dev-only dependencies, or changes to CI patterns unrelated to new features).
+
 ## Testing
 
 You may notice there are two sets of tests running, on two different services:
