@@ -56,12 +56,6 @@ unzip $PREPARE_DIR/wp-native-php-sessions.zip -d $PREPARE_DIR
 mv $PREPARE_DIR/wp-native-php-sessions $PREPARE_DIR/wp-content/plugins/
 rm $PREPARE_DIR/wp-native-php-sessions.zip
 
-# Download the latest Classic Editor release from WordPress.org
-wget -O $PREPARE_DIR/classic-editor.zip https://downloads.wordpress.org/plugin/classic-editor.zip
-unzip $PREPARE_DIR/classic-editor.zip -d $PREPARE_DIR
-mv $PREPARE_DIR/classic-editor $PREPARE_DIR/wp-content/plugins/
-rm $PREPARE_DIR/classic-editor.zip
-
 ###
 # Add the copy of this plugin itself to the environment
 ###
@@ -143,6 +137,6 @@ terminus build:workflow:wait $TERMINUS_SITE.$TERMINUS_ENV
 } &> /dev/null
 terminus wp $SITE_ENV -- option update home "https://$PANTHEON_SITE_URL"
 terminus wp $SITE_ENV -- option update siteurl "https://$PANTHEON_SITE_URL"
-terminus wp $SITE_ENV -- plugin activate classic-editor wp-native-php-sessions wp-saml-auth
+terminus wp $SITE_ENV -- plugin activate wp-native-php-sessions wp-saml-auth
 terminus wp $SITE_ENV -- theme activate $TERMINUS_SITE
 terminus wp $SITE_ENV -- rewrite structure '/%year%/%monthnum%/%day%/%postname%/'
