@@ -1,11 +1,11 @@
 # WP SAML Auth #
-**Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [outlandish-josh](https://profiles.wordpress.org/outlandish-josh/), [jazzs3quence](https://profiles.wordpress.org/jazzs3quence/)  
-**Tags:** authentication, SAML  
-**Requires at least:** 4.4  
-**Tested up to:** 6.3  
-**Requires PHP:** 7.3  
-**Stable tag:** 2.1.4-dev  
-**License:** GPLv2 or later  
+**Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [outlandish-josh](https://profiles.wordpress.org/outlandish-josh/), [jazzs3quence](https://profiles.wordpress.org/jazzs3quence/)
+**Tags:** authentication, SAML
+**Requires at least:** 4.4
+**Tested up to:** 6.3
+**Requires PHP:** 7.3
+**Stable tag:** 2.1.4-dev
+**License:** GPLv2 or later
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html
 
 SAML authentication for WordPress.
@@ -275,6 +275,7 @@ Minimum supported PHP version is 7.3.
 
 ### 2.1.4-dev ###
 * Fix typo in the label for the certificate path [[#352](https://github.com/pantheon-systems/wp-saml-auth/pull/352)]
+* Updates Pantheon WP Coding Standards to 2.0 [[#357](https://github.com/pantheon-systems/wp-saml-auth/pull/357)]
 
 ### 2.1.3 (April 8, 2023) ###
 * Fixes missing vendor/ directory in previous release [[#336](https://github.com/pantheon-systems/wp-saml-auth/pull/336)]
