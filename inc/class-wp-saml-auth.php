@@ -232,7 +232,7 @@ class WP_SAML_Auth {
 	 * @param string $password Password supplied by the user.
 	 * @return mixed
 	 */
-	public function filter_authenticate( $user, $username, $password ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+	public function filter_authenticate( $user, $username, $password ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable,Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
 
 		$permit_wp_login = self::get_option( 'permit_wp_login' );
 		if ( is_a( $user, 'WP_User' ) && $permit_wp_login ) {
@@ -270,7 +270,7 @@ class WP_SAML_Auth {
 						|| ( ! $permit_wp_login && false === stripos( $redirect_to, parse_url( wp_login_url(), PHP_URL_PATH ) ) ) ) {
 						add_filter(
 							'login_redirect',
-							function() use ( $redirect_to ) {
+							function () use ( $redirect_to ) {
 								return $redirect_to;
 							},
 							1

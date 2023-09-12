@@ -21,7 +21,7 @@
     },
     "require-dev": {
         "pantheon-systems/pantheon-wordpress-upstream-tests": "dev-master",
-        "pantheon-systems/pantheon-wp-coding-standards": "^1.0",
+        "pantheon-systems/pantheon-wp-coding-standards": "^2.0",
         "phpunit/phpunit": "^9",
         "symfony/filesystem": "^5",
         "symfony/service-contracts": "^2",
