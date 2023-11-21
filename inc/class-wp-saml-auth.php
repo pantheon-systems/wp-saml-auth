@@ -235,15 +235,26 @@ class WP_SAML_Auth {
 	public function filter_authenticate( $user, $username, $password ) {
 
 		$permit_wp_login = self::get_option( 'permit_wp_login' );
-		if ( is_a( $user, 'WP_User' ) && $permit_wp_login ) {
+		if ( is_a( $user, 'WP_User' ) ) {
+
+			if ( ! $permit_wp_login ) {
+				// @todo Revisit if necessary.
+				return null;
+			}
+
 			return $user;
 		}
 
-		if ( ! empty( $_POST['SAMLResponse'] ) ) {
-			$user = $this->do_saml_authentication();
-		} elseif ( ( ! $permit_wp_login && empty( $_GET['loggedout'] ) ) || ( ! empty( $_GET['action'] ) && 'wp-saml-auth' === $_GET['action'] ) ) {
-			$user = $this->do_saml_authentication();
+		if ( ! $permit_wp_login ) {
+			$should_saml = ! isset( $_GET['loggedout'] );
+		} else {
+			$should_saml = isset($_POST['SAMLResponse']) || isset( $_GET['action'] ) && 'wp-saml-auth' === $_GET['action'];
 		}
+
+		if ( $should_saml ) {
+			return $this->do_saml_authentication();
+		}
+
 		return $user;
 	}
 
