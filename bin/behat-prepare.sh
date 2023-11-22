@@ -50,7 +50,7 @@ mkdir $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE
 cp $BASH_DIR/fixtures/functions.php  $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE/functions.php
 cp $BASH_DIR/fixtures/style.css  $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE/style.css
 
-ECHO "Adding WP Native PHP Sessions to the environment"
+echo "Adding WP Native PHP Sessions to the environment"
 rm -rf $PREPARE_DIR/wp-content/plugins/wp-native-php-sessions
 # Download the latest WP Native PHP sessions release from WordPress.org
 wget -O $PREPARE_DIR/wp-native-php-sessions.zip https://downloads.wordpress.org/plugin/wp-native-php-sessions.zip
