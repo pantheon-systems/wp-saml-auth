@@ -238,8 +238,7 @@ class WP_SAML_Auth {
 		if ( is_a( $user, 'WP_User' ) ) {
 
 			if ( ! $permit_wp_login ) {
-				// @todo Revisit if necessary.
-				return null;
+				$user = $this->do_saml_authentication();
 			}
 
 			return $user;
