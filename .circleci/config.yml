@@ -3,7 +3,7 @@ workflows:
   version: 2
   main:
     jobs:
-      - test-behat:
+      - test-behat
       - test-phpunit:
           name: "Test with PHP 7.4"
           php_version: "7.4"
