@@ -2,7 +2,7 @@
 Contributors: getpantheon, danielbachhuber, Outlandish Josh, jspellman, jazzs3quence
 Tags: authentication, SAML
 Requires at least: 4.4
-Tested up to: 6.2
+Tested up to: 6.3
 Requires PHP: 7.3
 Stable tag: 2.1.3
 License: GPLv2 or later
@@ -273,11 +273,15 @@ Minimum supported PHP version is 7.3.
 
 == Changelog ==
 
+= 2.1.4-dev =
+* Fix typo in the label for the certificate path [[#352](https://github.com/pantheon-systems/wp-saml-auth/pull/352)]
+* Updates Pantheon WP Coding Standards to 2.0 [[#357](https://github.com/pantheon-systems/wp-saml-auth/pull/357)]
+
 = 2.1.3 (April 8, 2023) =
 * Fixes missing vendor/ directory in previous release [[#336](https://github.com/pantheon-systems/wp-saml-auth/pull/336)]
 
 = 2.1.2 (April 7, 2023) =
-* Bump yoast/phpunit-polyfills from 1.0.4 to 1.0.5 [[#334](https://github.com/pantheon-systems/wp-saml-auth/pull/334)]
+* Bump yoast/phpunit-polyfills from 1.0.4 to 1.0.5 [[#334](https://github.com/pantheon-systems/wp-saml-auth/pull/334)].
 * Updates tested up to version
 * Removes unused NPM dependencies
 
