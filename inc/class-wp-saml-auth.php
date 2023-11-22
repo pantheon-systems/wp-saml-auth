@@ -247,7 +247,7 @@ class WP_SAML_Auth {
 		if ( ! $permit_wp_login ) {
 			$should_saml = ! isset( $_GET['loggedout'] );
 		} else {
-			$should_saml = isset($_POST['SAMLResponse']) || isset( $_GET['action'] ) && 'wp-saml-auth' === $_GET['action'];
+			$should_saml = isset( $_POST['SAMLResponse'] ) || isset( $_GET['action'] ) && 'wp-saml-auth' === $_GET['action'];
 		}
 
 		if ( $should_saml ) {
@@ -280,7 +280,7 @@ class WP_SAML_Auth {
 						|| ( ! $permit_wp_login && false === stripos( $redirect_to, parse_url( wp_login_url(), PHP_URL_PATH ) ) ) ) {
 						add_filter(
 							'login_redirect',
-							function() use ( $redirect_to ) {
+							function () use ( $redirect_to ) {
 								return $redirect_to;
 							},
 							1
