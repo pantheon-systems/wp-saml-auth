@@ -144,5 +144,5 @@ terminus build:workflow:wait $TERMINUS_SITE.$TERMINUS_ENV
 terminus wp $SITE_ENV -- option update home "https://$PANTHEON_SITE_URL"
 terminus wp $SITE_ENV -- option update siteurl "https://$PANTHEON_SITE_URL"
 terminus wp $SITE_ENV -- plugin activate classic-editor wp-native-php-sessions wp-saml-auth
-terminus wp $SITE_ENV -- theme activate twentytwentythree
+terminus wp $SITE_ENV -- theme activate $TERMINUS_SITE
 terminus wp $SITE_ENV -- rewrite structure '/%year%/%monthnum%/%day%/%postname%/'
