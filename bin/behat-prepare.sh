@@ -43,12 +43,14 @@ git clone -b $TERMINUS_ENV $PANTHEON_GIT_URL $PREPARE_DIR
 ###
 # Add WP Native PHP Sessions and child theme to environment
 ###
+echo "Creating a child theme called $TERMINUS_SITE"
 rm -rf $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE
 # Create a child theme that includes WP SAML Auth configuration details
 mkdir $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE
 cp $BASH_DIR/fixtures/functions.php  $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE/functions.php
 cp $BASH_DIR/fixtures/style.css  $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE/style.css
 
+echo "Adding WP Native PHP Sessions to the environment"
 rm -rf $PREPARE_DIR/wp-content/plugins/wp-native-php-sessions
 # Download the latest WP Native PHP sessions release from WordPress.org
 wget -O $PREPARE_DIR/wp-native-php-sessions.zip https://downloads.wordpress.org/plugin/wp-native-php-sessions.zip
@@ -59,6 +61,7 @@ rm $PREPARE_DIR/wp-native-php-sessions.zip
 ###
 # Add the copy of this plugin itself to the environment
 ###
+echo "Copying WP SAML Auth into WordPress"
 cd $BASH_DIR/..
 rsync -av --exclude='node_modules/' --exclude='simplesamlphp/' --exclude='tests/' ./* $PREPARE_DIR/wp-content/plugins/wp-saml-auth
 rm -rf $PREPARE_DIR/wp-content/plugins/wp-saml-auth/.git
@@ -68,6 +71,7 @@ rm -rf $PREPARE_DIR/wp-content/plugins/wp-saml-auth/.git
 # SimpleSAMLphp is installed to ~/code/private, and then symlinked into the
 # web root
 ###
+echo "Setting up SimpleSAMLphp"
 rm -rf $PREPARE_DIR/private
 mkdir $PREPARE_DIR/private
 wget https://github.com/simplesamlphp/simplesamlphp/releases/download/v1.18.4/simplesamlphp-1.18.4.tar.gz -O $PREPARE_DIR/simplesamlphp-latest.tar.gz
