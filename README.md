@@ -229,6 +229,10 @@ Use `wp help saml-auth <command>` to learn more about each command.
 
 See [CONTRIBUTING.md](https://github.com/pantheon-systems/wp-saml-auth/blob/master/CONTRIBUTING.md) for information on contributing.
 
+## Security Policy ##
+### Reporting Security Bugs
+Please report security bugs found in the WP SAML Auth plugin's source code through the [Patchstack Vulnerability Disclosure Program](https://patchstack.com/database/vdp/wp-saml-auth). The Patchstack team will assist you with verification, CVE assignment, and notify the developers of this plugin.
+
 ## Frequently Asked Questions ##
 
 ### Can I update an existing WordPress user's data when they log back in? ###
