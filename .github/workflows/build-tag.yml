@@ -4,6 +4,9 @@ on:
     branches:
       - 'master'
 
+permissions:
+  contents: write
+
 jobs:
   wordpress:
     name: Release
