@@ -89,7 +89,7 @@ class WP_SAML_Auth_CLI {
 	 * @return string
 	 */
 	protected static function scaffold_config_function( $assoc_args ) {
-		$defaults   = array(
+		$defaults   = [
 			'type'                   => 'internal',
 			'simplesamlphp_autoload' => __DIR__ . '/simplesamlphp/lib/_autoload.php',
 			'auth_source'            => 'default-sp',
@@ -102,20 +102,20 @@ class WP_SAML_Auth_CLI {
 			'first_name_attribute'   => 'first_name',
 			'last_name_attribute'    => 'last_name',
 			'default_role'           => get_option( 'default_role' ),
-		);
+		];
 		$assoc_args = array_merge( $defaults, $assoc_args );
 
-		foreach ( array( 'auto_provision', 'permit_wp_login' ) as $bool ) {
+		foreach ( [ 'auto_provision', 'permit_wp_login' ] as $bool ) {
 			// Support --auto_provision=false passed as an argument.
 			$assoc_args[ $bool ] = 'false' === $assoc_args[ $bool ] ? false : (bool) $assoc_args[ $bool ];
 		}
 
-		$values = var_export( $assoc_args, true );
+		$values = var_export( $assoc_args, true ); //phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export
 		// Formatting fixes.
-		$search_replace = array(
+		$search_replace = [
 			'  '      => "\t\t",
 			'array (' => 'array(',
-		);
+		];
 		$values         = str_replace( array_keys( $search_replace ), array_values( $search_replace ), $values );
 		$values         = rtrim( $values, ')' ) . "\t);";
 		$function       = <<<EOT
@@ -131,5 +131,4 @@ add_filter( 'wp_saml_auth_option', 'wpsax_filter_option', 10, 2 );
 EOT;
 		return $function;
 	}
-
 }

@@ -43,12 +43,14 @@ git clone -b $TERMINUS_ENV $PANTHEON_GIT_URL $PREPARE_DIR
 ###
 # Add WP Native PHP Sessions and child theme to environment
 ###
+echo "Creating a child theme called $TERMINUS_SITE"
 rm -rf $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE
 # Create a child theme that includes WP SAML Auth configuration details
 mkdir $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE
 cp $BASH_DIR/fixtures/functions.php  $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE/functions.php
 cp $BASH_DIR/fixtures/style.css  $PREPARE_DIR/wp-content/themes/$TERMINUS_SITE/style.css
 
+echo "Adding WP Native PHP Sessions to the environment"
 rm -rf $PREPARE_DIR/wp-content/plugins/wp-native-php-sessions
 # Download the latest WP Native PHP sessions release from WordPress.org
 wget -O $PREPARE_DIR/wp-native-php-sessions.zip https://downloads.wordpress.org/plugin/wp-native-php-sessions.zip
@@ -56,15 +58,10 @@ unzip $PREPARE_DIR/wp-native-php-sessions.zip -d $PREPARE_DIR
 mv $PREPARE_DIR/wp-native-php-sessions $PREPARE_DIR/wp-content/plugins/
 rm $PREPARE_DIR/wp-native-php-sessions.zip
 
-# Download the latest Classic Editor release from WordPress.org
-wget -O $PREPARE_DIR/classic-editor.zip https://downloads.wordpress.org/plugin/classic-editor.zip
-unzip $PREPARE_DIR/classic-editor.zip -d $PREPARE_DIR
-mv $PREPARE_DIR/classic-editor $PREPARE_DIR/wp-content/plugins/
-rm $PREPARE_DIR/classic-editor.zip
-
 ###
 # Add the copy of this plugin itself to the environment
 ###
+echo "Copying WP SAML Auth into WordPress"
 cd $BASH_DIR/..
 rsync -av --exclude='node_modules/' --exclude='simplesamlphp/' --exclude='tests/' ./* $PREPARE_DIR/wp-content/plugins/wp-saml-auth
 rm -rf $PREPARE_DIR/wp-content/plugins/wp-saml-auth/.git
@@ -74,6 +71,7 @@ rm -rf $PREPARE_DIR/wp-content/plugins/wp-saml-auth/.git
 # SimpleSAMLphp is installed to ~/code/private, and then symlinked into the
 # web root
 ###
+echo "Setting up SimpleSAMLphp"
 rm -rf $PREPARE_DIR/private
 mkdir $PREPARE_DIR/private
 wget https://github.com/simplesamlphp/simplesamlphp/releases/download/v1.18.4/simplesamlphp-1.18.4.tar.gz -O $PREPARE_DIR/simplesamlphp-latest.tar.gz
@@ -143,6 +141,6 @@ terminus build:workflow:wait $TERMINUS_SITE.$TERMINUS_ENV
 } &> /dev/null
 terminus wp $SITE_ENV -- option update home "https://$PANTHEON_SITE_URL"
 terminus wp $SITE_ENV -- option update siteurl "https://$PANTHEON_SITE_URL"
-terminus wp $SITE_ENV -- plugin activate classic-editor wp-native-php-sessions wp-saml-auth
+terminus wp $SITE_ENV -- plugin activate wp-native-php-sessions wp-saml-auth
 terminus wp $SITE_ENV -- theme activate $TERMINUS_SITE
 terminus wp $SITE_ENV -- rewrite structure '/%year%/%monthnum%/%day%/%postname%/'

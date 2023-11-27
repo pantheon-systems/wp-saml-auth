@@ -40,8 +40,8 @@ class WP_SAML_Auth {
 	public static function get_instance() {
 		if ( ! isset( self::$instance ) ) {
 			self::$instance = new WP_SAML_Auth();
-			add_action( 'init', array( self::$instance, 'action_init' ) );
-			add_action( 'plugins_loaded', array( self::$instance, 'load_textdomain' ) );
+			add_action( 'init', [ self::$instance, 'action_init' ] );
+			add_action( 'plugins_loaded', [ self::$instance, 'load_textdomain' ] );
 		}
 		return self::$instance;
 	}
@@ -103,12 +103,12 @@ class WP_SAML_Auth {
 	 * Initialize the controller logic on the 'init' hook
 	 */
 	public function action_init() {
-		add_action( 'login_head', array( $this, 'action_login_head' ) );
-		add_action( 'login_message', array( $this, 'action_login_message' ) );
-		add_action( 'wp_logout', array( $this, 'action_wp_logout' ) );
-		add_filter( 'login_body_class', array( $this, 'filter_login_body_class' ) );
-		add_filter( 'authenticate', array( $this, 'filter_authenticate' ), 21, 3 ); // after wp_authenticate_username_password runs.
-		add_action( 'admin_notices', array( $this, 'action_admin_notices' ) );
+		add_action( 'login_head', [ $this, 'action_login_head' ] );
+		add_action( 'login_message', [ $this, 'action_login_message' ] );
+		add_action( 'wp_logout', [ $this, 'action_wp_logout' ] );
+		add_filter( 'login_body_class', [ $this, 'filter_login_body_class' ] );
+		add_filter( 'authenticate', [ $this, 'filter_authenticate' ], 21, 3 ); // after wp_authenticate_username_password runs.
+		add_action( 'admin_notices', [ $this, 'action_admin_notices' ] );
 	}
 
 	/**
@@ -147,15 +147,15 @@ class WP_SAML_Auth {
 		if ( ! self::get_option( 'permit_wp_login' ) || ! did_action( 'login_form_login' ) ) {
 			return $message;
 		}
-		$strings = array(
+		$strings = [
 			'title'     => __( 'Use one-click authentication:', 'wp-saml-auth' ),
 			'button'    => __( 'Sign In', 'wp-saml-auth' ),
 			'alt_title' => __( 'Or, sign in with WordPress:', 'wp-saml-auth' ),
-		);
+		];
 
-		$query_args  = array(
+		$query_args  = [
 			'action' => 'wp-saml-auth',
-		);
+		];
 		$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
 		if ( $redirect_to ) {
 			$query_args['redirect_to'] = rawurlencode( $redirect_to );
@@ -187,11 +187,11 @@ class WP_SAML_Auth {
 			if ( empty( $internal_config['idp']['singleLogoutService']['url'] ) ) {
 				return;
 			}
-			$args = array(
-				'parameters'   => array(),
+			$args = [
+				'parameters'   => [],
 				'nameId'       => null,
 				'sessionIndex' => null,
-			);
+			];
 			/**
 			 * Permit the arguments passed to the logout() method to be customized.
 			 *
@@ -232,18 +232,28 @@ class WP_SAML_Auth {
 	 * @param string $password Password supplied by the user.
 	 * @return mixed
 	 */
-	public function filter_authenticate( $user, $username, $password ) {
+	public function filter_authenticate( $user, $username, $password ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable,Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
 
 		$permit_wp_login = self::get_option( 'permit_wp_login' );
-		if ( is_a( $user, 'WP_User' ) && $permit_wp_login ) {
+		if ( is_a( $user, 'WP_User' ) ) {
+
+			if ( ! $permit_wp_login ) {
+				$user = $this->do_saml_authentication();
+			}
+
 			return $user;
 		}
 
-		if ( ! empty( $_POST['SAMLResponse'] ) ) {
-			$user = $this->do_saml_authentication();
-		} elseif ( ( ! $permit_wp_login && empty( $_GET['loggedout'] ) ) || ( ! empty( $_GET['action'] ) && 'wp-saml-auth' === $_GET['action'] ) ) {
-			$user = $this->do_saml_authentication();
+		if ( ! $permit_wp_login ) {
+			$should_saml = ! isset( $_GET['loggedout'] );
+		} else {
+			$should_saml = isset( $_POST['SAMLResponse'] ) || isset( $_GET['action'] ) && 'wp-saml-auth' === $_GET['action'];
 		}
+
+		if ( $should_saml ) {
+			return $this->do_saml_authentication();
+		}
+
 		return $user;
 	}
 
@@ -270,7 +280,7 @@ class WP_SAML_Auth {
 						|| ( ! $permit_wp_login && false === stripos( $redirect_to, parse_url( wp_login_url(), PHP_URL_PATH ) ) ) ) {
 						add_filter(
 							'login_redirect',
-							function() use ( $redirect_to ) {
+							function () use ( $redirect_to ) {
 								return $redirect_to;
 							},
 							1
@@ -279,7 +289,7 @@ class WP_SAML_Auth {
 				}
 			} else {
 				$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
-				$redirect_to = $redirect_to ? $redirect_to : $_SERVER['REQUEST_URI'];
+				$redirect_to = $redirect_to ? $redirect_to : ( isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( $_SERVER['REQUEST_URI'] ) : null );
 				/**
 				 * Allows forceAuthn="true" to be enabled.
 				 *
@@ -292,7 +302,7 @@ class WP_SAML_Auth {
 				 *
 				 * @param array $parameters
 				 */
-				$parameters = apply_filters( 'wp_saml_auth_login_parameters', array() );
+				$parameters = apply_filters( 'wp_saml_auth_login_parameters', [] );
 
 				$provider->login( $redirect_to, $parameters, $force_authn );
 			}
@@ -300,27 +310,27 @@ class WP_SAML_Auth {
 			$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
 			if ( $redirect_to ) {
 				$redirect_to = add_query_arg(
-					array(
+					[
 						'redirect_to' => rawurlencode( $redirect_to ),
 						'action'      => 'wp-saml-auth',
-					),
+					],
 					wp_login_url()
 				);
 			} else {
 				$redirect_to = wp_login_url();
 				// Make sure we're only dealing with the URI components and not arguments.
-				$request = explode( '?', $_SERVER['REQUEST_URI'] );
+				$request = explode( '?', sanitize_text_field( $_SERVER['REQUEST_URI'] ) );
 				// Only persist redirect_to when it's not wp-login.php.
 				if ( false === stripos( $redirect_to, reset( $request ) ) ) {
-					$redirect_to = add_query_arg( 'redirect_to', $_SERVER['REQUEST_URI'], $redirect_to );
+					$redirect_to = add_query_arg( 'redirect_to', sanitize_text_field( $_SERVER['REQUEST_URI'] ), $redirect_to );
 				} else {
-					$redirect_to = add_query_arg( array( 'action' => 'wp-saml-auth' ), $redirect_to );
+					$redirect_to = add_query_arg( [ 'action' => 'wp-saml-auth' ], $redirect_to );
 				}
 			}
 			$provider->requireAuth(
-				array(
+				[
 					'ReturnTo' => $redirect_to,
-				)
+				]
 			);
 			$attributes = $provider->getAttributes();
 		} else {
@@ -374,8 +384,8 @@ class WP_SAML_Auth {
 			return new WP_Error( 'wp_saml_auth_auto_provision_disabled', esc_html__( 'No WordPress user exists for your account. Please contact your administrator.', 'wp-saml-auth' ) );
 		}
 
-		$user_args = array();
-		foreach ( array( 'display_name', 'user_login', 'user_email', 'first_name', 'last_name' ) as $type ) {
+		$user_args = [];
+		foreach ( [ 'display_name', 'user_login', 'user_email', 'first_name', 'last_name' ] as $type ) {
 			$attribute          = self::get_option( "{$type}_attribute" );
 			$user_args[ $type ] = ! empty( $attributes[ $attribute ][0] ) ? $attributes[ $attribute ][0] : '';
 		}

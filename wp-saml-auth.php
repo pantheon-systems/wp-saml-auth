@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: WP SAML Auth
- * Version: 2.1.3
+ * Version: 2.1.4
  * Description: SAML authentication for WordPress, using SimpleSAMLphp.
  * Author: Pantheon
  * Author URI: https://pantheon.io
@@ -19,7 +19,7 @@
  * @param string $option_name Configuration option name.
  */
 function wpsa_filter_option( $value, $option_name ) {
-	$defaults = array(
+	$defaults = [
 		/**
 		 * Type of SAML connection bridge to use.
 		 *
@@ -58,39 +58,39 @@ function wpsa_filter_option( $value, $option_name ) {
 		 *
 		 * @param array
 		 */
-		'internal_config'        => array(
+		'internal_config'        => [
 			// Validation of SAML responses is required.
 			'strict'  => true,
 			'debug'   => defined( 'WP_DEBUG' ) && WP_DEBUG ? true : false,
 			'baseurl' => home_url(),
-			'sp'      => array(
+			'sp'      => [
 				'entityId'                 => 'urn:' . parse_url( home_url(), PHP_URL_HOST ),
-				'assertionConsumerService' => array(
+				'assertionConsumerService' => [
 					'url'     => home_url(),
 					'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST',
-				),
-			),
-			'idp'     => array(
+				],
+			],
+			'idp'     => [
 				// Required: Set based on provider's supplied value.
 				'entityId'                 => '',
-				'singleSignOnService'      => array(
+				'singleSignOnService'      => [
 					// Required: Set based on provider's supplied value.
 					'url'     => '',
 					'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
-				),
-				'singleLogoutService'      => array(
+				],
+				'singleLogoutService'      => [
 					// Required: Set based on provider's supplied value.
 					'url'     => '',
 					'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
-				),
+				],
 				// Required: Contents of the IDP's public x509 certificate.
 				// Use file_get_contents() to load certificate contents into scope.
 				'x509cert'                 => '',
 				// Optional: Instead of using the x509 cert, you can specify the fingerprint and algorithm.
 				'certFingerprint'          => '',
 				'certFingerprintAlgorithm' => '',
-			),
-		),
+			],
+		],
 		/**
 		 * Whether or not to automatically provision new WordPress users.
 		 *
@@ -153,7 +153,7 @@ function wpsa_filter_option( $value, $option_name ) {
 		 * @param string
 		 */
 		'default_role'           => get_option( 'default_role' ),
-	);
+	];
 	$value = isset( $defaults[ $option_name ] ) ? $defaults[ $option_name ] : $value;
 	return $value;
 }

@@ -2,9 +2,9 @@
 Contributors: getpantheon, danielbachhuber, Outlandish Josh, jspellman, jazzs3quence
 Tags: authentication, SAML
 Requires at least: 4.4
-Tested up to: 6.2
+Tested up to: 6.3
 Requires PHP: 7.3
-Stable tag: 2.1.3
+Stable tag: 2.1.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -266,6 +266,10 @@ Note: the declaration does need to be at the top of `_include.php`, to ensure Wo
 
 There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Native PHP Sessions active, SimpleSAMLphp and WP SAML Auth will be able to communicate to one another on a multi web node environment.
 
+= Where do I report security bugs found in this plugin? =
+
+Please report security bugs found in the source code of the WP SAML Auth plugin through the [Patchstack Vulnerability Disclosure Program](https://patchstack.com/database/vdp/wp-saml-auth). The Patchstack team will assist you with verification, CVE assignment, and notify the developers of this plugin.
+
 == Upgrade Notice ==
 
 = 2.0.0 =
@@ -273,11 +277,16 @@ Minimum supported PHP version is 7.3.
 
 == Changelog ==
 
+= 2.1.4 (November 27, 2023) =
+* Fix typo in the label for the certificate path [[#352](https://github.com/pantheon-systems/wp-saml-auth/pull/352)]
+* Updates Pantheon WP Coding Standards to 2.0 [[#357](https://github.com/pantheon-systems/wp-saml-auth/pull/357)]
+* Fix logged-out auth issue [[#359](https://github.com/pantheon-systems/wp-saml-auth/pull/359)] (props [Snicco](https://snicco.io))
+
 = 2.1.3 (April 8, 2023) =
 * Fixes missing vendor/ directory in previous release [[#336](https://github.com/pantheon-systems/wp-saml-auth/pull/336)]
 
 = 2.1.2 (April 7, 2023) =
-* Bump yoast/phpunit-polyfills from 1.0.4 to 1.0.5 [[#334](https://github.com/pantheon-systems/wp-saml-auth/pull/334)]
+* Bump yoast/phpunit-polyfills from 1.0.4 to 1.0.5 [[#334](https://github.com/pantheon-systems/wp-saml-auth/pull/334)].
 * Updates tested up to version
 * Removes unused NPM dependencies
 
