@@ -4,7 +4,7 @@ Tags: authentication, SAML
 Requires at least: 4.4
 Tested up to: 6.3
 Requires PHP: 7.3
-Stable tag: 2.1.5-dev
+Stable tag: 2.1.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -276,8 +276,6 @@ Please report security bugs found in the source code of the WP SAML Auth plugin 
 Minimum supported PHP version is 7.3.
 
 == Changelog ==
-
-= 2.1.5-dev =
 
 = 2.1.4 (November 27, 2023) =
 * Fix typo in the label for the certificate path [[#352](https://github.com/pantheon-systems/wp-saml-auth/pull/352)]
