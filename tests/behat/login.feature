@@ -31,7 +31,7 @@ Feature: SAML Login
     And I press "submit"
     And I press "Submit"
     Then print current URL
-    Then I should see "Sample Page" in the ".entry-title" element
+    Then I should see "Sample Page" in the ".wp-block-post-title" element
 
   Scenario: Errors on an invalidpassword
     Given I am on "wp-login.php"

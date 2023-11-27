@@ -152,14 +152,14 @@ class WP_SAML_Auth_Settings {
 				<p>
 				<?php
 				// translators: Link to the plugin settings page.
-				echo sprintf( wp_kses( __( 'Settings are defined with a filter and unavailable for editing through the backend. <a href="%s">Visit the plugin page</a> for more information.', 'wp-saml-auth' ), $allowed_html ), 'https://wordpress.org/plugins/wp-saml-auth/' );
+				printf( wp_kses( __( 'Settings are defined with a filter and unavailable for editing through the backend. <a href="%s">Visit the plugin page</a> for more information.', 'wp-saml-auth' ), $allowed_html ), 'https://wordpress.org/plugins/wp-saml-auth/' );
 				?>
 				</p>
 			<?php else : ?>
 				<p>
 				<?php
 				// translators: Link to the plugin settings page.
-				echo sprintf( wp_kses( __( 'Use the following settings to configure WP SAML Auth with the \'internal\' connection type. <a href="%s">Visit the plugin page</a> for more information.', 'wp-saml-auth' ), $allowed_html ), 'https://wordpress.org/plugins/wp-saml-auth/' );
+				printf( wp_kses( __( 'Use the following settings to configure WP SAML Auth with the \'internal\' connection type. <a href="%s">Visit the plugin page</a> for more information.', 'wp-saml-auth' ), $allowed_html ), 'https://wordpress.org/plugins/wp-saml-auth/' );
 				?>
 				</p>
 				<?php if ( WP_SAML_Auth_Options::do_required_settings_have_values() ) : ?>
@@ -395,7 +395,7 @@ class WP_SAML_Auth_Settings {
 			[
 				'section'     => 'idp',
 				'uid'         => 'x509cert',
-				'label'       => __( 'x509 Cerificate Path', 'wp-saml-auth' ),
+				'label'       => __( 'x509 Certificate Path', 'wp-saml-auth' ),
 				'type'        => 'text',
 				'description' => __( 'Path to the x509 certificate file, used for verifying the request.<br/>Include <code>ABSPATH</code> to set path base to WordPress\' ABSPATH constant.', 'wp-saml-auth' ),
 			],

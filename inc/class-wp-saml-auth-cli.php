@@ -131,5 +131,4 @@ add_filter( 'wp_saml_auth_option', 'wpsax_filter_option', 10, 2 );
 EOT;
 		return $function;
 	}
-
 }

@@ -3,29 +3,18 @@ workflows:
   version: 2
   main:
     jobs:
-      - lint
-      - test-behat:
-          requires:
-            - lint
+      - test-behat
       - test-phpunit:
           name: "Test with PHP 7.4"
-          requires:
-            - lint
           php_version: "7.4"
       - test-phpunit:
           name: "Test with PHP 8.0"
-          requires:
-            - lint
           php_version: "8.0"
       - test-phpunit:
           name: "Test with PHP 8.1"
-          requires:
-            - lint
           php_version: "8.1"
       - test-phpunit:
           name: "Test with PHP 8.2"
-          requires:
-            - lint
           php_version: "8.2"
   nightly:
     triggers:
@@ -38,24 +27,6 @@ workflows:
     jobs:
       - test-behat
 jobs:
-  lint:
-    working_directory: ~/pantheon-systems/wp-saml-auth
-    docker:
-      - image: quay.io/pantheon-public/build-tools-ci:8.x-php8.0
-    steps:
-      - checkout
-      - restore_cache:
-          keys:
-            - test-lint-dependencies-{{ checksum "composer.json" }}
-      - run: composer install -n --prefer-dist
-      - save_cache:
-          key: test-lint-dependencies-{{ checksum "composer.json" }}
-          paths:
-            - vendor
-      - run:
-          name: "Run PHP Lint"
-          command: |
-            composer phpcs
   test-behat:
     working_directory: ~/pantheon-systems/wp-saml-auth
     parallelism: 1
@@ -96,6 +67,7 @@ jobs:
           exit 0
         fi
         terminus auth:login --machine-token=$TERMINUS_TOKEN
+    - run: ./bin/validate-fixture-version.sh
     - run: ./bin/behat-prepare.sh
     - run: ./bin/behat-test.sh --strict
     - run:

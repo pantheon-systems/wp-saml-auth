@@ -10,6 +10,8 @@ Pull requests and issues are welcome!
 
 The `develop` branch is the development branch which means it contains the next version to be released. `master` contains the corresponding stable development version. Always work on the `develop` branch and open up PRs against `develop`.
 
+We prefer to squash commits (i.e. avoid merge PRs) from a feature branch into `develop` when merging, and to include the PR # in the commit message. PRs to `develop` should also include any relevent updates to the changelog in readme.txt. For example, if a feature constitutes a minor or major version bump, that version update should be discussed and made as part of approving and merging the feature into `develop`. We do not update the README changelogs for development or process related PRs (i.e. dev-only dependencies, or changes to CI patterns unrelated to new features).
+
 ## Testing
 
 You may notice there are two sets of tests running, on two different services:
@@ -28,7 +30,6 @@ Behat requires a Pantheon site. Once you've created the site, you'll need [insta
 1. From `develop`, checkout a new branch `release_X.Y.Z`.
 1. Make a release commit:
     * Drop the `-dev` from the version number in `README.md`, `readme.txt`, and `wp-saml-auth.php`.
-    * Update the "Latest" heading in the changelog to the new version number with the date
     * Commit these changes with the message `Release X.Y.Z`
     * Push the release branch up.
 1. Open a Pull Request to merge `release_X.Y.Z` into `main`. Your PR should consist of all commits to `develop` since the last release, and one commit to update the version number. The PR name should also be `Release X.Y.Z`.
@@ -42,7 +43,7 @@ Behat requires a Pantheon site. Once you've created the site, you'll need [insta
     * `git checkout develop`
     * `git rebase master`
     * Update the version number in all locations, incrementing the version by one patch version, and add the `-dev` flag (e.g. after releasing `1.2.3`, the new verison will be `1.2.4-dev`)
-    * Add a new `** Latest **` heading to the changelog
+    * Add a new `** X.Y.X-dev **` heading to the changelogs
     * `git add -A .`
     * `git commit -m "Prepare X.Y.X-dev"`
     * `git push origin develop`
