@@ -280,6 +280,7 @@ Minimum supported PHP version is 7.3.
 ### 2.1.4 (November 27, 2023) ###
 * Fix typo in the label for the certificate path [[#352](https://github.com/pantheon-systems/wp-saml-auth/pull/352)]
 * Updates Pantheon WP Coding Standards to 2.0 [[#357](https://github.com/pantheon-systems/wp-saml-auth/pull/357)]
+* Fix logged-out auth issue [[#359](https://github.com/pantheon-systems/wp-saml-auth/pull/359)]
 
 ### 2.1.3 (April 8, 2023) ###
 * Fixes missing vendor/ directory in previous release [[#336](https://github.com/pantheon-systems/wp-saml-auth/pull/336)]
