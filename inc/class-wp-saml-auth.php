@@ -247,7 +247,7 @@ class WP_SAML_Auth {
 		if ( ! $permit_wp_login ) {
 			$should_saml = ! isset( $_GET['loggedout'] );
 		} else {
-			$should_saml = isset( $_POST['SAMLResponse'] ) || isset( $_GET['action'] ) && 'wp-saml-auth' === $_GET['action'];
+			$should_saml = isset( $_POST['SAMLResponse'] ) || ( isset( $_GET['action'] ) && 'wp-saml-auth' === $_GET['action'] );
 		}
 
 		if ( $should_saml ) {
