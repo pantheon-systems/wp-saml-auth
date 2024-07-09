@@ -1325,16 +1325,16 @@
         },
         {
             "name": "pantheon-systems/pantheon-wp-coding-standards",
-            "version": "2.0.2",
+            "version": "2.0.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/pantheon-systems/Pantheon-WP-Coding-Standards.git",
-                "reference": "fabb264d8dc39cf1cf3facea8526a881894dd591"
+                "reference": "5008d7416057ab0420bcddd407d9833340a0081d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/pantheon-systems/Pantheon-WP-Coding-Standards/zipball/fabb264d8dc39cf1cf3facea8526a881894dd591",
-                "reference": "fabb264d8dc39cf1cf3facea8526a881894dd591",
+                "url": "https://api.github.com/repos/pantheon-systems/Pantheon-WP-Coding-Standards/zipball/5008d7416057ab0420bcddd407d9833340a0081d",
+                "reference": "5008d7416057ab0420bcddd407d9833340a0081d",
                 "shasum": ""
             },
             "require": {
@@ -1361,9 +1361,9 @@
             "description": "PHPCS Rulesets for WordPress projects on Pantheon.",
             "support": {
                 "issues": "https://github.com/pantheon-systems/Pantheon-WP-Coding-Standards/issues",
-                "source": "https://github.com/pantheon-systems/Pantheon-WP-Coding-Standards/tree/2.0.2"
+                "source": "https://github.com/pantheon-systems/Pantheon-WP-Coding-Standards/tree/2.0.3"
             },
-            "time": "2024-06-07T20:18:22+00:00"
+            "time": "2024-07-05T21:39:52+00:00"
         },
         {
             "name": "phar-io/manifest",
