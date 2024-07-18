@@ -27,16 +27,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Install Composer dependencies
-        run: composer install
-      - name: PHP Code Beautifier
-        run: composer phpcbf
-      - name: Commit changes
-        run: |
-          git config --global user.name "Pantheon Robot"
-          git config --global user.email "bot@getpantheon.io"
-          git add -A
-          git commit -m "Apply PHP Code Beautifier changes" || true # Allow commit to fail if there are no changes.
-          git push || true # Allow push to fail if there are no changes.
-      - name: Lint
-        run: composer lint
+      - uses: shalior/wordpress-phpcs-action@v1
+        with:
+          github_token: ${{ github.token }}
+          use_default_configuration_file: true
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "PHPCBF: Fix coding standards"
+          commit_options: '--no-verify'
+          branch: ${{ github.ref }}
+          commit_user_name: "Pantheon Robot"
+          commit_user_email: "bot@getpantheon.io"
