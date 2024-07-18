@@ -21,20 +21,14 @@ jobs:
         uses: pantheon-systems/action-wporg-validator@1.0.0
         with:
           type: plugin
-  composer-install:
-    name: Composer Install
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Composer Install
+      - name: Install Composer dependencies
         run: composer install
-  phpcbf:
-    name: PHP Code Beautifier
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
       - name: PHP Code Beautifier
         run: composer phpcbf
       - name: Commit changes
@@ -43,12 +37,6 @@ jobs:
           git config --global user.email "bot@getpantheon.io"
           git add -A
           git commit -m "Apply PHP Code Beautifier changes"
-          git push
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+          git push || true # Allow push to fail if there are no changes.
       - name: Lint
         run: composer lint
