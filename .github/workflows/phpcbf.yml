@@ -19,11 +19,17 @@ jobs:
         run: |
           git config --global user.email "bot@getpantheon.com"
           git config --global user.name "Pantheon Robot"
-          git add .
-          git diff-index --quiet HEAD || git commit -m "PHPCBF: Fix coding standards" --no-verify
-          echo ::set-output name=changes_detected::$(git diff-index --quiet HEAD || echo "true")
+          DIFF=$(git diff-index --quiet HEAD || echo "true")
+          if [ "$DIFF" == "true" ]; then
+            git add .
+            git commit -m "PHPCBF: Fix coding standards" --no-verify
+            git push origin HEAD
+            echo "changes_detected=true" >> $GITHUB_ENV
+          else
+            echo "changes_detected=false" >> $GITHUB_ENV
+          fi
       - name: Add PR Comment
-        if: steps.git-auto-commit.outputs.changes_detected == 'true'
+        if: env.changes_detected == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
