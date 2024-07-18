@@ -19,7 +19,6 @@ jobs:
         with:
           commit_message: "PHPCBF: Fix coding standards"
           commit_options: '--no-verify'
-          branch: ${{ github.ref }}
           commit_user_name: "Pantheon Robot"
           commit_user_email: "bot@getpantheon.io"
       - name: Add PR Comment
