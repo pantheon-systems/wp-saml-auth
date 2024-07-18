@@ -27,6 +27,21 @@ jobs:
         uses: actions/checkout@v4
       - name: Composer Install
         run: composer install
+  phpcbf:
+    name: PHP Code Beautifier
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: PHP Code Beautifier
+        run: composer phpcbf
+      - name: Commit changes
+        run: |
+          git config --global user.name "Pantheon Robot"
+          git config --global user.email "bot@getpantheon.io"
+          git add -A
+          git commit -m "Apply PHP Code Beautifier changes"
+          git push
   lint:
     name: Lint
     runs-on: ubuntu-latest
