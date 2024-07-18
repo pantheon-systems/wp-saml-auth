@@ -237,7 +237,7 @@ class WP_SAML_Auth {
 		$permit_wp_login = self::get_option( 'permit_wp_login' );
 		if (is_a( $user, 'WP_User' )) {
 
-			if ( ! $permit_wp_login ) {
+			if (!$permit_wp_login) {
 				$user = $this->do_saml_authentication();
 			}
 
