@@ -10,6 +10,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
       - name: Install Composer dependencies and run PHPCBF
         run: |
           composer install
@@ -23,7 +25,7 @@ jobs:
           if [ "$DIFF" == "true" ]; then
             git add .
             git commit -m "PHPCBF: Fix coding standards" --no-verify
-            git push origin ${{ github.head_ref}}
+            git push origin ${{ github.event.pull_request.head.ref }}
             echo "changes_detected=true" >> $GITHUB_ENV
           else
             echo "changes_detected=false" >> $GITHUB_ENV
