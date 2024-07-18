@@ -363,10 +363,7 @@ class WP_SAML_Auth {
 		}
 
 		// Some SAML providers return oddly shaped responses.
-        $attributes = apply_filters( 
-            'wp_saml_auth_patch_attributes', $attributes,
-             $provider);
-
+		$attributes = apply_filters( 'wp_saml_auth_patch_attributes', $attributes, $provider );
 		$get_user_by = self::get_option( 'get_user_by' );
 		$attribute   = self::get_option( "user_{$get_user_by}_attribute" );
 		if ( empty( $attributes[ $attribute ][0] ) ) {
