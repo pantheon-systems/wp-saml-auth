@@ -23,7 +23,7 @@ jobs:
           if [ "$DIFF" == "true" ]; then
             git add .
             git commit -m "PHPCBF: Fix coding standards" --no-verify
-            git push origin HEAD
+            git push origin ${{ github.head_ref}}
             echo "changes_detected=true" >> $GITHUB_ENV
           else
             echo "changes_detected=false" >> $GITHUB_ENV
