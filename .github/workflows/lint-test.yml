@@ -36,7 +36,7 @@ jobs:
           git config --global user.name "Pantheon Robot"
           git config --global user.email "bot@getpantheon.io"
           git add -A
-          git commit -m "Apply PHP Code Beautifier changes"
+          git commit -m "Apply PHP Code Beautifier changes" || true # Allow commit to fail if there are no changes.
           git push || true # Allow push to fail if there are no changes.
       - name: Lint
         run: composer lint
