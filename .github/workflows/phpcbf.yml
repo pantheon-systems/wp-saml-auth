@@ -1,0 +1,23 @@
+name: PHP Code Beautifier
+on: [pull_request]
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  phpcbf:
+    name: PHPCBF & Commit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Composer dependencies and run PHPCBF
+        run: |
+          composer install
+          composer phpcbf
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "PHPCBF: Fix coding standards"
+          commit_options: '--no-verify'
+          branch: ${{ github.ref }}
+          commit_user_name: "Pantheon Robot"
+          commit_user_email: "bot@getpantheon.io"
