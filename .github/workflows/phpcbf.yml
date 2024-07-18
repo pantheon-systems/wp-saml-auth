@@ -14,13 +14,14 @@ jobs:
         run: |
           composer install
           composer phpcbf || true # Allow the workflow to continue even if PHPCBF fails
-      - uses: stefanzweifel/git-auto-commit-action@v5
+      - name: Commit changes to PR
         id: git-auto-commit
-        with:
-          commit_message: "PHPCBF: Fix coding standards"
-          commit_options: '--no-verify'
-          commit_user_name: "Pantheon Robot"
-          commit_user_email: "bot@getpantheon.io"
+        run: |
+          git config --global user.email "bot@getpantheon.com"
+          git config --global user.name "Pantheon Robot"
+          git add .
+          git diff-index --quiet HEAD || git commit -m "PHPCBF: Fix coding standards" --no-verify
+          echo ::set-output name=changes_detected::$(git diff-index --quiet HEAD || echo "true")
       - name: Add PR Comment
         if: steps.git-auto-commit.outputs.changes_detected == 'true'
         env:
