@@ -235,7 +235,7 @@ class WP_SAML_Auth {
 	public function filter_authenticate( $user, $username, $password ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable,Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
 
 		$permit_wp_login = self::get_option( 'permit_wp_login' );
-		if ( is_a( $user, 'WP_User' ) ) {
+		if (is_a( $user, 'WP_User' )) {
 
 			if ( ! $permit_wp_login ) {
 				$user = $this->do_saml_authentication();
