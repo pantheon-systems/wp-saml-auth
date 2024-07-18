@@ -13,7 +13,7 @@ jobs:
       - name: Install Composer dependencies and run PHPCBF
         run: |
           composer install
-          composer phpcbf
+          composer phpcbf || true # Allow the workflow to continue even if PHPCBF fails
       - uses: stefanzweifel/git-auto-commit-action@v5
         id: git-auto-commit
         with:
