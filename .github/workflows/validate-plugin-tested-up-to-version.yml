@@ -1,0 +1,19 @@
+name: Validate Tested Up To Version
+on:
+  schedule:
+    - cron: '0 0 * * 0'
+
+permissions:
+  pull-requests: write
+  contents: write
+
+jobs:
+  validate-plugin-version:
+    runs-on: ubuntu-latest
+    name: Validate Plugin Tested Up To
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: jazzsequence/action-validate-plugin-version@v1
+        branch: 'master'
