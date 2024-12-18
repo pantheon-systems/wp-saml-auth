@@ -278,6 +278,7 @@ Minimum supported PHP version is 7.3.
 == Changelog ==
 
 = 2.1.5-dev =
+* Add a hook to modify returned attributes. [[#379](https://github.com/pantheon-systems/wp-saml-auth/pull/379/)]
 
 = 2.1.4 (November 27, 2023) =
 * Fix typo in the label for the certificate path [[#352](https://github.com/pantheon-systems/wp-saml-auth/pull/352)]
