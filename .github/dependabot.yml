@@ -29,3 +29,7 @@ updates:
     day: tuesday
   target-branch: "develop"
   open-pull-requests-limit: 99
+- package-ecosystem: "github-actions"
+  directory: "/"
+  schedule:
+    interval: daily
