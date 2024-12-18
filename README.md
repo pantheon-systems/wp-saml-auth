@@ -2,7 +2,7 @@
 **Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [outlandish-josh](https://profiles.wordpress.org/outlandish-josh/), [jazzs3quence](https://profiles.wordpress.org/jazzs3quence/)  
 **Tags:** authentication, SAML  
 **Requires at least:** 4.4  
-**Tested up to:** 6.3  
+**Tested up to:** 6.7.1  
 **Requires PHP:** 7.3  
 **Stable tag:** 2.1.5-dev  
 **License:** GPLv2 or later  
