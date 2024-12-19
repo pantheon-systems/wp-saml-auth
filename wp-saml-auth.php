@@ -189,3 +189,33 @@ if ( is_admin() ) {
  */
 require_once __DIR__ . '/inc/class-wp-saml-auth-options.php';
 WP_SAML_Auth_Options::get_instance();
+
+
+add_action('parse_request', 'get_sp_metadata', 0);
+
+/**
+ * Provides a display at /saml/metadata for viewing the XML.
+ */
+function get_sp_metadata() {
+	$url =  "//{$_SERVER['HTTP_HOST']}{$_SERVER['REQUEST_URI']}";
+	$path = parse_url($url, PHP_URL_PATH);
+	if (trim($path, '\/') !== 'saml/metadata') {
+		return;
+	}
+	$instance = WP_SAML_Auth::get_instance();
+	$provider = $instance->get_provider();
+	$settings = $provider->getSettings();
+	$metadata = null;
+	try {
+		$metadata = $settings->getSPMetadata();
+		$errors   = $settings->validateMetadata($metadata);
+	} catch (\Exception $e) {
+		$errors = $e->getMessage();
+	}
+	if ($errors) {
+		wp_die(esc_html__('Invalid SAML settings. Contact your administrator.', 'wp-saml-auth'));
+	}
+	header('Content-Type: text/xml');
+	echo $metadata;
+	exit;
+}
