@@ -2,7 +2,7 @@
 Contributors: getpantheon, danielbachhuber, Outlandish Josh, jspellman, jazzs3quence
 Tags: authentication, SAML
 Requires at least: 4.4
-Tested up to: 6.7.1
+Tested up to: 6.3
 Requires PHP: 7.3
 Stable tag: 2.1.5-dev
 License: GPLv2 or later
