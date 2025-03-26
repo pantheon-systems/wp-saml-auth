@@ -19,7 +19,6 @@ main(){
         terminus auth:login --machine-token="${TERMINUS_TOKEN}"
     fi
 
-
     # Use find to locate the file with a case-insensitive search
     README_FILE_PATH=$(find ${DIRNAME}/.. -iname "readme.txt" -print -quit)
     if [[ -z "$README_FILE_PATH" ]]; then
@@ -34,7 +33,7 @@ main(){
     FIXTURE_VERSION=$(terminus wp "${TERMINUS_SITE}.dev" -- core version)
     echo "Fixture Version: ${FIXTURE_VERSION}"
 
-    if ! php -r "exit(version_compare('${TESTED_UP_TO}', '${FIXTURE_VERSION}'));"; then
+    if php -r "exit(version_compare('${TESTED_UP_TO}', '${FIXTURE_VERSION}') < 0 ? 0 : 1);"; then
         echo "${FIXTURE_VERSION} is less than ${TESTED_UP_TO}"
         echo "Please update ${TERMINUS_SITE} to at least WordPress ${TESTED_UP_TO}"
         exit 1
