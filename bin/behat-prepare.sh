@@ -74,7 +74,7 @@ rm -rf $PREPARE_DIR/wp-content/plugins/wp-saml-auth/.git
 echo "Setting up SimpleSAMLphp"
 rm -rf $PREPARE_DIR/private
 mkdir $PREPARE_DIR/private
-wget https://github.com/simplesamlphp/simplesamlphp/releases/download/v1.18.4/simplesamlphp-1.18.4.tar.gz -O $PREPARE_DIR/simplesamlphp-latest.tar.gz
+wget https://github.com/simplesamlphp/simplesamlphp/releases/download/v2.3.7/simplesamlphp-2.3.7.tar.gz -O $PREPARE_DIR/simplesamlphp-latest.tar.gz
 tar -zxvf $PREPARE_DIR/simplesamlphp-latest.tar.gz -C $PREPARE_DIR/private
 ORIG_SIMPLESAMLPHP_DIR=$(ls $PREPARE_DIR/private)
 mv $PREPARE_DIR/private/$ORIG_SIMPLESAMLPHP_DIR $PREPARE_DIR/private/simplesamlphp
