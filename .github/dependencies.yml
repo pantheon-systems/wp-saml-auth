@@ -2,5 +2,5 @@
 dependencies:
   # Installed on fixture multidev for Behat tests in bin/behat-prepare.sh
   simplesamlphp: 
-    current_tag: v1.19.7
+    current_tag: v2.3.7
     repo: simplesamlphp/simplesamlphp

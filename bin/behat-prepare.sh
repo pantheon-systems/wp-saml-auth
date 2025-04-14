@@ -75,7 +75,7 @@ SIMPLE_SAML_PHP_VERSION=$(yq '.dependencies.simplesamlphp.current_tag' "$BASH_DI
 echo "Setting up SimpleSAMLphp (${SIMPLE_SAML_PHP_VERSION})"
 rm -rf $PREPARE_DIR/private
 mkdir $PREPARE_DIR/private
-TARG_GZ_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/${SIMPLE_SAML_PHP_VERSION}/simplesamlphp-${SIMPLE_SAML_PHP_VERSION#v}.tar.gz"
+TARG_GZ_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/${SIMPLE_SAML_PHP_VERSION}/simplesamlphp-${SIMPLE_SAML_PHP_VERSION#v}-full.tar.gz"
 wget "$TARG_GZ_URL" -O "${PREPARE_DIR}/simplesamlphp-latest.tar.gz"
 tar -zxvf $PREPARE_DIR/simplesamlphp-latest.tar.gz -C $PREPARE_DIR/private
 ORIG_SIMPLESAMLPHP_DIR=$(ls $PREPARE_DIR/private)
