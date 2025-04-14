@@ -2,18 +2,20 @@ name: Ensure Behat Fixtured Matches Tested Up To
 
 on: [pull_request]
 
-steps:
-  - name: Setup PHP
-    uses: shivammathur/setup-php@v2
-    with:
-      php-version: "8.3"
-
-  - name: Install Terminus
-    uses: pantheon-systems/terminus-github-actions@v1
-    with:
-      pantheon-machine-token: ${{ secrets.PANTHEON_MACHINE_TOKEN }}
-
-  - name: Check Behat Fixture Versions
-    env:
-      TERMINUS_HIDE_GIT_MODE_WARNING: 1
-    run: bin/validate-fixtures-tested-up-to-version.sh
+jobs:
+  vfv:
+    name: Validate Fixture Version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+      - name: Install Terminus
+        uses: pantheon-systems/terminus-github-actions@v1
+        with:
+          pantheon-machine-token: ${{ secrets.PANTHEON_MACHINE_TOKEN }}
+      - name: Check Behat Fixture Versions
+        env:
+          TERMINUS_HIDE_GIT_MODE_WARNING: 1
+        run: bin/validate-fixtures-tested-up-to-version.sh
