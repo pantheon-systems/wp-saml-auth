@@ -153,6 +153,27 @@ function wpsa_filter_option( $value, $option_name ) {
 		 * @param string
 		 */
 		'default_role'           => get_option( 'default_role' ),
+		/**
+		 * Minimum recommended version of SimpleSAMLphp.
+		 * Versions below this will show a warning but still work.
+		 *
+		 * @param string
+		 */
+		'min_simplesamlphp_version' => '2.3.7',
+		/**
+		 * Critical security version of SimpleSAMLphp.
+		 * Versions below this will show an error and block authentication.
+		 *
+		 * @param string
+		 */
+		'critical_simplesamlphp_version' => '2.0.0',
+		/**
+		 * Whether to enforce the minimum SimpleSAMLphp version requirement.
+		 * If true, authentication will be blocked for versions below critical_simplesamlphp_version.
+		 *
+		 * @param bool
+		 */
+		'enforce_min_simplesamlphp_version' => true,
 	];
 	$value = isset( $defaults[ $option_name ] ) ? $defaults[ $option_name ] : $value;
 	return $value;

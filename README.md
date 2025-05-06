@@ -1,11 +1,11 @@
 # WP SAML Auth #
-**Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [outlandish-josh](https://profiles.wordpress.org/outlandish-josh/), [jazzs3quence](https://profiles.wordpress.org/jazzs3quence/)  
-**Tags:** authentication, SAML  
-**Requires at least:** 4.4  
-**Tested up to:** 6.3  
-**Requires PHP:** 7.3  
-**Stable tag:** 2.1.4  
-**License:** GPLv2 or later  
+**Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [outlandish-josh](https://profiles.wordpress.org/outlandish-josh/), [jazzs3quence](https://profiles.wordpress.org/jazzs3quence/)
+**Tags:** authentication, SAML
+**Requires at least:** 4.4
+**Tested up to:** 6.3
+**Requires PHP:** 7.3
+**Stable tag:** 2.1.4
+**License:** GPLv2 or later
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html
 
 SAML authentication for WordPress.
@@ -232,6 +232,16 @@ See [CONTRIBUTING.md](https://github.com/pantheon-systems/wp-saml-auth/blob/mast
 ## Security Policy ##
 ### Reporting Security Bugs
 Please report security bugs found in the WP SAML Auth plugin's source code through the [Patchstack Vulnerability Disclosure Program](https://patchstack.com/database/vdp/wp-saml-auth). The Patchstack team will assist you with verification, CVE assignment, and notify the developers of this plugin.
+
+## Security Requirements
+
+### SimpleSAMLphp Version
+
+If you're using the SimpleSAMLphp connection type:
+- **Critical Security Requirement:** Version 2.0.0 or later is required to fix CVE-2023-26881 (XML signature validation bypass vulnerability).
+- **Recommended Security Requirement:** Version 2.3.7 or later is recommended for additional security fixes.
+- Authentication will be blocked for versions below 2.0.0 when "Enforce Security Requirements" is enabled.
+- It's always recommended to use the latest stable version of SimpleSAMLphp for security and compatibility.
 
 ## Frequently Asked Questions ##
 

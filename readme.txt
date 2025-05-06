@@ -270,6 +270,14 @@ There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Nati
 
 Please report security bugs found in the source code of the WP SAML Auth plugin through the [Patchstack Vulnerability Disclosure Program](https://patchstack.com/database/vdp/wp-saml-auth). The Patchstack team will assist you with verification, CVE assignment, and notify the developers of this plugin.
 
+= What are the security requirements for SimpleSAMLphp? =
+
+If you're using the SimpleSAMLphp connection type:
+* **Critical Security Requirement:** Version 2.0.0 or later is required to fix CVE-2023-26881 (XML signature validation bypass vulnerability).
+* **Recommended Security Requirement:** Version 2.3.7 or later is recommended for additional security fixes.
+* Authentication will be blocked for versions below 2.0.0 when "Enforce Security Requirements" is enabled.
+* It's always recommended to use the latest stable version of SimpleSAMLphp for security and compatibility.
+
 == Upgrade Notice ==
 
 = 2.0.0 =
