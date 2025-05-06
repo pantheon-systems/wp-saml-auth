@@ -281,6 +281,7 @@ Minimum supported PHP version is 7.3.
 
 ### 2.1.5-dev ###
 * Add a hook to modify returned attributes. [[#379](https://github.com/pantheon-systems/wp-saml-auth/pull/379/)] (props @anthonybaxter-uwu)
+* Updates [`onelogin/php-saml`](https://github.com/SAML-Toolkits/php-saml) to 4.2.0.
 
 ### 2.1.4 (November 27, 2023) ###
 * Fix typo in the label for the certificate path [[#352](https://github.com/pantheon-systems/wp-saml-auth/pull/352)]
