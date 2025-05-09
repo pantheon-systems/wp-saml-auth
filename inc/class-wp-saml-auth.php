@@ -446,6 +446,14 @@ class WP_SAML_Auth {
 			return false;
 		}
 
+		// Try to get SimpleSAMLphp version from the SimpleSAML\Configuration class
+		if ( class_exists( 'SimpleSAML\Configuratin' ) ) {
+			$simple_saml_config = \SimpleSAML\Configuration::getInstance();
+			if ( method_exists( $simple_saml_config, 'getVersion' ) ) {
+				return $simple_saml_config->getVersion();
+			}
+		}
+
 		// Try to get version from composer.json
 		$composer_path = dirname( dirname( $simplesamlphp_path ) ) . '/composer.json';
 		if ( file_exists( $composer_path ) ) {
