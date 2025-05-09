@@ -40,6 +40,8 @@ If you're connecting directly to an existing IdP, you should use the bundled One
 
 If you have more complex authentication needs, then you can also use a SimpleSAMLphp installation running in the same environment. These settings are not configurable through the WordPress backend; they'll need to be defined with a filter. And, if you have a filter in place, the WordPress backend settings will be removed.
 
+**Note:** A security vulnerability was found in SimpleSAMLphp versions 2.0.0 and below. It is highly recommended if you are using SimpleSAMLphp with WP SAML Auth that you update your SimpleSAMLphp library to 2.4.0 or above. (See [CVE-2025-27773](https://nvd.nist.gov/vuln/detail/CVE-2025-27773) and [The SimpleSAMLphp SAML2 library incorrectly verifies signatures for HTTP-Redirect bindings](https://github.com/advisories/GHSA-46r4-f8gj-xg56) for more information.)
+
 Additional explanation of each setting can be found in the code snippet below.
 
 To install SimpleSAMLphp locally for testing purposes, the [Identity Provider QuickStart](https://simplesamlphp.org/docs/stable/simplesamlphp-idp) is a good place to start. On Pantheon, the SimpleSAMLphp web directory needs to be symlinked to `~/code/simplesaml` to be properly handled by Nginx. [Read the docs](https://pantheon.io/docs/shibboleth-sso/) for more details about configuring SimpleSAMLphp on Pantheon.
@@ -287,6 +289,7 @@ Minimum supported PHP version is 7.3.
 
 = 2.1.5-dev =
 * Add a hook to modify returned attributes. [[#379](https://github.com/pantheon-systems/wp-saml-auth/pull/379/)]
+* Updates [`onelogin/php-saml`](https://github.com/SAML-Toolkits/php-saml) to 4.2.0.
 
 = 2.1.4 (November 27, 2023) =
 * Fix typo in the label for the certificate path [[#352](https://github.com/pantheon-systems/wp-saml-auth/pull/352)]
