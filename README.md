@@ -1,11 +1,11 @@
 # WP SAML Auth #
-**Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [outlandish-josh](https://profiles.wordpress.org/outlandish-josh/), [jazzs3quence](https://profiles.wordpress.org/jazzs3quence/)
-**Tags:** authentication, SAML
-**Requires at least:** 4.4
-**Tested up to:** 6.3
-**Requires PHP:** 7.3
-**Stable tag:** 2.1.4
-**License:** GPLv2 or later
+**Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [outlandish-josh](https://profiles.wordpress.org/outlandish-josh/), [jazzs3quence](https://profiles.wordpress.org/jazzs3quence/), [lcatlett](https://profiles.wordpress.org/lcatlett/)  
+**Tags:** authentication, SAML  
+**Requires at least:** 4.4  
+**Tested up to:** 6.3  
+**Requires PHP:** 7.3  
+**Stable tag:** 2.1.5-dev  
+**License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html
 
 SAML authentication for WordPress.
@@ -286,6 +286,9 @@ There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Nati
 Minimum supported PHP version is 7.3.
 
 ## Changelog ##
+
+### 2.1.5-dev ###
+* Add a hook to modify returned attributes. [[#379](https://github.com/pantheon-systems/wp-saml-auth/pull/379/)] (props @anthonybaxter-uwu)
 
 ### 2.1.4 (November 27, 2023) ###
 * Fix typo in the label for the certificate path [[#352](https://github.com/pantheon-systems/wp-saml-auth/pull/352)]

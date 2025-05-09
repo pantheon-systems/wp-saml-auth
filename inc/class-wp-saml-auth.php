@@ -247,7 +247,7 @@ class WP_SAML_Auth {
 		if ( ! $permit_wp_login ) {
 			$should_saml = ! isset( $_GET['loggedout'] );
 		} else {
-			$should_saml = isset( $_POST['SAMLResponse'] ) || isset( $_GET['action'] ) && 'wp-saml-auth' === $_GET['action'];
+			$should_saml = isset( $_POST['SAMLResponse'] ) || ( isset( $_GET['action'] ) && 'wp-saml-auth' === $_GET['action'] );
 		}
 
 		if ( $should_saml ) {
@@ -380,6 +380,8 @@ class WP_SAML_Auth {
 			return new WP_Error( 'wp_saml_auth_no_attributes', esc_html__( 'No attributes were present in SAML response. Attributes are used to create and fetch users. Please contact your administrator', 'wp-saml-auth' ) );
 		}
 
+		// Some SAML providers return oddly shaped responses.
+		$attributes = apply_filters( 'wp_saml_auth_patch_attributes', $attributes, $provider );
 		$get_user_by = self::get_option( 'get_user_by' );
 		$attribute   = self::get_option( "user_{$get_user_by}_attribute" );
 		if ( empty( $attributes[ $attribute ][0] ) ) {

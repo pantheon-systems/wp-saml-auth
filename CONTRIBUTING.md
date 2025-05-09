@@ -33,10 +33,9 @@ Behat requires a Pantheon site. Once you've created the site, you'll need [insta
     * Commit these changes with the message `Release X.Y.Z`
     * Push the release branch up.
 1. Open a Pull Request to merge `release_X.Y.Z` into `main`. Your PR should consist of all commits to `develop` since the last release, and one commit to update the version number. The PR name should also be `Release X.Y.Z`.
-1. After all tests pass and you have received approval from a [CODEOWNER](./CODEOWNERS), merge the PR into `master`. "Rebase and merge" is preferred in this case. _Never_ squash to `master`.
-1. Pull `master` locally, create a new tag (based on version number from previous steps), and push up. The tag should _only_ be the version number. It _should not_ be prefixed  `v` (i.e. `X.Y.Z`, not `vX.Y.X`).
-1. Confirm that the necessary assets are present in the newly created tag, and test on a WP install if desired. Specifically, ensure that the `vendor/` directory exists, since that's where the SAML libraries are sourced from.
-1. Create a [new release](https://github.com/pantheon-systems/wp-saml-auth/releases/new) using the tag created in the previous steps, naming the release with the new version number, and targeting the tag created in the previous step. Paste the release changelog from the `Changelog` section of [the readme](readme.txt) into the body of the release, including the links to the closed issues if applicable.
+1. After all tests pass and you have received approval from a [CODEOWNER](./CODEOWNERS), merge the PR into `master`. A merge commit is preferred in this case. _Never_ squash to `master`.
+1. CI will create a tag, commit the assets to it, and draft a [new release](https://github.com/pantheon-systems/wp-saml-auth/releases).
+1. Open the release draft, review the changelog, assert the assets (vendor) have been added, and publish the release when ready.
 1. Wait for the [_Release wp-saml-auth plugin to wp.org_ action](https://github.com/pantheon-systems/wp-saml-auth/actions/workflows/wordpress-plugin-deploy.yml) to finish deploying to the WordPress.org plugin repository. If all goes well, users with SVN commit access for that plugin will receive an emailed diff of changes.
 1. Check WordPress.org: Ensure that the changes are live on [the plugin repository](https://wordpress.org/plugins/wp-saml-auth/). This may take a few minutes.
 1. Following the release, prepare the next dev version with the following steps:
