@@ -18,10 +18,10 @@ mkdir -p $TEST_DIR
 
 # Download and extract SimpleSAMLphp
 echo "Downloading SimpleSAMLphp $SIMPLESAMLPHP_VERSION"
-wget https://github.com/simplesamlphp/simplesamlphp/releases/download/v$SIMPLESAMLPHP_VERSION/simplesamlphp-$SIMPLESAMLPHP_VERSION.tar.gz -O $TEST_DIR/simplesamlphp-$SIMPLESAMLPHP_VERSION.tar.gz
-tar -zxvf $TEST_DIR/simplesamlphp-$SIMPLESAMLPHP_VERSION.tar.gz -C $TEST_DIR
+wget https://github.com/simplesamlphp/simplesamlphp/releases/download/v$SIMPLESAMLPHP_VERSION/simplesamlphp-$SIMPLESAMLPHP_VERSION-full.tar.gz -O $TEST_DIR/simplesamlphp-$SIMPLESAMLPHP_VERSION-full.tar.gz
+tar -zxvf $TEST_DIR/simplesamlphp-$SIMPLESAMLPHP_VERSION-full.tar.gz -C $TEST_DIR
 mv $TEST_DIR/simplesamlphp-$SIMPLESAMLPHP_VERSION $TEST_DIR/simplesamlphp
-rm $TEST_DIR/simplesamlphp-$SIMPLESAMLPHP_VERSION.tar.gz
+rm $TEST_DIR/simplesamlphp-$SIMPLESAMLPHP_VERSION-full.tar.gz
 
 # Copy SimpleSAMLphp to the plugin directory
 echo "Copying SimpleSAMLphp to the plugin directory"
