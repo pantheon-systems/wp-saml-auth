@@ -1,11 +1,11 @@
 # WP SAML Auth #
-**Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [outlandish-josh](https://profiles.wordpress.org/outlandish-josh/), [jazzs3quence](https://profiles.wordpress.org/jazzs3quence/), [lcatlett](https://profiles.wordpress.org/lcatlett/)
-**Tags:** authentication, SAML
-**Requires at least:** 4.4
-**Tested up to:** 6.3
-**Requires PHP:** 7.3
-**Stable tag:** 2.1.5-dev
-**License:** GPLv2 or later
+**Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [outlandish-josh](https://profiles.wordpress.org/outlandish-josh/), [jazzs3quence](https://profiles.wordpress.org/jazzs3quence/), [lcatlett](https://profiles.wordpress.org/lcatlett/)  
+**Tags:** authentication, SAML  
+**Requires at least:** 4.4  
+**Tested up to:** 6.3  
+**Requires PHP:** 7.3  
+**Stable tag:** 2.1.5-dev  
+**License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html
 
 SAML authentication for WordPress.
