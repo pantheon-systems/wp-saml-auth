@@ -40,7 +40,9 @@ jobs:
     - restore_cache:
         keys:
           - test-behat-dependencies-{{ checksum "composer.json" }}
-    - run: composer install -n --prefer-dist
+    - run:
+        composer install -n --prefer-dist
+        chmod +x bin/*.sh
     - save_cache:
         key: test-behat-dependencies-{{ checksum "composer.json" }}
         paths:
@@ -97,7 +99,10 @@ jobs:
       - restore_cache:
           keys:
             - test-phpunit-dependencies-{{ checksum "composer.json" }}
-      - run: composer update && composer install -n --prefer-dist
+      - run: |
+          composer update
+          composer install -n --prefer-dist
+          chmod +x bin/*.sh
       - save_cache:
           key: test-phpunit-dependencies-{{ checksum "composer.json" }}
           paths:
