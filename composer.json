@@ -31,7 +31,7 @@
     },
     "scripts": {
         "lint": "@phpcs",
-        "phpcs": "vendor/bin/phpcs",
+        "phpcs": "vendor/bin/phpcs -s",
         "phpcbf": "vendor/bin/phpcbf",
         "phpunit": "vendor/bin/phpunit",
         "test": "@phpunit",

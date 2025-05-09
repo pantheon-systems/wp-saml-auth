@@ -22,6 +22,11 @@
 		<exclude name="Squiz.Commenting.FunctionComment.MissingParamTag">
 			<file>*/inc/class-wp-saml-auth-cli.php</file>
 		</exclude>
+
+		<!-- Ignore file_get_contents warnings -->
+		<exclude name="WordPressVIPMinimum.Performance.FetchingRemoteData.FileGetContentsUnknown">
+			<file>*/inc/class-wp-saml-auth.php</file>
+		</exclude>
 	</rule>
 	<rule ref="WordPress-Docs" />
 	<rule ref="PHPCompatibility"/>
