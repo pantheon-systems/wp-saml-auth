@@ -22,9 +22,11 @@ echo "Testing with SimpleSAMLphp 1.19.0 (vulnerable version)"
 echo "==================================================================="
 ./bin/test-simplesamlphp-1.19.0.sh
 
-# Pause for manual verification
-echo "Press Enter to continue to the next test..."
-read
+if [ "$IS_CI" != "true" ]; then
+	# Pause for manual verification
+	echo "Press Enter to continue to the next test..."
+	read
+fi
 
 # Test with SimpleSAMLphp 2.0.0 (secure but not recommended version)
 echo "==================================================================="
@@ -32,9 +34,11 @@ echo "Testing with SimpleSAMLphp 2.0.0 (secure but not recommended version)"
 echo "==================================================================="
 ./bin/test-simplesamlphp-2.0.0.sh
 
-# Pause for manual verification
-echo "Press Enter to continue to the next test..."
-read
+if [ "$IS_CI" != "true" ]; then
+	# Pause for manual verification
+	echo "Press Enter to continue to the next test..."
+	read
+fi
 
 # Test with SimpleSAMLphp 2.3.7 (recommended version)
 echo "==================================================================="
