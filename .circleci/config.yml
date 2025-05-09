@@ -16,6 +16,9 @@ workflows:
       - test-phpunit:
           name: "Test with PHP 8.2"
           php_version: "8.2"
+      - test-phpunit:
+          name: "Test with PHP 8.3"
+          php_version: "8.3"
   nightly:
     triggers:
       - schedule:
