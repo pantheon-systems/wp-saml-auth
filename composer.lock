@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "94041ddb4cad13dddd88e696a3dfa0b3",
+    "content-hash": "036cd1451f25b342f42b3465c5112c6d",
     "packages": [
         {
             "name": "onelogin/php-saml",
@@ -1384,6 +1384,52 @@
                 "source": "https://github.com/pantheon-systems/Pantheon-WP-Coding-Standards/tree/2.0.3"
             },
             "time": "2024-07-05T21:39:52+00:00"
+        },
+        {
+            "name": "pantheon-systems/wpunit-helpers",
+            "version": "v2.0.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/pantheon-systems/wpunit-helpers.git",
+                "reference": "8e767a2d59abc16b4fc5bedc12e0adbb87554044"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/pantheon-systems/wpunit-helpers/zipball/8e767a2d59abc16b4fc5bedc12e0adbb87554044",
+                "reference": "8e767a2d59abc16b4fc5bedc12e0adbb87554044",
+                "shasum": ""
+            },
+            "require": {
+                "composer-plugin-api": "^2.0"
+            },
+            "require-dev": {
+                "squizlabs/php_codesniffer": "^3.7"
+            },
+            "type": "composer-plugin",
+            "extra": {
+                "class": "Pantheon\\WPUnitHelpers\\Plugin"
+            },
+            "autoload": {
+                "psr-4": {
+                    "Pantheon\\WPUnitHelpers\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Pantheon",
+                    "email": "noreply@pantheon.io"
+                }
+            ],
+            "description": "Unified scripts for installing and running automated WP Unit Tests.",
+            "support": {
+                "issues": "https://github.com/pantheon-systems/wpunit-helpers/issues",
+                "source": "https://github.com/pantheon-systems/wpunit-helpers/tree/v2.0.2"
+            },
+            "time": "2025-01-06T18:07:41+00:00"
         },
         {
             "name": "phar-io/manifest",
