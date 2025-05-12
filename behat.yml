@@ -23,5 +23,3 @@ default:
     Behat\MinkExtension:
       # base_url set by ENV
       goutte: ~
-    gherkin:
-      keywords: "%paths.base%/vendor/behat/gherkin/i18n.php"
