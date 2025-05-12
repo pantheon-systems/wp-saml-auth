@@ -24,4 +24,26 @@ set -ex
 
 export XDEBUG_MODE=off
 
+# Construct the BEHAT_PARAMS JSON string
+# Escape backslashes in the class name for JSON
+CLASS_NAME_JSON="PantheonSystems\\\\WPSamlAuth\\\\Behat\\\\SafePathCachedArrayKeywords"
+
+BEHAT_PARAMS_JSON=$(cat <<EOF
+{
+    "extensions": {
+        "Behat\\\\MinkExtension": {
+            "base_url": "http://$TERMINUS_ENV-$TERMINUS_SITE.pantheonsite.io"
+        }
+    },
+    "parameters": {
+        "gherkin.keywords.class": "$CLASS_NAME_JSON"
+    }
+}
+EOF
+)
+
+export BEHAT_PARAMS="$BEHAT_PARAMS_JSON"
+
+echo "Using BEHAT_PARAMS: $BEHAT_PARAMS" # For debugging
+
 ./vendor/bin/behat "$@"
