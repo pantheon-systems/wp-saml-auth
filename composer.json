@@ -20,6 +20,8 @@
         "php": "^7.3 || ^8.0"
     },
     "require-dev": {
+        "behat/behat": "^3.14",
+        "behat/gherkin": "4.9.0",
         "pantheon-systems/pantheon-wordpress-upstream-tests": "dev-master",
         "pantheon-systems/pantheon-wp-coding-standards": "^2.0",
         "phpunit/phpunit": "^9",
