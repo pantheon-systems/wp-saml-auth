@@ -110,10 +110,11 @@ touch $PREPARE_DIR/private/simplesamlphp/modules/exampleauth/enable
 openssl req -newkey rsa:2048 -new -x509 -days 3652 -nodes -out $PREPARE_DIR/private/simplesamlphp/cert/saml.crt -keyout $PREPARE_DIR/private/simplesamlphp/cert/saml.pem -batch
 
 # Modify the login template so Behat can submit the form
-sed -i  -- "s/<button/<button id='submit'/g" $PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php
-sed -i  -- "s/this.disabled=true; this.form.submit(); return true;//g" $PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php
+sed -i  -- "s/<input type=\"submit\"/<input type=\"submit\" id='submit'/g" $PREPARE_DIR/private/simplesamlphp/modules/exampleauth/templates/authenticate.twig
+#sed -i  -- "s/<button/<button id='submit'/g" $PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php
+#sed -i  -- "s/this.disabled=true; this.form.submit(); return true;//g" $PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php
 # Second button instance shouldn't have an id
-sed -i  -- "s/<button id='submit' class=\"btn\" tabindex=\"6\"/<button class=\"btn\" tabindex=\"6\"/g" $PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php
+#sed -i  -- "s/<button id='submit' class=\"btn\" tabindex=\"6\"/<button class=\"btn\" tabindex=\"6\"/g" $PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php
 
 cd $PREPARE_DIR
 # Make the SimpleSAMLphp installation publicly accessible
