@@ -19,9 +19,9 @@ default:
         - Behat\MinkExtension\Context\MinkContext
         - PantheonSystems\WPSamlAuth\Behat\AdminLogIn
         - PantheonSystems\PantheonWordPressUpstreamTests\Behat\ResponseHeader
-      # Add this line under the default profile
-      bootstrap: tests/behat/bootstrap/gherkin_i18n_fix.php
   extensions:
     Behat\MinkExtension:
       # base_url set by ENV
       goutte: ~
+    Behat\Gherkin\ServiceContainer\GherkinExtension:
+      keywords: "%paths.base%/vendor/behat/gherkin/i18n.php"
