@@ -39,7 +39,6 @@ jobs:
           - test-behat-dependencies-{{ checksum "composer.json" }}
     - run:
         composer install -n --prefer-dist
-        chmod +x bin/*.sh
     - save_cache:
         key: test-behat-dependencies-{{ checksum "composer.json" }}
         paths:
