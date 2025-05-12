@@ -109,8 +109,13 @@ touch $PREPARE_DIR/private/simplesamlphp/modules/exampleauth/enable
 # Because these files are in ~/code/private, they're inaccessible from the web
 openssl req -newkey rsa:2048 -new -x509 -days 3652 -nodes -out $PREPARE_DIR/private/simplesamlphp/cert/saml.crt -keyout $PREPARE_DIR/private/simplesamlphp/cert/saml.pem -batch
 
+TWIG_TEMPLATE_PATH="$PREPARE_DIR/private/simplesamlphp/modules/exampleauth/templates/authenticate.twig"
 # Modify the login template so Behat can submit the form
-sed -i  -- "s/<input type=\"submit\"/<input type=\"submit\" id='submit'/g" $PREPARE_DIR/private/simplesamlphp/modules/exampleauth/templates/authenticate.twig
+echo "Operating on: $TWIG_TEMPLATE_PATH"
+sed -i  -- "s/<input type=\"submit\"/<input type=\"submit\" id='submit'/g" $TWIG_TEMPLATE_PATH
+sed -i 's|<input type="text" name="username">|<input type="text" name="username" id="username">|g' "$TWIG_TEMPLATE_PATH"
+sed -i 's|<input type="text" name="password">|<input type="text" name="password" id="password">|g' "$TWIG_TEMPLATE_PATH"
+
 #sed -i  -- "s/<button/<button id='submit'/g" $PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php
 #sed -i  -- "s/this.disabled=true; this.form.submit(); return true;//g" $PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php
 # Second button instance shouldn't have an id
