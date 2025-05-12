@@ -34,15 +34,24 @@ jobs:
     - image: quay.io/pantheon-public/build-tools-ci:8.x-php8.2
     steps:
     - checkout
-    - restore_cache:
+    - restore_cache: # Restore composer's internal cache
         keys:
-          - test-behat-dependencies-{{ checksum "composer.json" }}
+          - composer-cache-v1-{{ checksum "composer.lock" }}
+          - composer-cache-v1-
     - run:
-        composer install -n --prefer-dist
-    - save_cache:
-        key: test-behat-dependencies-{{ checksum "composer.json" }}
+        name: Clean vendor directory and composer cache
+        command: |
+          echo "Removing old vendor directory..."
+          rm -rf vendor
+          echo "Clearing composer cache..."
+          composer clear-cache
+    - run:
+        name: Install Composer dependencies
+        command: composer install -n --prefer-dist
+    - save_cache: # Save composer's internal cache
+        key: composer-cache-v1-{{ checksum "composer.lock" }}
         paths:
-          - vendor
+          - ~/.composer/cache # Note: Path adjusted
     - run: echo $(openssl rand -hex 8) > /tmp/WORDPRESS_ADMIN_PASSWORD
     - run: |
         echo 'export TERMINUS_ENV=ci-$CIRCLE_BUILD_NUM' >> $BASH_ENV
@@ -126,5 +135,3 @@ jobs:
           name: "Run SimpleSAMLphp tests"
           command: |
             IS_CI="true" bash bin/test-all-versions.sh
-
-
