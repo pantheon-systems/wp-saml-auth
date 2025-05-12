@@ -28,6 +28,8 @@ export XDEBUG_MODE=off
 # Escape backslashes in the class name for JSON
 CLASS_NAME_JSON="PantheonSystems\\\\WPSamlAuth\\\\Behat\\\\SafePathCachedArrayKeywords"
 
+# For Behat 3.x, parameters are typically at the root or profile level.
+# Let's try putting gherkin.keywords.class at the root of the JSON.
 BEHAT_PARAMS_JSON=$(cat <<EOF
 {
     "extensions": {
@@ -35,9 +37,7 @@ BEHAT_PARAMS_JSON=$(cat <<EOF
             "base_url": "http://$TERMINUS_ENV-$TERMINUS_SITE.pantheonsite.io"
         }
     },
-    "parameters": {
-        "gherkin.keywords.class": "$CLASS_NAME_JSON"
-    }
+    "gherkin.keywords.class": "$CLASS_NAME_JSON"
 }
 EOF
 )
