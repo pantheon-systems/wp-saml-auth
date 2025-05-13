@@ -83,10 +83,17 @@ jobs:
     - run:
         name: Prepare, run Behat and maybe cleanup
         command: |
-          set -e
+          source $BASH_ENV
           ./bin/behat-prepare.sh
           ./bin/behat-test.sh --strict
-          ./bin/behat-cleanup.sh
+          if [ $? != 0 ]; then
+            $MD_URL=
+            echo "Behat tests failed. Test multidev left running at: "${TERMINUS_ENV}.pantheonsite.io"
+            exit 1
+          else
+            echo "Tests successful, cleaning up..."
+            ./bin/behat-cleanup.sh
+          fi
   test-phpunit:
     parameters:
       php_version:
