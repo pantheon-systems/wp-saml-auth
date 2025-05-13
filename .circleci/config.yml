@@ -81,8 +81,9 @@ jobs:
     - run: ./bin/behat-prepare.sh
     - run: ./bin/behat-test.sh --strict
     - run:
-        command: ./bin/behat-cleanup.sh
-        when: always
+      name: Behat Cleanup
+      command: ./bin/behat-cleanup.sh
+      when: on_success
   test-phpunit:
     parameters:
       php_version:
