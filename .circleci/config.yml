@@ -77,13 +77,16 @@ jobs:
           exit 0
         fi
         terminus auth:login --machine-token=$TERMINUS_TOKEN
-    - run: ./bin/validate-fixture-version.sh
-    - run: ./bin/behat-prepare.sh
-    - run: ./bin/behat-test.sh --strict
     - run:
-      name: Behat Cleanup
-      command: ./bin/behat-cleanup.sh
-      when: on_success
+        name: Validate fixture version
+        command: ./bin/validate-fixture-version.sh
+    - run:
+        name: Prepare, run Behat and maybe cleanup
+        command: |
+          set -e
+          ./bin/behat-prepare.sh
+          ./bin/behat-test.sh --strict
+          ./bin/behat-cleanup.sh
   test-phpunit:
     parameters:
       php_version:
