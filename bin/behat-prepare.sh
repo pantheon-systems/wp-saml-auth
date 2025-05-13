@@ -125,6 +125,7 @@ composer install --no-dev --working-dir=$PREPARE_DIR/private/simplesamlphp --ign
 
 cd $PREPARE_DIR
 # Copy SimpleSAMLphp installation into public /simplesaml directory.
+mkdir $PREPARE_DIR/simplesaml
 cp -r $PREPARE_DIR/private/simplesamlphp/public/* $PREPARE_DIR/simplesaml
 cp -r $PREPARE_DIR/private/simplesamlphp/vendor $PREPARE_DIR/simplesaml/
 cp -r $PREPARE_DIR/private/simplesamlphp/src $PREPARE_DIR/simplesaml/
