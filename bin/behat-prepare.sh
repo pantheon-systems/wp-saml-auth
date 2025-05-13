@@ -135,6 +135,7 @@ cp -r $PREPARE_DIR/private/simplesamlphp/vendor $PREPARE_DIR/simplesaml/
 cp -r $PREPARE_DIR/private/simplesamlphp/src $PREPARE_DIR/simplesaml/
 cp -r $PREPARE_DIR/private/simplesamlphp/modules $PREPARE_DIR/simplesaml/
 cp -r $PREPARE_DIR/private/simplesamlphp/config $PREPARE_DIR/simplesaml/
+cp -r $PREPARE_DIR/private/simplesamlphp/templates $PREPARE_DIR/simplesaml/
 # Modify the include...
 sed -i "s|dirname(__FILE__, 2) . '/src/_autoload.php'|__DIR__ . '/src/_autoload.php'|" "$PREPARE_DIR/simplesaml/_include.php"
 
