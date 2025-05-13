@@ -134,7 +134,6 @@ cp -r $PREPARE_DIR/private/simplesamlphp/config $PREPARE_DIR/simplesaml/
 ###
 # Push files to the environment
 ###
-cd $PREPARE_DIR
 git add private wp-content simplesaml
 git config user.email "wp-saml-auth@getpantheon.com"
 git config user.name "Pantheon"
