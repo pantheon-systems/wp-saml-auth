@@ -85,9 +85,7 @@ jobs:
         command: |
           source $BASH_ENV
           ./bin/behat-prepare.sh
-          ./bin/behat-test.sh --strict
-          if [ $? != 0 ]; then
-            $MD_URL=
+          if ! ./bin/behat-test.sh --strict; then
             echo "Behat tests failed. Test multidev left running at: "${TERMINUS_ENV}.pantheonsite.io"
             exit 1
           else
