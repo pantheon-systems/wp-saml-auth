@@ -124,8 +124,12 @@ sed -i 's|<input type="text" name="password">|<input type="text" name="password"
 composer install --no-dev --working-dir=$PREPARE_DIR/private/simplesamlphp --ignore-platform-req=ext-ldap
 
 cd $PREPARE_DIR
-# Make the SimpleSAMLphp installation publicly accessible
-ln -s ./private/simplesamlphp/www ./simplesaml
+# Copy SimpleSAMLphp installation into public /simplesaml directory.
+cp -r $PREPARE_DIR/private/simplesamlphp/public/* $PREPARE_DIR/simplesaml
+cp -r $PREPARE_DIR/private/simplesamlphp/vendor $PREPARE_DIR/simplesaml/
+cp -r $PREPARE_DIR/private/simplesamlphp/src $PREPARE_DIR/simplesaml/
+cp -r $PREPARE_DIR/private/simplesamlphp/modules $PREPARE_DIR/simplesaml/
+cp -r $PREPARE_DIR/private/simplesamlphp/config $PREPARE_DIR/simplesaml/
 
 ###
 # Push files to the environment
