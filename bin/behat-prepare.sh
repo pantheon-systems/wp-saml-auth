@@ -121,6 +121,8 @@ sed -i 's|<input type="text" name="password">|<input type="text" name="password"
 # Second button instance shouldn't have an id
 #sed -i  -- "s/<button id='submit' class=\"btn\" tabindex=\"6\"/<button class=\"btn\" tabindex=\"6\"/g" $PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php
 
+composer install --no-dev --working-dir=$PREPARE_DIR/private/simplesamlphp --ignore-platform-req=ext-ldap
+
 cd $PREPARE_DIR
 # Make the SimpleSAMLphp installation publicly accessible
 ln -s ./private/simplesamlphp/www ./simplesaml
