@@ -86,7 +86,7 @@ jobs:
           set -e
           source $BASH_ENV
           ./bin/behat-prepare.sh
-          echo "Running Behat on https://${TERMINUS_ENV}.pantheonsite.io"
+          echo "Running Behat on https://${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io"
           ./bin/behat-test.sh --strict
           ./bin/behat-cleanup.sh
   test-phpunit:
