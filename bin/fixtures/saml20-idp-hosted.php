@@ -25,8 +25,12 @@ $metadata[$host] = array(
 
 	'attributes.NameFormat' => 'urn:oasis:names:tc:SAML:2.0:attrname-format:uri',
 	'authproc' => array(
-	    // Convert LDAP names to oids.
-	    100 => array('class' => 'core:AttributeMap', 'name2oid'),
+		10 => array(
+			'class' => 'core:AttributeLimit',
+			'uid',
+			'mail',
+			'eduPersonAffiliation',
+		),
 	),
 
 	/*
