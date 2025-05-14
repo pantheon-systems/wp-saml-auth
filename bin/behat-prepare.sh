@@ -89,6 +89,7 @@ rm $PREPARE_DIR/simplesamlphp-latest.tar.gz
 # Copy demo configuration files with our specifics for our tests
 cp $BASH_DIR/fixtures/authsources.php $PREPARE_DIR/private/simplesamlphp/config/authsources.php
 cp $BASH_DIR/fixtures/config.php $PREPARE_DIR/private/simplesamlphp/config/config.php
+cp $BASH_DIR/fixtures/config-prepare $PREPARE_DIR/wp-content/mu-plugins/config-prepare.php
 # Copy the variables into authsources.php
 sed -i "/'employee:employeepass'/a \ \ \ \ '${WORDPRESS_ADMIN_USERNAME}:${WORDPRESS_ADMIN_PASSWORD}' => [\n    'uid' => ['${WORDPRESS_ADMIN_USERNAME}'],\n    'eduPersonAffiliation' => ['member', 'employee'],\n    'mail' => ['${WORDPRESS_ADMIN_EMAIL}'],\n]," \
   "$PREPARE_DIR/private/simplesamlphp/config/authsources.php"

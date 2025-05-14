@@ -34,6 +34,3 @@ add_filter( 'wp_saml_auth_option', function( $value, $option_name ){
     }
     return $value;
 }, 11, 2 );
-
-// Set the SIMPLESAML_CONFIG_DIR environment variable.
-putenv('SIMPLESAML_CONFIG_DIR=' . ABSPATH . 'simplesaml/config');
