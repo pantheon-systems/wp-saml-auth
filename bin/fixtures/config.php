@@ -6,7 +6,7 @@ $config['secretsalt'] = 'todo';
 $config['auth.adminpassword'] = 'admin';
 $config['technicalcontact_email'] = 'test@example.com';
 
-$config['baseurlpath'] = '/simplesaml/';
+$config['baseurlpath'] = 'https://' . $_SERVER['HTTP_HOST'] . '/simplesaml/';
 $config['certdir'] = 'cert/';
 $config['loggingdir'] = $_SERVER['HOME'] . '/files/simplesaml/log/';
 $config['datadir'] = $_SERVER['HOME'] . '/files/simplesaml/data/';
