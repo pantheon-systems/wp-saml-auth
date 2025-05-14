@@ -120,19 +120,6 @@ sed -i 's|<input type="text" name="password">|<input type="text" name="password"
 
 composer install --no-dev --working-dir=$PREPARE_DIR/private/simplesamlphp --ignore-platform-req=ext-ldap
 
-# Create writeable directories in /files (aka wp-content/uploads) that SimpleSAMLphp might need.
-terminus wp $SITE_ENV -- eval '
-    $dirs = [
-        WP_CONTENT_DIR . "/uploads/simplesaml/log",
-        WP_CONTENT_DIR . "/uploads/simplesaml/data",
-    ];
-    foreach ($dirs as $dir) {
-        if ( ! file_exists($dir) ) {
-            mkdir($dir, 0775, true);
-        }
-    }
-'
-
 # Copy SimpleSAMLphp installation into public /simplesaml directory.
 cd $PREPARE_DIR
 mkdir -p $PREPARE_DIR/simplesaml
@@ -169,3 +156,15 @@ terminus wp $SITE_ENV -- option update siteurl "https://$PANTHEON_SITE_URL"
 terminus wp $SITE_ENV -- plugin activate wp-native-php-sessions wp-saml-auth
 terminus wp $SITE_ENV -- theme activate $TERMINUS_SITE
 terminus wp $SITE_ENV -- rewrite structure '/%year%/%monthnum%/%day%/%postname%/'
+# Create writeable directories in /files (aka wp-content/uploads) that SimpleSAMLphp might need.
+terminus wp $SITE_ENV -- eval '
+    $dirs = [
+        WP_CONTENT_DIR . "/uploads/simplesaml/log",
+        WP_CONTENT_DIR . "/uploads/simplesaml/data",
+    ];
+    foreach ($dirs as $dir) {
+        if ( ! file_exists($dir) ) {
+            mkdir($dir, 0775, true);
+        }
+    }
+'
