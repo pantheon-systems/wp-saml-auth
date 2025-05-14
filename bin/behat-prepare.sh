@@ -89,30 +89,30 @@ rm $PREPARE_DIR/simplesamlphp-latest.tar.gz
 # Create the authsources.php with dynamic user variables.
 cat > "$PREPARE_DIR/private/simplesamlphp/config/authsources.php" <<EOF
 <?php
-// This file was added by behat-prepare.sh.
 \$config = [];
 
 \$config['example-userpass'] = [
     'exampleauth:UserPass',
     'student:studentpass' => [
-        'uid' => ['test'],
-        'eduPersonAffiliation' => ['member', 'student'],
-        'mail' => ['test-student@example.com'],
+        'uid' => 'test',
+        'eduPersonAffiliation' => 'student',
+        'mail' => 'test-student@example.com',
     ],
     'employee:employeepass' => [
-        'uid' => ['employee'],
-        'eduPersonAffiliation' => ['member', 'employee'],
-        'mail' => ['test-em@example.com'],
+        'uid' => 'employee',
+        'eduPersonAffiliation' => 'employee',
+        'mail' => 'test-em@example.com',
     ],
     '${WORDPRESS_ADMIN_USERNAME}:${WORDPRESS_ADMIN_PASSWORD}' => [
-        'uid' => ['${WORDPRESS_ADMIN_USERNAME}'],
-        'eduPersonAffiliation' => ['member', 'employee'],
-        'mail' => ['${WORDPRESS_ADMIN_EMAIL}'],
+        'uid' => '${WORDPRESS_ADMIN_USERNAME}',
+        'eduPersonAffiliation' => 'employee',
+        'mail' => '${WORDPRESS_ADMIN_EMAIL}',
     ],
 ];
 
 return \$config;
 EOF
+
 # Copy demo configuration files with our specifics for our tests
 cp $BASH_DIR/fixtures/config.php $PREPARE_DIR/private/simplesamlphp/config/config.php
 cp $BASH_DIR/fixtures/config-prepare.php $PREPARE_DIR/wp-content/mu-plugins/config-prepare.php
