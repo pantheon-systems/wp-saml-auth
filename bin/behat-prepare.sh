@@ -171,3 +171,5 @@ terminus wp $SITE_ENV -- eval '
         }
     }
 '
+
+terminus env:clear-cache $TERMINUS_SITE.$TERMINUS_ENV
