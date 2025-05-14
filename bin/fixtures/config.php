@@ -18,4 +18,7 @@ $config['store.sql.dsn'] = 'sqlite:/tmp/sqlitedatabase.sq3';
 $config['enable.saml20-idp'] = true;
 $config['enable.shib13-idp'] = true;
 
+$config['module.enable'] = ['exampleauth', 'core', 'saml', 'cron'];
+$config['module.directories'] = [__DIR__ . '/../modules'];
+
 return $config;
