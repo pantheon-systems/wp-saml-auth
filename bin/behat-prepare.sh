@@ -110,6 +110,15 @@ cat > "$PREPARE_DIR/private/simplesamlphp/config/authsources.php" <<EOF
     ],
 ];
 
+// Prevent global attributes from being auto-injected
+foreach (\$config['example-userpass'] as \$key => &\$user) {
+    if (!is_array(\$user)) continue;
+    \$user = array_intersect_key(
+        \$user,
+        array_flip(['uid', 'mail', 'eduPersonAffiliation'])
+    );
+}
+
 return \$config;
 EOF
 
