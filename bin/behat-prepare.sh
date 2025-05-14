@@ -85,20 +85,13 @@ rm $PREPARE_DIR/simplesamlphp-latest.tar.gz
 # For the purposes of the Behat tests, we're using SimpleSAMLphp as an identity
 # provider with its exampleauth module enabled
 ###
-# Append existing configuration files with our the specifics for our tests
-echo "// This variable was added by behat-prepare.sh." >>  $PREPARE_DIR/private/simplesamlphp/config/authsources.php
-# Silence output so as not to show the password.
-{
-  echo "\$wordpress_admin_password = '"${WORDPRESS_ADMIN_PASSWORD}"';" >> $PREPARE_DIR/private/simplesamlphp/config/authsources.php
-} &> /dev/null
-echo "\$wordpress_admin_username = '"${WORDPRESS_ADMIN_USERNAME}"';" >> $PREPARE_DIR/private/simplesamlphp/config/authsources.php
-echo "\$wordpress_admin_email = '"${WORDPRESS_ADMIN_EMAIL}"';" >> $PREPARE_DIR/private/simplesamlphp/config/authsources.php
-cat $BASH_DIR/fixtures/authsources.php.additions >> $PREPARE_DIR/private/simplesamlphp/config/authsources.php
-echo "<?php" > $PREPARE_DIR/private/simplesamlphp/config/config.php
-echo "\$config = [];" >> $PREPARE_DIR/private/simplesamlphp/config/config.php
-cat $BASH_DIR/fixtures/config.php.additions >> $PREPARE_DIR/private/simplesamlphp/config/config.php
-echo "return \$config;" >> $PREPARE_DIR/private/simplesamlphp/config/config.php
 
+# Copy demo configuration files with our specifics for our tests
+cp $BASH_DIR/fixtures/authsources.php $PREPARE_DIR/private/simplesamlphp/config/authsources.php
+cp $BASH_DIR/fixtures/config.php $PREPARE_DIR/private/simplesamlphp/config/config.php
+# Copy the variables into authsources.php
+sed -i "/'employee:employeepass'/a \ \ \ \ '${WORDPRESS_ADMIN_USERNAME}:${WORDPRESS_ADMIN_PASSWORD}' => [\n    'uid' => ['${WORDPRESS_ADMIN_USERNAME}'],\n    'eduPersonAffiliation' => ['member', 'employee'],\n    'mail' => ['${WORDPRESS_ADMIN_EMAIL}'],\n]," \
+  "$PREPARE_DIR/private/simplesamlphp/config/authsources.php"
 
 # Copy identify provider configuration files into their appropriate locations
 cp $BASH_DIR/fixtures/saml20-idp-hosted.php  $PREPARE_DIR/private/simplesamlphp/metadata/saml20-idp-hosted.php
@@ -127,9 +120,22 @@ sed -i 's|<input type="text" name="password">|<input type="text" name="password"
 
 composer install --no-dev --working-dir=$PREPARE_DIR/private/simplesamlphp --ignore-platform-req=ext-ldap
 
-cd $PREPARE_DIR
+# Create writeable directories in /files (aka wp-content/uploads) that SimpleSAMLphp might need.
+terminus wp $SITE_ENV -- eval '
+    $dirs = [
+        WP_CONTENT_DIR . "/uploads/simplesaml/log",
+        WP_CONTENT_DIR . "/uploads/simplesaml/data",
+    ];
+    foreach ($dirs as $dir) {
+        if ( ! file_exists($dir) ) {
+            mkdir($dir, 0775, true);
+        }
+    }
+'
+
 # Copy SimpleSAMLphp installation into public /simplesaml directory.
-mkdir $PREPARE_DIR/simplesaml
+cd $PREPARE_DIR
+mkdir -p $PREPARE_DIR/simplesaml
 cp -r $PREPARE_DIR/private/simplesamlphp/public/* $PREPARE_DIR/simplesaml
 cp -r $PREPARE_DIR/private/simplesamlphp/vendor $PREPARE_DIR/simplesaml/
 cp -r $PREPARE_DIR/private/simplesamlphp/src $PREPARE_DIR/simplesaml/
