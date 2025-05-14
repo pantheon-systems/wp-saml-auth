@@ -31,8 +31,8 @@ cp -r $TEST_DIR/simplesamlphp $PLUGIN_DIR/
 
 # Basic SimpleSAMLphp configuration
 echo "Configuring SimpleSAMLphp"
-cp $PLUGIN_DIR/bin/fixtures/config.php.additions $PLUGIN_DIR/simplesamlphp/config/config.php
-cp $PLUGIN_DIR/bin/fixtures/authsources.php.additions $PLUGIN_DIR/simplesamlphp/config/authsources.php
+cp $PLUGIN_DIR/bin/fixtures/config.php $PLUGIN_DIR/simplesamlphp/config/config.php
+cp $PLUGIN_DIR/bin/fixtures/authsources.php $PLUGIN_DIR/simplesamlphp/config/authsources.php
 
 # Generate a certificate SimpleSAMLphp uses for encryption
 echo "Generating SSL certificate for SimpleSAMLphp"
