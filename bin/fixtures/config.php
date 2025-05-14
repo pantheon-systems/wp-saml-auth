@@ -18,7 +18,15 @@ $config['store.sql.dsn'] = 'sqlite:/tmp/sqlitedatabase.sq3';
 $config['enable.saml20-idp'] = true;
 $config['enable.shib13-idp'] = true;
 
-$config['module.enable'] = ['exampleauth', 'core', 'saml', 'cron'];
+$config['module.enable'] = [
+	'exampleauth' => true,
+	'core' => true,
+	'saml' => true,
+	'cron' => true,
+];
 $config['module.directories'] = [__DIR__ . '/../modules'];
+
+$config['logging.handler'] = 'file';
+$config['logging.logfile'] = $_SERVER['HOME'] . '/files/simplesaml/log/simplesamlphp.log';
 
 return $config;
