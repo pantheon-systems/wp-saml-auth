@@ -114,7 +114,6 @@ cat > "$PREPARE_DIR/private/simplesamlphp/config/authsources.php" <<EOF
 return \$config;
 EOF
 # Copy demo configuration files with our specifics for our tests
-cp $BASH_DIR/fixtures/authsources.php $PREPARE_DIR/private/simplesamlphp/config/authsources.php
 cp $BASH_DIR/fixtures/config.php $PREPARE_DIR/private/simplesamlphp/config/config.php
 cp $BASH_DIR/fixtures/config-prepare.php $PREPARE_DIR/wp-content/mu-plugins/config-prepare.php
 # Copy the variables into authsources.php
