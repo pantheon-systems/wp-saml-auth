@@ -1,12 +1,20 @@
 <?php
 
+/**
+ * The configuration of SimpleSAMLphp
+ */
+
+// $httpUtils = new \SimpleSAML\Utils\HTTP();
+
 $config = [];
 
 $config['secretsalt'] = 'todo';
 $config['auth.adminpassword'] = 'admin';
+$config['auth.adminsource'] = 'example-userpass'; // this does not appear to exist
 $config['technicalcontact_email'] = 'test@example.com';
 
-$config['baseurlpath'] = 'https://' . $_SERVER['HTTP_HOST'] . '/simplesaml/';
+$host = explode(':', $_SERVER['HTTP_HOST'])[0];
+$config['baseurlpath'] = 'https://' . $host . '/simplesaml/';
 $config['certdir'] = 'cert/';
 $config['loggingdir'] = $_SERVER['HOME'] . '/files/simplesaml/log/';
 $config['datadir'] = $_SERVER['HOME'] . '/files/simplesaml/data/';
@@ -25,7 +33,7 @@ $config['module.enable'] = [
 	'saml' => true,
 	'cron' => true,
 ];
-$config['module.directories'] = [__DIR__ . '/../modules'];
+// $config['module.directories'] = [__DIR__ . '/../modules']; // this appears to not be a thing
 
 $config['logging.handler'] = 'file';
 $config['logging.logfile'] = $_SERVER['HOME'] . '/files/simplesaml/log/simplesamlphp.log';
@@ -35,14 +43,17 @@ $config['metadata.sources'][] = [
     'directory' => __DIR__ . '/../metadata',
 ];
 
-$config['default-authsource'] = 'example-userpass';
-$config['auth.adminsource'] = 'example-userpass';
+$config['default-authsource'] = 'example-userpass'; // this does not appear to be a thing either
 
 $config['debug'] = [
-    'enable' => true,
     'showerrors' => true,
-    'debug' => true,
+    'errorreporting' => true,
+    'saml' => false,
+    'backtraces' => true,
+    'validatexml' => true,
 ];
+$config['showerrors'] = true;
+$config['errorreporting'] = true;
 $config['logging.level'] = SimpleSAML\Logger::DEBUG;
 
 return $config;
