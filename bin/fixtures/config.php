@@ -13,8 +13,7 @@ $config['auth.adminpassword'] = 'admin';
 $config['auth.adminsource'] = 'example-userpass'; // this does not appear to exist
 $config['technicalcontact_email'] = 'test@example.com';
 
-$host = explode(':', $_SERVER['HTTP_HOST'])[0];
-$config['baseurlpath'] = 'https://' . $host . '/simplesaml/';
+$config['baseurlpath'] = 'https://' . $_SERVER['HTTP_HOST'] . '/simplesaml/';
 $config['certdir'] = 'cert/';
 $config['loggingdir'] = $_SERVER['HOME'] . '/files/simplesaml/log/';
 $config['datadir'] = $_SERVER['HOME'] . '/files/simplesaml/data/';
