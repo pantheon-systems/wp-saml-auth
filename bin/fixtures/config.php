@@ -10,7 +10,7 @@ $config['baseurlpath'] = 'https://' . $_SERVER['HTTP_HOST'] . '/simplesaml/';
 $config['certdir'] = 'cert/';
 $config['loggingdir'] = $_SERVER['HOME'] . '/files/simplesaml/log/';
 $config['datadir'] = $_SERVER['HOME'] . '/files/simplesaml/data/';
-$config['tempdir'] = '/srv/bindings/' . $_ENV['PANTHEON_BINDING'] . '/tmp/simplesaml';
+$config['tempdir'] = $_SERVER['HOME'] . '/files/simplesaml/tmp/';
 
 $config['store.type'] = 'sql';
 $config['store.sql.dsn'] = 'sqlite:/tmp/sqlitedatabase.sq3';

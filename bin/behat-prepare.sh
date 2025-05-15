@@ -217,6 +217,7 @@ terminus wp $SITE_ENV -- eval '
     $dirs = [
         WP_CONTENT_DIR . "/uploads/simplesaml/log",
         WP_CONTENT_DIR . "/uploads/simplesaml/data",
+        WP_CONTENT_DIR . "/uploads/simplesaml/tmp",
     ];
     foreach ($dirs as $dir) {
         if ( ! file_exists($dir) ) {
