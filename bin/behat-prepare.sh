@@ -153,6 +153,7 @@ cp $BASH_DIR/fixtures/config-prepare.php $PREPARE_DIR/wp-content/mu-plugins/conf
 cp $BASH_DIR/fixtures/saml20-idp-hosted.php  $PREPARE_DIR/private/simplesamlphp/metadata/saml20-idp-hosted.php
 cp $BASH_DIR/fixtures/shib13-idp-hosted.php  $PREPARE_DIR/private/simplesamlphp/metadata/shib13-idp-hosted.php
 cp $BASH_DIR/fixtures/shib13-sp-remote.php  $PREPARE_DIR/private/simplesamlphp/metadata/shib13-sp-remote.php
+cp $BASH_DIR/fixtures/debug_authstate.php $PREPARE_DIR/private/simplesamlphp/debug_authstate.php
 
 # Enable the exampleauth module
 touch $PREPARE_DIR/private/simplesamlphp/modules/exampleauth/enable
@@ -186,6 +187,8 @@ cp -r $PREPARE_DIR/private/simplesamlphp/config $PREPARE_DIR/simplesaml/
 cp -r $PREPARE_DIR/private/simplesamlphp/templates $PREPARE_DIR/simplesaml/
 cp -r $PREPARE_DIR/private/simplesamlphp/cert $PREPARE_DIR/simplesaml/
 cp -r $PREPARE_DIR/private/simplesamlphp/metadata $PREPARE_DIR/simplesaml/
+# Copy the debug file into /simplesaml/
+cp $PREPARE_DIR/private/simplesamlphp/debug_authstate.php $PREPARE_DIR/simplesaml/
 
 # Modify the include...
 sed -i "s|dirname(__FILE__, 2) . '/src/_autoload.php'|__DIR__ . '/src/_autoload.php'|" "$PREPARE_DIR/simplesaml/_include.php"
