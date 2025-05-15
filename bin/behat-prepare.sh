@@ -118,7 +118,7 @@ foreach (\$config['example-userpass'] as \$key => &\$user) {
         array_flip(['uid', 'mail', 'eduPersonAffiliation'])
     );
 }
-
+\$config['admin'] = [ 'exampleauth:UserPass' ];
 \$config['default'] = &\$config['example-userpass'];
 
 return \$config;

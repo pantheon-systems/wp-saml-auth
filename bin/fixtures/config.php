@@ -34,4 +34,7 @@ $config['metadata.sources'][] = [
     'directory' => __DIR__ . '/../metadata',
 ];
 
+$config['default-authsource'] = 'example-userpass';
+$config['auth.adminsource'] = 'admin';
+
 return $config;
