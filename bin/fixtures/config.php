@@ -12,8 +12,9 @@ $config['loggingdir'] = $_SERVER['HOME'] . '/files/simplesaml/log/';
 $config['datadir'] = $_SERVER['HOME'] . '/files/simplesaml/data/';
 $config['tempdir'] = $_SERVER['HOME'] . '/files/simplesaml/tmp/';
 
-$config['store.sql.dsn'] = 'sqlite:' . $_SERVER['HOME'] . '/files/simplesaml/tmp/simplesaml.sq3';
-$config['store.sql.dsn'] = 'sqlite:/tmp/sqlitedatabase.sq3';
+// $config['store.sql.dsn'] = 'sqlite:' . $_SERVER['HOME'] . '/files/simplesaml/tmp/simplesaml.sq3';
+// $config['store.sql.dsn'] = 'sqlite:/tmp/sqlitedatabase.sq3';
+$config['store.type'] = 'phpsession';
 
 $config['enable.saml20-idp'] = true;
 $config['enable.shib13-idp'] = true;
