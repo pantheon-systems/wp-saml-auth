@@ -38,4 +38,7 @@ $config['metadata.sources'][] = [
 $config['default-authsource'] = 'example-userpass';
 $config['auth.adminsource'] = 'example-userpass';
 
+$config['debug'] = true;
+$config['logging.level'] = SimpleSAML\Logger::DEBUG;
+
 return $config;

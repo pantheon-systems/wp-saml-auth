@@ -22,7 +22,9 @@ $metadata[$host] = array(
 	 * 'config/authsources.php'.
 	 */
 	'auth' => 'example-userpass',
-
+    'redirect.sign' => true, // optional, helpful for debugging
+    'simplesaml.attributes' => true, // optional
+    'UIInfo' => ['DisplayName' => ['en' => 'WP Test IdP']],
 	'attributes.NameFormat' => 'urn:oasis:names:tc:SAML:2.0:attrname-format:uri',
 	'authproc' => array(
 		10 => array(
