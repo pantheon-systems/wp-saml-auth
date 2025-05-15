@@ -12,7 +12,7 @@ $config['loggingdir'] = $_SERVER['HOME'] . '/files/simplesaml/log/';
 $config['datadir'] = $_SERVER['HOME'] . '/files/simplesaml/data/';
 $config['tempdir'] = $_SERVER['HOME'] . '/files/simplesaml/tmp/';
 
-$config['store.type'] = 'sql';
+$config['store.sql.dsn'] = 'sqlite:' . $_SERVER['HOME'] . '/files/simplesaml/tmp/simplesaml.sq3';
 $config['store.sql.dsn'] = 'sqlite:/tmp/sqlitedatabase.sq3';
 
 $config['enable.saml20-idp'] = true;
@@ -35,6 +35,6 @@ $config['metadata.sources'][] = [
 ];
 
 $config['default-authsource'] = 'example-userpass';
-$config['auth.adminsource'] = 'admin';
+$config['auth.adminsource'] = 'example-userpass';
 
 return $config;
