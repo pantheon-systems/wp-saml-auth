@@ -29,4 +29,9 @@ $config['module.directories'] = [__DIR__ . '/../modules'];
 $config['logging.handler'] = 'file';
 $config['logging.logfile'] = $_SERVER['HOME'] . '/files/simplesaml/log/simplesamlphp.log';
 
+$config['metadata.sources'][] = [
+    'type' => 'flatfile',
+    'directory' => __DIR__ . '/../metadata',
+];
+
 return $config;
