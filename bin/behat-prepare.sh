@@ -119,6 +119,8 @@ foreach (\$config['example-userpass'] as \$key => &\$user) {
     );
 }
 
+\$config['default'] = &\$config['example-userpass'];
+
 return \$config;
 EOF
 
