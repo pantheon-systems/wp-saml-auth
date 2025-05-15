@@ -122,6 +122,27 @@ foreach (\$config['example-userpass'] as \$key => &\$user) {
 return \$config;
 EOF
 
+cat > "$PREPARE_DIR/private/simplesamlphp/metadata/saml20-sp-remote.php" <<EOF
+<?php
+
+\$metadata['urn:$PANTHEON_SITE_URL'] = [
+    'AssertionConsumerService' => [
+        [
+            'Binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST',
+            'Location' => 'https://$PANTHEON_SITE_URL/wp-login.php?saml_acs',
+            'index' => 0,
+        ],
+    ],
+    'SingleLogoutService' => [
+        [
+            'Binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
+            'Location' => 'https://$PANTHEON_SITE_URL/wp-login.php?saml_sls',
+        ],
+    ],
+    'NameIDFormat' => 'urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified',
+];
+EOF
+
 # Copy demo configuration files with our specifics for our tests
 cp $BASH_DIR/fixtures/config.php $PREPARE_DIR/private/simplesamlphp/config/config.php
 cp $BASH_DIR/fixtures/config-prepare.php $PREPARE_DIR/wp-content/mu-plugins/config-prepare.php
@@ -132,7 +153,6 @@ sed -i "/'employee:employeepass'/a \ \ \ \ '${WORDPRESS_ADMIN_USERNAME}:${WORDPR
 # Copy identify provider configuration files into their appropriate locations
 cp $BASH_DIR/fixtures/saml20-idp-hosted.php  $PREPARE_DIR/private/simplesamlphp/metadata/saml20-idp-hosted.php
 cp $BASH_DIR/fixtures/shib13-idp-hosted.php  $PREPARE_DIR/private/simplesamlphp/metadata/shib13-idp-hosted.php
-cp $BASH_DIR/fixtures/saml20-sp-remote.php  $PREPARE_DIR/private/simplesamlphp/metadata/saml20-sp-remote.php
 cp $BASH_DIR/fixtures/shib13-sp-remote.php  $PREPARE_DIR/private/simplesamlphp/metadata/shib13-sp-remote.php
 
 # Enable the exampleauth module
