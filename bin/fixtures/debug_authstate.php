@@ -1,15 +1,20 @@
 <?php
-require __DIR__ . '/../../_include.php';
+require __DIR__ . '/_include.php';
 
 use SimpleSAML\Auth\State;
-use SimpleSAML\Utils\HTTP;
 
-$stateId = $_GET['AuthState'] ?? null;
-if (!$stateId) {
-    die("Missing AuthState");
+$authState = $_GET['AuthState'] ?? null;
+
+if (!$authState) {
+    echo "Missing AuthState.";
+    exit;
 }
 
-$state = State::loadState($stateId, 'SimpleSAML_Auth_State');
-echo '<pre>';
-print_r($state);
-echo '</pre>';
+try {
+    $state = State::loadState($authState, 'SimpleSAML_Auth_State');
+    echo "<pre>";
+    print_r($state);
+    echo "</pre>";
+} catch (Throwable $e) {
+    echo "Error loading AuthState: " . $e->getMessage();
+}
