@@ -145,8 +145,8 @@ TWIG_TEMPLATE_PATH="$PREPARE_DIR/private/simplesamlphp/modules/core/templates/lo
 # Modify the login template so Behat can submit the form
 echo "Operating on: $TWIG_TEMPLATE_PATH"
 sed -i  -- "s/<input type=\"submit\"/<input type=\"submit\" id='submit'/g" $TWIG_TEMPLATE_PATH
-sed -i 's|<input type="text" name="username">|<input type="text" name="username" id="username">|g' "$TWIG_TEMPLATE_PATH"
-sed -i 's|<input type="text" name="password">|<input type="text" name="password" id="password">|g' "$TWIG_TEMPLATE_PATH"
+# sed -i 's|<input type="text" name="username">|<input type="text" name="username" id="username">|g' "$TWIG_TEMPLATE_PATH"
+# sed -i 's|<input type="text" name="password">|<input type="text" name="password" id="password">|g' "$TWIG_TEMPLATE_PATH"
 
 #sed -i  -- "s/<button/<button id='submit'/g" $PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php
 #sed -i  -- "s/this.disabled=true; this.form.submit(); return true;//g" $PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php
