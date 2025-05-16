@@ -36,6 +36,9 @@ class AdminLogIn implements Context, SnippetAcceptingContext {
 		// Follow any meta or JS-based redirect manually
     	$this->followSamlRedirectManually();
 
+		// Debug output for inspection
+    	$this->minkContext->printLastResponse();
+
         $this->minkContext->assertPageAddress("wp-admin/");
     }
 
