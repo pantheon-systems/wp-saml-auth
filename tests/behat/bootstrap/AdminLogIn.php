@@ -32,7 +32,30 @@ class AdminLogIn implements Context, SnippetAcceptingContext {
         $this->minkContext->fillField('username', getenv('WORDPRESS_ADMIN_USERNAME'));
         $this->minkContext->fillField('password', getenv('WORDPRESS_ADMIN_PASSWORD'));
         $this->minkContext->pressButton('submit');
-        $this->minkContext->pressButton('Submit');
+
+		// Follow any meta or JS-based redirect manually
+    	$this->followSamlRedirectManually();
+
         $this->minkContext->assertPageAddress("wp-admin/");
     }
+
+	/**
+	 * @Then I follow the SAML redirect manually
+	 */
+	public function followSamlRedirectManually()
+	{
+		$html = $this->minkContext->getSession()->getPage()->getContent();
+
+		if (preg_match('/<meta http-equiv="refresh" content="\d+;url=([^"]+)"/i', $html, $matches)) {
+			$redirectUrl = html_entity_decode($matches[1]);
+			$this->minkContext->visit($redirectUrl);
+		} elseif (preg_match('/window\.location\s*=\s*"([^"]+)"/i', $html, $matches)) {
+			// Handle JS-based redirects in <script>
+			$redirectUrl = html_entity_decode($matches[1]);
+			$this->minkContext->visit($redirectUrl);
+		} else {
+			throw new \Exception('No meta refresh or window.location redirect found in response');
+		}
+	}
+
 }
