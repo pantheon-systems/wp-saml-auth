@@ -144,7 +144,8 @@ openssl req -newkey rsa:2048 -new -x509 -days 3652 -nodes -out $PREPARE_DIR/priv
 TWIG_TEMPLATE_PATH="$PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.twig"
 # Modify the login template so Behat can submit the form
 echo "Operating on: $TWIG_TEMPLATE_PATH"
-sed -i  -- "s/<input type=\"submit\"/<input type=\"submit\" id='submit'/g" $TWIG_TEMPLATE_PATH
+sed -i  -- "s/<button class=\"pure-button pure\"/<input type=\"submit\" id='submit'/g" $TWIG_TEMPLATE_PATH
+sed -i  -- "s/<button class=\"pure-button pure-button-red pure-input-1-2 pure-input-sm-1-1 right\" id=\"submit_button\"/<button class=\"pure-button pure-button-red pure-input-1-2 pure-input-sm-1-1 right\" id=\"submit\"/g" $TWIG_TEMPLATE_PATH
 # sed -i 's|<input type="text" name="username">|<input type="text" name="username" id="username">|g' "$TWIG_TEMPLATE_PATH"
 # sed -i 's|<input type="text" name="password">|<input type="text" name="password" id="password">|g' "$TWIG_TEMPLATE_PATH"
 
