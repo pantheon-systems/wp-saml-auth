@@ -36,9 +36,6 @@ class AdminLogIn implements Context, SnippetAcceptingContext {
 		// Follow any meta or JS-based redirect manually
     	$this->followSamlRedirectManually();
 
-		// Debug output for inspection
-    	$this->minkContext->printLastResponse();
-
         $this->minkContext->assertPageAddress("wp-admin/");
     }
 
@@ -57,6 +54,8 @@ class AdminLogIn implements Context, SnippetAcceptingContext {
 			$redirectUrl = html_entity_decode($matches[1]);
 			$this->minkContext->visit($redirectUrl);
 		} else {
+			// Debug output for inspection
+			$this->minkContext->printLastResponse();
 			throw new \Exception('No meta refresh or window.location redirect found in response');
 		}
 	}
