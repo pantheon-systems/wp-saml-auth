@@ -146,6 +146,10 @@ TWIG_TEMPLATE_PATH="$PREPARE_DIR/private/simplesamlphp/modules/core/templates/lo
 echo "Operating on: $TWIG_TEMPLATE_PATH"
 sed -i  -- "s/<button class=\"pure-button pure-button-red pure-input-1-2 pure-input-sm-1-1 right\" id=\"submit_button\"/<button class=\"pure-button pure-button-red pure-input-1-2 pure-input-sm-1-1 right\" id=\"submit\"/g" $TWIG_TEMPLATE_PATH
 sed -i  -- "s/Login/Submit/g" $TWIG_TEMPLATE_PATH
+# Modify the loginuserpass.js file so Behat can submit the form
+JS_FILE_PATH="$PREPARE_DIR/private/simplesamlphp/modules/core/public/assets/js/loginuserpass.js" # Adjust path if necessary
+sed -i -- 's/getElementById("submit_button")/getElementById("submit")/g' $JS_FILE_PATH
+
 
 # sed -i 's|<input type="text" name="username">|<input type="text" name="username" id="username">|g' "$TWIG_TEMPLATE_PATH"
 # sed -i 's|<input type="text" name="password">|<input type="text" name="password" id="password">|g' "$TWIG_TEMPLATE_PATH"
