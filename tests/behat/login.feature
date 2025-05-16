@@ -9,6 +9,7 @@ Feature: SAML Login
     And I fill in "username" with "employee"
     And I fill in "password" with "employeepass"
     And I press "submit"
+	Then I follow the SAML redirect manually
     Then print current URL
     Then the "email" field should contain "test-em@example.com"
 
@@ -18,6 +19,7 @@ Feature: SAML Login
     And I fill in "username" with "student"
     And I fill in "password" with "studentpass"
     And I press "submit"
+	Then I follow the SAML redirect manually
     Then print current URL
     Then the "email" field should contain "test-student@example.com"
 
@@ -27,6 +29,7 @@ Feature: SAML Login
     And I fill in "username" with "employee"
     And I fill in "password" with "employeepass"
     And I press "submit"
+	Then I follow the SAML redirect manually
     Then print current URL
     Then I should see "Sample Page" in the ".wp-block-post-title" element
 
