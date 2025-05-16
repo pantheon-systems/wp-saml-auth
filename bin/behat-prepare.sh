@@ -172,10 +172,10 @@ cp $BASH_DIR/fixtures/config.php $PREPARE_DIR/private/simplesamlphp/config/confi
 cp $BASH_DIR/fixtures/config-prepare.php $PREPARE_DIR/wp-content/mu-plugins/config-prepare.php
 
 # Copy identify provider configuration files into their appropriate locations
+cp $BASH_DIR/fixtures/saml20-sp-remote.php  $PREPARE_DIR/private/simplesamlphp/metadata/saml20-sp-remote.php
 cp $BASH_DIR/fixtures/saml20-idp-hosted.php  $PREPARE_DIR/private/simplesamlphp/metadata/saml20-idp-hosted.php
 cp $BASH_DIR/fixtures/shib13-idp-hosted.php  $PREPARE_DIR/private/simplesamlphp/metadata/shib13-idp-hosted.php
 cp $BASH_DIR/fixtures/shib13-sp-remote.php  $PREPARE_DIR/private/simplesamlphp/metadata/shib13-sp-remote.php
-cp $BASH_DIR/fixtures/debug_authstate.php $PREPARE_DIR/private/simplesamlphp/debug_authstate.php
 
 # Enable the exampleauth module
 touch $PREPARE_DIR/private/simplesamlphp/modules/exampleauth/enable
