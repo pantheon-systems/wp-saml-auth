@@ -121,28 +121,50 @@ foreach (\$config['example-userpass'] as \$key => &\$user) {
 \$config['admin'] = [ 'exampleauth:UserPass' ];
 \$config['default'] = &\$config['example-userpass'];
 
-return \$config;
-EOF
+// --- SP Definition ---
+// This 'default-sp' is what the wp-saml-auth plugin will use by default.
+// It configures SimpleSAMLphp to act as an SP client.
 
-cat > "$PREPARE_DIR/private/simplesamlphp/metadata/saml20-sp-remote.php" <<EOF
-<?php
+// Dynamically determine host and entity IDs
+// Ensure \$_SERVER['HTTP_HOST'] is available and correct in the PHP environment.
+\$current_host_with_port = isset(\$_SERVER['HTTP_HOST']) ? \$_SERVER['HTTP_HOST'] : 'localhost'; // Fallback for CLI or misconfigured env
+\$idp_entity_id = 'https://' . \$current_host_with_port . '/simplesaml'; // The IdP is this local SimpleSAMLphp instance
+\$sp_entity_id_hostname_part = explode(':', \$current_host_with_port)[0];
+\$sp_entity_id = 'urn:' . \$sp_entity_id_hostname_part; // Default entityID format for wp-saml-auth
 
-\$metadata['urn:$PANTHEON_SITE_URL'] = [
-    'AssertionConsumerService' => [
-        [
-            'Binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST',
-            'Location' => 'https://$PANTHEON_SITE_URL/wp-login.php?saml_acs',
-            'index' => 0,
-        ],
-    ],
-    'SingleLogoutService' => [
-        [
-            'Binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
-            'Location' => 'https://$PANTHEON_SITE_URL/wp-login.php?saml_sls',
-        ],
-    ],
-    'NameIDFormat' => 'urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified',
+\$config['default-sp'] = [
+    'saml:SP', // Identifies this as an SP configuration
+
+    // The entityID of this Service Provider.
+    // It should match what the IdP expects (defined in IdP's SP-remote metadata).
+    'entityID' => \$sp_entity_id,
+
+    // The entityID of the Identity Provider this SP should use.
+    'idp' => \$idp_entity_id,
+
+    // URL to the discovery service. Null if IdP is specified directly.
+    'discoURL' => null,
+
+    // Optional: Specify private key and certificate for this SP if it needs to sign requests
+    // or decrypt assertions. These would be different from the IdP's keys if both roles are distinct.
+    // For a single instance acting as both, you might reuse certs or have separate ones.
+    // 'privatekey' => 'sp.pem', // e.g., in simplesaml/cert/
+    // 'certificate' => 'sp.crt', // e.g., in simplesaml/cert/
+
+    // How the NameID should be formatted. 'unspecified' is common.
+    'NameIDPolicy' => 'urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified',
+
+    // How attributes received from the IdP should be named. 'uri' is common.
+    'attributes.NameFormat' => 'urn:oasis:names:tc:SAML:2.0:attrname-format:uri',
+
+    // Optional: Attribute processing filters for this SP.
+    // Example: Ensure required attributes are present.
+    // 'authproc' => [
+    //     10 => ['class' => 'saml:ExpectedAttributes', 'attributes' => ['uid', 'mail', 'displayName']],
+    // ],
 ];
+
+return \$config;
 EOF
 
 # Copy demo configuration files with our specifics for our tests
