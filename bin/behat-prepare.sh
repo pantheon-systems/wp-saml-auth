@@ -72,10 +72,10 @@ rm -rf "$PREPARE_DIR"/wp-content/plugins/wp-saml-auth/.git
 # SimpleSAMLphp is installed to ~/code/private, and then symlinked into the
 # web root
 ###
-echo "Setting up SimpleSAMLphp 2.4.0"
+echo "Setting up SimpleSAMLphp $SIMPLESAMLPHP_VERSION"
 rm -rf "$PREPARE_DIR"/private
 mkdir "$PREPARE_DIR"/private
-wget https://github.com/simplesamlphp/simplesamlphp/releases/download/v2.4.0/simplesamlphp-2.4.0-full.tar.gz -O "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
+wget "https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}-full.tar.gz" -O "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
 tar -zxvf "$PREPARE_DIR"/simplesamlphp-latest.tar.gz -C "$PREPARE_DIR"/private
 ORIG_SIMPLESAMLPHP_DIR=$(ls "$PREPARE_DIR"/private)
 mv "$PREPARE_DIR"/private/"$ORIG_SIMPLESAMLPHP_DIR" "$PREPARE_DIR"/private/simplesamlphp

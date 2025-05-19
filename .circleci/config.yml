@@ -3,7 +3,18 @@ workflows:
   version: 2
   main:
     jobs:
-      - test-behat
+      - test-behat:
+          name: "Test with SimpleSAMLphp 1.18.0"
+          simplesamlphp_version: "1.18.0"
+      - test-behat:
+          name: "Test with SimpleSAMLphp 2.0.0"
+          simplesamlphp_version: "2.0.0"
+      - test-behat:
+          name: "Test with SimpleSAMLphp 2.3.7"
+          simplesamlphp_version: "2.3.7"
+      - test-behat:
+          name: "Test with SimpleSAMLphp 2.4.0"
+          simplesamlphp_version: "2.4.0"
       - test-phpunit:
           name: "Test with PHP 7.4"
           php_version: "7.4"
@@ -28,8 +39,15 @@ workflows:
       - test-behat
 jobs:
   test-behat:
+    parameters:
+      simplesamlphp_version:
+        type: enum
+        enum:
+          - "1.18.0"
+          - "2.0.0"
+          - "2.3.7"
+          - "2.4.0"
     working_directory: ~/pantheon-systems/wp-saml-auth
-    parallelism: 1
     docker:
     - image: quay.io/pantheon-public/build-tools-ci:8.x-php8.2
     steps:
@@ -46,14 +64,17 @@ jobs:
         paths:
           - ~/.composer/cache # Note: Path adjusted
     - run: echo $(openssl rand -hex 8) > /tmp/WORDPRESS_ADMIN_PASSWORD
-    - run: |
-        echo 'export TERMINUS_ENV=ci-$CIRCLE_BUILD_NUM' >> $BASH_ENV
-        echo 'export TERMINUS_SITE=wp-saml-auth' >> $BASH_ENV
-        echo 'export SITE_ENV=wp-saml-auth.ci-$CIRCLE_BUILD_NUM' >> $BASH_ENV
-        echo 'export WORDPRESS_ADMIN_USERNAME=pantheon' >> $BASH_ENV
-        echo 'export WORDPRESS_ADMIN_EMAIL=no-reply@getpantheon.com' >> $BASH_ENV
-        echo 'export WORDPRESS_ADMIN_PASSWORD=$(cat /tmp/WORDPRESS_ADMIN_PASSWORD)' >> $BASH_ENV
-        source $BASH_ENV
+    - run:
+        name: Set environment variables
+        command: |
+          echo 'export TERMINUS_ENV=ci-$CIRCLE_BUILD_NUM' >> $BASH_ENV
+          echo 'export TERMINUS_SITE=wp-saml-auth' >> $BASH_ENV
+          echo 'export SITE_ENV=wp-saml-auth.ci-$CIRCLE_BUILD_NUM' >> $BASH_ENV
+          echo 'export WORDPRESS_ADMIN_USERNAME=pantheon' >> $BASH_ENV
+          echo 'export WORDPRESS_ADMIN_EMAIL=no-reply@getpantheon.com' >> $BASH_ENV
+          echo 'export WORDPRESS_ADMIN_PASSWORD=$(cat /tmp/WORDPRESS_ADMIN_PASSWORD)' >> $BASH_ENV
+          echo 'export SIMPLESAMLPHP_VERSION="<< parameters.simplesamlphp_version >>"'
+          source $BASH_ENV
     - run: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
     - run: |
         if [ -z "$GITHUB_TOKEN" ]; then
@@ -84,7 +105,11 @@ jobs:
           echo "Running Behat on https://${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io/wp-login.php"
           echo "========================================================="
           echo ""
-          ./bin/behat-test.sh --strict
+          if [ << parameters.simplesamlphp_version != '1.18.0' ]; then
+            ./bin/behat-test.sh --strict
+          else
+            ./bin/behat-test-simplesaml1.18.0.sh --strict
+          fi
           ./bin/behat-cleanup.sh
   test-phpunit:
     parameters:
