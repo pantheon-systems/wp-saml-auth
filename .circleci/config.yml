@@ -39,13 +39,6 @@ jobs:
           - composer-cache-v1-{{ checksum "composer.lock" }}
           - composer-cache-v1-
     - run:
-        name: Clean vendor directory and composer cache
-        command: |
-          echo "Removing old vendor directory..."
-          rm -rf vendor
-          echo "Clearing composer cache..."
-          composer clear-cache
-    - run:
         name: Install Composer dependencies
         command: composer install -n --prefer-dist
     - save_cache: # Save composer's internal cache
