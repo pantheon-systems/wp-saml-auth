@@ -47,7 +47,7 @@ else
 
   if [ -z "$OLDEST_CI_ENVS" ]; then
     echo "No 'ci-' prefixed environments found to cleanup after filtering and sorting."
-    return
+    exit 0
   fi
   for ENV_ID in $OLDEST_CI_ENVS; do
     echo "Deleting environment: $TERMINUS_SITE.$ENV_ID"
