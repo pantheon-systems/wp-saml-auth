@@ -110,17 +110,20 @@ jobs:
         command: |
           set -e
           source $BASH_ENV
-          ./bin/behat-prepare.sh
+
+          # Prepare fixture environment for tests.
+          if [ << parameters.simplesamlphp_version >> != '1.18.0' ]; then
+`          ./bin/behat-prepare.sh
+          else
+            ./bin/behat-prepare-simplesaml1.18.0.sh
+          fi
+
           echo ""
           echo "========================================================="
           echo "Running Behat on https://${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io/wp-login.php"
           echo "========================================================="
           echo ""
-          if [ << parameters.simplesamlphp_version >> != '1.18.0' ]; then
-            ./bin/behat-test.sh --strict
-          else
-            ./bin/behat-test-simplesaml1.18.0.sh --strict
-          fi
+          ./bin/behat-test.sh --strict
           ./bin/behat-cleanup.sh
   test-phpunit:
     parameters:
