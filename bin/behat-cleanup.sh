@@ -20,7 +20,7 @@ fi
 ###
 # Delete the environment used for this test run.
 ###
-terminus multidev:delete $SITE_ENV --delete-branch --yes
+terminus multidev:delete "$SITE_ENV" --delete-branch --yes
 
 ###
 # Also delete the oldest 5 multidevs that start with ci-

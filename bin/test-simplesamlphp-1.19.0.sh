@@ -26,17 +26,17 @@ rm $TEST_DIR/simplesamlphp-$SIMPLESAMLPHP_VERSION.tar.gz
 # Copy SimpleSAMLphp to the plugin directory
 echo "Copying SimpleSAMLphp to the plugin directory"
 PLUGIN_DIR=$(pwd)
-rm -rf $PLUGIN_DIR/simplesamlphp
-cp -r $TEST_DIR/simplesamlphp $PLUGIN_DIR/
+rm -rf "$PLUGIN_DIR"/simplesamlphp
+cp -r "$TEST_DIR"/simplesamlphp "$PLUGIN_DIR"/
 
 # Basic SimpleSAMLphp configuration
 echo "Configuring SimpleSAMLphp"
-cp $PLUGIN_DIR/bin/fixtures/config.php $PLUGIN_DIR/simplesamlphp/config/config.php
-cp $PLUGIN_DIR/bin/fixtures/authsources.base.php $PLUGIN_DIR/simplesamlphp/config/authsources.php
+cp "$PLUGIN_DIR"/bin/fixtures/config.php "$PLUGIN_DIR"/simplesamlphp/config/config.php
+cp "$PLUGIN_DIR"/bin/fixtures/authsources.base.php "$PLUGIN_DIR"/simplesamlphp/config/authsources.php
 
 # Generate a certificate SimpleSAMLphp uses for encryption
 echo "Generating SSL certificate for SimpleSAMLphp"
-openssl req -newkey rsa:2048 -new -x509 -days 3652 -nodes -out $PLUGIN_DIR/simplesamlphp/cert/saml.crt -keyout $PLUGIN_DIR/simplesamlphp/cert/saml.pem -batch
+openssl req -newkey rsa:2048 -new -x509 -days 3652 -nodes -out "$PLUGIN_DIR"/simplesamlphp/cert/saml.crt -keyout "$PLUGIN_DIR"/simplesamlphp/cert/saml.pem -batch
 
 # Run the tests
 echo "Running tests to verify security warnings and authentication blocking"

@@ -4,7 +4,8 @@ IFS=$'\n\t'
 
 main(){
     export TERMINUS_HIDE_GIT_MODE_WARNING=1
-    local DIRNAME=$(dirname "$0")
+    local DIRNAME
+	DIRNAME=$(dirname "$0")
 
     if [ -z "${TERMINUS_SITE}" ]; then
         echo "TERMINUS_SITE environment variable must be set"
@@ -21,7 +22,7 @@ main(){
 
 
     # Use find to locate the file with a case-insensitive search
-    README_FILE_PATH=$(find ${DIRNAME}/.. -iname "readme.txt" -print -quit)
+    README_FILE_PATH=$(find "${DIRNAME}"/.. -iname "readme.txt" -print -quit)
     if [[ -z "$README_FILE_PATH" ]]; then
         echo "readme.txt not found."
         exit 1

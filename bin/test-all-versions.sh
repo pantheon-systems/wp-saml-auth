@@ -25,7 +25,7 @@ echo "==================================================================="
 if [ "$IS_CI" != "true" ]; then
 	# Pause for manual verification
 	echo "Press Enter to continue to the next test..."
-	read
+	read -r
 fi
 
 # Test with SimpleSAMLphp 2.0.0 (secure but not recommended version)
@@ -37,7 +37,7 @@ echo "==================================================================="
 if [ "$IS_CI" != "true" ]; then
 	# Pause for manual verification
 	echo "Press Enter to continue to the next test..."
-	read
+	read -r
 fi
 
 # Test with SimpleSAMLphp 2.3.7 (recommended version)
