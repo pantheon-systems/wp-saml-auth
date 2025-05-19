@@ -169,11 +169,11 @@ function wpsa_filter_option( $value, $option_name ) {
 		'critical_simplesamlphp_version' => '2.0.0',
 		/**
 		 * Whether to enforce the minimum SimpleSAMLphp version requirement.
-		 * If true, authentication will be blocked for versions below critical_simplesamlphp_version.
+		 * If true, authentication will be blocked for versions below critical_simplesamlphp_version. Defaults to false.
 		 *
 		 * @param bool
 		 */
-		'enforce_min_simplesamlphp_version' => true,
+		'enforce_min_simplesamlphp_version' => false,
 	];
 	$value = isset( $defaults[ $option_name ] ) ? $defaults[ $option_name ] : $value;
 	return $value;
