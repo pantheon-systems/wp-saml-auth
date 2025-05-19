@@ -46,39 +46,41 @@ class AdminLogIn implements Context, SnippetAcceptingContext {
 		$session = $this->minkContext->getSession();
 		$html = $session->getPage()->getContent();
 
-		$this->minkContext->printLastResponse(); // for debugging
+		// Print response for debugging if needed
+		$this->minkContext->printLastResponse();
 
-		// Try meta refresh
+		// Step 1: meta refresh (fallback)
 		if (preg_match('/<meta http-equiv="refresh" content="\d+;url=([^"]+)"/i', $html, $matches)) {
 			$this->minkContext->visit(html_entity_decode($matches[1]));
 			return;
 		}
 
-		// Try JS redirect
+		// Step 2: window.location
 		if (preg_match('/window\.location\s*=\s*"([^"]+)"/i', $html, $matches)) {
 			$this->minkContext->visit(html_entity_decode($matches[1]));
 			return;
 		}
 
-		// Try submitting the login form manually
-		$crawler = new Crawler($html);
-		$form = $crawler->filter('form[name="f"]');
+		// Step 3: Detect post-login redirect form with SAMLResponse
+		if (preg_match('/<form[^>]+action="([^"]+saml_acs[^"]*)"[^>]*method="post"[^>]*>.*?<\/form>/is', $html, $formMatch)) {
+			$actionUrl = html_entity_decode($formMatch[1]);
 
-		if ($form->count() > 0) {
-			$action = $form->attr('action');
+			// Extract all hidden fields from the form
+			preg_match_all('/<input[^>]+type="hidden"[^>]+name="([^"]+)"[^>]+value="([^"]*)"/i', $html, $inputs, PREG_SET_ORDER);
 
-			$formData = [
-				'username' => getenv('WORDPRESS_ADMIN_USERNAME'),
-				'password' => getenv('WORDPRESS_ADMIN_PASSWORD'),
-			];
+			$formFields = [];
+			foreach ($inputs as $input) {
+				$formFields[$input[1]] = html_entity_decode($input[2]);
+			}
 
-			// Submit the form manually using the Goutte driver
+			// Submit the form manually
 			$client = $session->getDriver()->getClient();
-			$client->request('POST', $action, $formData);
+			$client->request('POST', $actionUrl, $formFields);
+
 			return;
 		}
 
-		throw new \Exception('No meta refresh, JS redirect, or login form found in response');
+		throw new \Exception('No meta refresh, JS redirect, or SAML post-back form found in response');
 	}
 
 }
