@@ -4,7 +4,7 @@ namespace PantheonSystems\WPSamlAuth\Behat;
 
 use Behat\Behat\Context\Context;
 use Behat\Behat\Context\SnippetAcceptingContext;
-use Behat\MinkExtension\Context\MinkContext;
+use Symfony\Component\DomCrawler\Crawler;
 use Behat\Behat\Hook\Scope\BeforeScenarioScope;
 
 /**
@@ -42,22 +42,43 @@ class AdminLogIn implements Context, SnippetAcceptingContext {
 	/**
 	 * @Then I follow the SAML redirect manually
 	 */
-	public function followSamlRedirectManually()
-	{
-		$html = $this->minkContext->getSession()->getPage()->getContent();
+	public function followSamlRedirectManually() {
+		$session = $this->minkContext->getSession();
+		$html = $session->getPage()->getContent();
 
+		$this->minkContext->printLastResponse(); // for debugging
+
+		// Try meta refresh
 		if (preg_match('/<meta http-equiv="refresh" content="\d+;url=([^"]+)"/i', $html, $matches)) {
-			$redirectUrl = html_entity_decode($matches[1]);
-			$this->minkContext->visit($redirectUrl);
-		} elseif (preg_match('/window\.location\s*=\s*"([^"]+)"/i', $html, $matches)) {
-			// Handle JS-based redirects in <script>
-			$redirectUrl = html_entity_decode($matches[1]);
-			$this->minkContext->visit($redirectUrl);
-		} else {
-			// Debug output for inspection
-			$this->minkContext->printLastResponse();
-			throw new \Exception('No meta refresh or window.location redirect found in response');
+			$this->minkContext->visit(html_entity_decode($matches[1]));
+			return;
 		}
+
+		// Try JS redirect
+		if (preg_match('/window\.location\s*=\s*"([^"]+)"/i', $html, $matches)) {
+			$this->minkContext->visit(html_entity_decode($matches[1]));
+			return;
+		}
+
+		// Try submitting the login form manually
+		$crawler = new Crawler($html);
+		$form = $crawler->filter('form[name="f"]');
+
+		if ($form->count() > 0) {
+			$action = $form->attr('action');
+
+			$formData = [
+				'username' => getenv('WORDPRESS_ADMIN_USERNAME'),
+				'password' => getenv('WORDPRESS_ADMIN_PASSWORD'),
+			];
+
+			// Submit the form manually using the Goutte driver
+			$client = $session->getDriver()->getClient();
+			$client->request('POST', $action, $formData);
+			return;
+		}
+
+		throw new \Exception('No meta refresh, JS redirect, or login form found in response');
 	}
 
 }
