@@ -84,7 +84,7 @@ jobs:
           echo 'export WORDPRESS_ADMIN_USERNAME=pantheon' >> $BASH_ENV
           echo 'export WORDPRESS_ADMIN_EMAIL=no-reply@getpantheon.com' >> $BASH_ENV
           echo 'export WORDPRESS_ADMIN_PASSWORD=$(cat /tmp/WORDPRESS_ADMIN_PASSWORD)' >> $BASH_ENV
-          echo 'export SIMPLESAMLPHP_VERSION="<< parameters.simplesamlphp_version >>"'
+          echo 'export SIMPLESAMLPHP_VERSION="<< parameters.simplesamlphp_version >>"' >> $BASH_ENV
           source $BASH_ENV
     - run: echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
     - run: |
