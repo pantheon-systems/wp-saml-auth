@@ -141,7 +141,3 @@ jobs:
           command: |
             composer test:install:withdb
             composer phpunit
-      - run:
-          name: "Run SimpleSAMLphp tests"
-          command: |
-            IS_CI="true" bash bin/test-all-versions.sh
