@@ -113,7 +113,7 @@ jobs:
 
           # Prepare fixture environment for tests.
           if [ << parameters.simplesamlphp_version >> != '1.18.0' ]; then
-`          ./bin/behat-prepare.sh
+            ./bin/behat-prepare.sh
           else
             ./bin/behat-prepare-simplesaml1.18.0.sh
           fi
