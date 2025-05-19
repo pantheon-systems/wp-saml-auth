@@ -36,7 +36,18 @@ workflows:
               only:
                 - master
     jobs:
-      - test-behat
+      - test-behat:
+          name: "Test with SimpleSAMLphp 1.18.0"
+          simplesamlphp_version: "1.18.0"
+      - test-behat:
+          name: "Test with SimpleSAMLphp 2.0.0"
+          simplesamlphp_version: "2.0.0"
+      - test-behat:
+          name: "Test with SimpleSAMLphp 2.3.7"
+          simplesamlphp_version: "2.3.7"
+      - test-behat:
+          name: "Test with SimpleSAMLphp 2.4.0"
+          simplesamlphp_version: "2.4.0"
 jobs:
   test-behat:
     parameters:
