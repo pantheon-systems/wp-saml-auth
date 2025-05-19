@@ -40,15 +40,4 @@ $metadata[$sp_entity_id] = [
     // 'unspecified' is often a safe default.
     'NameIDFormat' => 'urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified',
 
-    // Optional: SP's public certificate if assertions need to be encrypted for this SP,
-    // or if the IdP needs to verify signed requests from this SP.
-    // If wp-saml-auth is configured to sign requests, its public key would go here.
-    // 'certificate' => 'sp-public-key.crt', // Path relative to cert/ directory
-
-    // Optional: Define which attributes this SP should receive.
-    // This can also be controlled by IdP's authproc filters.
-    // 'attributes' => ['uid', 'mail', 'displayName', 'eduPersonAffiliation'],
-    
-    // Optional: If NameID should be based on a specific attribute from the IdP.
-    // 'simplesaml.nameidattribute' => 'uid',
 ];

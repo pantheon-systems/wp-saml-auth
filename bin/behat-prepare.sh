@@ -45,7 +45,7 @@ git clone -b "$TERMINUS_ENV" "$PANTHEON_GIT_URL" "$PREPARE_DIR"
 # Add WP Native PHP Sessions and child theme to environment
 ###
 echo "Creating a child theme called $TERMINUS_SITE"
-rm -rf "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"
+rm -rf "${PREPARE_DIR}/wp-content/themes/${TERMINUS_SITE}"
 # Create a child theme that includes WP SAML Auth configuration details
 mkdir "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"
 cp "$BASH_DIR"/fixtures/functions.php  "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"/functions.php
@@ -182,7 +182,7 @@ git commit -m "Include SimpleSAMLphp and its configuration files"
 git push
 
 # Sometimes Pantheon takes a little time to refresh the filesystem
-terminus build:workflow:wait "$TERMINUS_SITE"."$TERMINUS_ENV"
+terminus build:workflow:wait "$SITE_ENV"
 
 ###
 # Set up WordPress, theme, and plugins for the test run

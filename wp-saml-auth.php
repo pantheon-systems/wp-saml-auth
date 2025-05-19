@@ -162,7 +162,7 @@ function wpsa_filter_option( $value, $option_name ) {
 		'min_simplesamlphp_version' => '2.3.7',
 		/**
 		 * Critical security version of SimpleSAMLphp.
-		 * Versions below this will show an error and block authentication.
+		 * Versions below this will show an error and block authentication if `enforce_min_simplesamlphp_version` is true.
 		 *
 		 * @param string
 		 */
