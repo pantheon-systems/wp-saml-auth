@@ -292,7 +292,8 @@ SimpleSAMLphp recommended version is 2.3.7 or later for `simplesamlphp` SAML aut
 
 = 2.2.0-dev =
 * Add a hook to modify returned attributes. [[#379](https://github.com/pantheon-systems/wp-saml-auth/pull/379/)]
-* Updates [`onelogin/php-saml`](https://github.com/SAML-Toolkits/php-saml) to 4.2.0.
+* Updates [`onelogin/php-saml`](https://github.com/SAML-Toolkits/php-saml) to 4.2.0. [[#402](https://github.com/pantheon-systems/wp-saml-auth/pull/402/)]
+* Adds warnings and the option to disable SAML when using a vulnerable version of simplesamlphp [[#402](https://github.com/pantheon-systems/wp-saml-auth/pull/402/)]
 
 = 2.1.4 (November 27, 2023) =
 * Fix typo in the label for the certificate path [[#352](https://github.com/pantheon-systems/wp-saml-auth/pull/352)]
