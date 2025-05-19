@@ -46,37 +46,35 @@ class AdminLogIn implements Context, SnippetAcceptingContext {
 		$session = $this->minkContext->getSession();
 		$html = $session->getPage()->getContent();
 
-		// Print response for debugging if needed
+		// Print response for debugging
 		$this->minkContext->printLastResponse();
 
-		// Step 1: meta refresh (fallback)
+		// Step 1: Meta refresh
 		if (preg_match('/<meta http-equiv="refresh" content="\d+;url=([^"]+)"/i', $html, $matches)) {
 			$this->minkContext->visit(html_entity_decode($matches[1]));
 			return;
 		}
 
-		// Step 2: window.location
+		// Step 2: JS redirect
 		if (preg_match('/window\.location\s*=\s*"([^"]+)"/i', $html, $matches)) {
 			$this->minkContext->visit(html_entity_decode($matches[1]));
 			return;
 		}
 
-		// Step 3: Detect post-login redirect form with SAMLResponse
+		// Step 3: SAML form postback
 		if (preg_match('/<form[^>]+action="([^"]+saml_acs[^"]*)"[^>]*method="post"[^>]*>.*?<\/form>/is', $html, $formMatch)) {
 			$actionUrl = html_entity_decode($formMatch[1]);
 
-			// Extract all hidden fields from the form
-			preg_match_all('/<input[^>]+type="hidden"[^>]+name="([^"]+)"[^>]+value="([^"]*)"/i', $html, $inputs, PREG_SET_ORDER);
+			// ✅ Updated regex to capture *all* inputs, not just hidden
+			preg_match_all('/<input[^>]+name="([^"]+)"[^>]*value="([^"]*)"?/i', $html, $inputs, PREG_SET_ORDER);
 
 			$formFields = [];
 			foreach ($inputs as $input) {
 				$formFields[$input[1]] = html_entity_decode($input[2]);
 			}
 
-			// Submit the form manually
 			$client = $session->getDriver()->getClient();
 			$client->request('POST', $actionUrl, $formFields);
-
 			return;
 		}
 
