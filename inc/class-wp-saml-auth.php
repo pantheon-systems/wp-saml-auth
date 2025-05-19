@@ -503,9 +503,8 @@ class WP_SAML_Auth {
 			return 'critical';
 		} elseif ( version_compare( $version, $min_version, '<' ) ) {
 			return 'warning';
-		} else {
-			return 'ok';
 		}
+		return 'ok';
 	}
 
 	/**
