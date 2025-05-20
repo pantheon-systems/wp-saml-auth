@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2129
 
 ###
 # Prepare a Pantheon site environment for the Behat test suite, by installing
@@ -36,9 +37,9 @@ BASH_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ###
 # Switch to git mode for pushing the files up
 ###
-terminus connection:set $SITE_ENV git
-rm -rf $PREPARE_DIR
-git clone -b $TERMINUS_ENV $PANTHEON_GIT_URL $PREPARE_DIR
+terminus connection:set "$SITE_ENV" git
+rm -rf "$PREPARE_DIR"
+git clone -b "$TERMINUS_ENV" "$PANTHEON_GIT_URL" "$PREPARE_DIR"
 
 ###
 # Add WP Native PHP Sessions and child theme to environment
@@ -47,8 +48,8 @@ echo "Creating a child theme called $TERMINUS_SITE"
 rm -rf "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"
 # Create a child theme that includes WP SAML Auth configuration details
 mkdir "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"
-cp $"BASH_DIR"/fixtures/functions.simplesaml1.18.0.php  "$PREPARE_DIR"/wp-content/themes/$TERMINUS_SITE/functions.php
-cp $"BASH_DIR"/fixtures/style.css  "$PREPARE_DIR"/wp-content/themes/$TERMINUS_SITE/style.css
+cp "$BASH_DIR"/fixtures/functions.simplesaml1.18.0.php  "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"/functions.php
+cp "$BASH_DIR"/fixtures/style.css  "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"/style.css
 
 echo "Adding WP Native PHP Sessions to the environment"
 rm -rf "$PREPARE_DIR"/wp-content/plugins/wp-native-php-sessions
@@ -77,7 +78,7 @@ mkdir "$PREPARE_DIR"/private
 wget https://github.com/simplesamlphp/simplesamlphp/releases/download/v1.18.4/simplesamlphp-1.18.4.tar.gz -O "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
 tar -zxvf "$PREPARE_DIR"/simplesamlphp-latest.tar.gz -C "$PREPARE_DIR"/private
 ORIG_SIMPLESAMLPHP_DIR=$(ls "$PREPARE_DIR"/private)
-mv "$PREPARE_DIR"/private/$ORIG_SIMPLESAMLPHP_DIR "$PREPARE_DIR"/private/simplesamlphp
+mv "$PREPARE_DIR"/private/"$ORIG_SIMPLESAMLPHP_DIR" "$PREPARE_DIR"/private/simplesamlphp
 rm "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
 
 ###
@@ -89,7 +90,7 @@ rm "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
 echo "// This variable was added by behat-prepare.sh." >>  "$PREPARE_DIR"/private/simplesamlphp/config/authsources.php
 # Silence output so as not to show the password.
 {
-  echo "\$wordpress_admin_password = '"${WORDPRESS_ADMIN_PASSWORD}"';" >> "$PREPARE_DIR"/private/simplesamlphp/config/authsources.php
+  echo "\$wordpress_admin_password = '${WORDPRESS_ADMIN_PASSWORD}';" >> "$PREPARE_DIR"/private/simplesamlphp/config/authsources.php
 } &> /dev/null
 echo "\$wordpress_admin_username = '${WORDPRESS_ADMIN_USERNAME}';" >> "$PREPARE_DIR"/private/simplesamlphp/config/authsources.php
 echo "\$wordpress_admin_email = '${WORDPRESS_ADMIN_EMAIL}';" >> "$PREPARE_DIR"/private/simplesamlphp/config/authsources.php
