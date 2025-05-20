@@ -33,6 +33,12 @@ PANTHEON_GIT_URL=$(terminus connection:info "$SITE_ENV" --field=git_url)
 PANTHEON_SITE_URL="$TERMINUS_ENV-$TERMINUS_SITE.pantheonsite.io"
 PREPARE_DIR="/tmp/$TERMINUS_ENV-$TERMINUS_SITE"
 BASH_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+SIMPLESAMLPHP_DOWNLOAD_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}-full.tar.gz"
+
+# 2.0.0 didn't have the -full suffix.
+if [ "$SIMPLESAMLPHP_VERSION" == '2.0.0' ]; then
+	SIMPLESAMLPHP_DOWNLOAD_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}.tar.gz"
+fi
 
 ###
 # Switch to git mode for pushing the files up
@@ -75,7 +81,7 @@ rm -rf "$PREPARE_DIR"/wp-content/plugins/wp-saml-auth/.git
 echo "Setting up SimpleSAMLphp $SIMPLESAMLPHP_VERSION"
 rm -rf "$PREPARE_DIR"/private
 mkdir "$PREPARE_DIR"/private
-wget "https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}-full.tar.gz" -O "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
+wget $SIMPLESAMLPHP_DOWNLOAD_URL -O "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
 tar -zxvf "$PREPARE_DIR"/simplesamlphp-latest.tar.gz -C "$PREPARE_DIR"/private
 ORIG_SIMPLESAMLPHP_DIR=$(ls "$PREPARE_DIR"/private)
 mv "$PREPARE_DIR"/private/"$ORIG_SIMPLESAMLPHP_DIR" "$PREPARE_DIR"/private/simplesamlphp
