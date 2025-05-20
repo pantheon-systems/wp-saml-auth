@@ -1,0 +1,32 @@
+
+#####################
+# This section of code is added to the bottom of config.php by a testing
+# script for wp-saml-auth
+# These steps come from https://pantheon.io/docs/shibboleth-sso/
+####################
+
+require_once $_SERVER['DOCUMENT_ROOT'] . '/wp-load.php';
+$ps = json_decode($_SERVER['PRESSFLOW_SETTINGS'], TRUE);
+$host = $_SERVER['HTTP_HOST'];
+$drop_id = $ps['conf']['pantheon_binding'];
+$db = $ps['databases']['default']['default'];
+
+$config['secretsalt'] = 'todo';
+$config['auth.adminpassword'] = '@todo';
+$config['technicalcontact_email'] = 'test@example.com';
+
+// @todo, The documentation shows that the database
+// needs to be set as the storage mechanism.
+// So why do tests pass without that?
+// https://pantheon.io/docs/shibboleth-sso/
+$config['baseurlpath'] = 'https://'. $host .'/simplesaml/';
+$config['certdir'] = 'cert/';
+$config['loggingdir'] = 'log/';
+$config['datadir'] = 'data/';
+$config['tempdir'] = '/srv/bindings/'. $drop_id .'/tmp/simplesaml';
+
+$config['store.type'] = 'sql';
+$config['store.sql.dsn'] = 'sqlite:/tmp/sqlitedatabase.sq3';
+
+$config['enable.saml20-idp'] = TRUE;
+$config['enable.shib13-idp'] = TRUE;
