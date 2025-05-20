@@ -124,7 +124,7 @@ jobs:
           echo "========================================================="
           echo ""
           ./bin/behat-test.sh --strict
-          ./bin/behat-cleanup.sh
+          # ./bin/behat-cleanup.sh
   test-phpunit:
     parameters:
       php_version:
