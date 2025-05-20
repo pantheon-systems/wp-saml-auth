@@ -118,10 +118,7 @@ sed -i  -- "s/<button id='submit' class=\"btn\" tabindex=\"6\"/<button class=\"b
 
 cd "$PREPARE_DIR"
 # Make the SimpleSAMLphp installation publicly accessible
-cp -R ./private/simplesamlphp/www ./simplesaml
-cp -R ./private/simplesamlphp/modules ./simplesaml
-cp -R ./private/simplesamlphp/config ./simplesaml
-cp -R ./private/simplesamlphp/metadata ./simplesaml
+ln -s ./private/simplesamlphp/www ./simplesaml
 
 ###
 # Push files to the environment
