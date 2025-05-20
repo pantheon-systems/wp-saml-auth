@@ -121,6 +121,7 @@ jobs:
           echo ""
           echo "========================================================="
           echo "Running Behat on https://${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io/wp-login.php"
+          echo "with SimpleSAMLphp version $SIMPLESAMLPHP_VERSION"
           echo "========================================================="
           echo ""
           ./bin/behat-test.sh --strict
