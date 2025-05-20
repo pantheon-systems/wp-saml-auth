@@ -63,7 +63,7 @@ jobs:
     - image: quay.io/pantheon-public/build-tools-ci:8.x-php8.2
     steps:
     - checkout
-    - restore_cache: # Restore composer's internal cache
+    - restore_cache:
         keys:
           - composer-cache-v1-{{ checksum "composer.lock" }}
           - composer-cache-v1-
@@ -73,7 +73,7 @@ jobs:
     - save_cache: # Save composer's internal cache
         key: composer-cache-v1-{{ checksum "composer.lock" }}
         paths:
-          - ~/.composer/cache # Note: Path adjusted
+          - vendor
     - run: echo $(openssl rand -hex 8) > /tmp/WORDPRESS_ADMIN_PASSWORD
     - run:
         name: Set environment variables
