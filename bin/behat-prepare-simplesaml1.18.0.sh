@@ -95,7 +95,7 @@ echo "// This variable was added by behat-prepare.sh." >>  "$PREPARE_DIR"/privat
 echo "\$wordpress_admin_username = '${WORDPRESS_ADMIN_USERNAME}';" >> "$PREPARE_DIR"/private/simplesamlphp/config/authsources.php
 echo "\$wordpress_admin_email = '${WORDPRESS_ADMIN_EMAIL}';" >> "$PREPARE_DIR"/private/simplesamlphp/config/authsources.php
 cat "$BASH_DIR"/fixtures/authsources.php.additions >> "$PREPARE_DIR"/private/simplesamlphp/config/authsources.php
-cat "$BASH_DIR"/fixtures/config.php.additions      >> "$PREPARE_DIR"/private/simplesamlphp/config/config.php
+cat "$BASH_DIR"/fixtures/config.php.additions >> "$PREPARE_DIR"/private/simplesamlphp/config/config.php
 
 # Copy identify provider configuration files into their appropriate locations
 cp "$BASH_DIR"/fixtures/saml20-idp-hosted.php  "$PREPARE_DIR"/private/simplesamlphp/metadata/saml20-idp-hosted.php
@@ -118,7 +118,10 @@ sed -i  -- "s/<button id='submit' class=\"btn\" tabindex=\"6\"/<button class=\"b
 
 cd "$PREPARE_DIR"
 # Make the SimpleSAMLphp installation publicly accessible
-ln -s ./private/simplesamlphp/www ./simplesaml
+cp -R ./private/simplesamlphp/www ./simplesaml
+cp -R ./private/simplesamlphp/modules ./simplesaml
+cp -R ./private/simplesamlphp/config ./simplesaml
+cp -R ./private/simplesamlphp/metadata ./simplesaml
 
 ###
 # Push files to the environment
