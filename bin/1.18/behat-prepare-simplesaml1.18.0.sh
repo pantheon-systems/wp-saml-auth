@@ -48,8 +48,8 @@ echo "Creating a child theme called $TERMINUS_SITE"
 rm -rf "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"
 # Create a child theme that includes WP SAML Auth configuration details
 mkdir "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"
-cp "$BASH_DIR"/fixtures/functions.simplesaml1.18.0.php  "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"/functions.php
-cp "$BASH_DIR"/fixtures/style.css  "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"/style.css
+cp "$BASH_DIR"/1.18/functions.simplesaml1.18.0.php  "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"/functions.php
+cp "$BASH_DIR"/1.18/style.css  "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"/style.css
 
 echo "Adding WP Native PHP Sessions to the environment"
 rm -rf "$PREPARE_DIR"/wp-content/plugins/wp-native-php-sessions
@@ -94,13 +94,13 @@ echo "// This variable was added by behat-prepare.sh." >>  "$PREPARE_DIR"/privat
 } &> /dev/null
 echo "\$wordpress_admin_username = '${WORDPRESS_ADMIN_USERNAME}';" >> "$PREPARE_DIR"/private/simplesamlphp/config/authsources.php
 echo "\$wordpress_admin_email = '${WORDPRESS_ADMIN_EMAIL}';" >> "$PREPARE_DIR"/private/simplesamlphp/config/authsources.php
-cat "$BASH_DIR"/fixtures/authsources.php.additions >> "$PREPARE_DIR"/private/simplesamlphp/config/authsources.php
-cat "$BASH_DIR"/fixtures/config.php.additions >> "$PREPARE_DIR"/private/simplesamlphp/config/config.php
+cat "$BASH_DIR"/1.18/authsources.php.additions >> "$PREPARE_DIR"/private/simplesamlphp/config/authsources.php
+cat "$BASH_DIR"/1.18/config.php.additions >> "$PREPARE_DIR"/private/simplesamlphp/config/config.php
 
 # Copy identify provider configuration files into their appropriate locations
-cp "$BASH_DIR"/fixtures/saml20-idp-hosted.php  "$PREPARE_DIR"/private/simplesamlphp/metadata/saml20-idp-hosted.php
+cp "$BASH_DIR"/1.18/saml20-idp-hosted.php  "$PREPARE_DIR"/private/simplesamlphp/metadata/saml20-idp-hosted.php
 cp "$BASH_DIR"/fixtures/shib13-idp-hosted.php  "$PREPARE_DIR"/private/simplesamlphp/metadata/shib13-idp-hosted.php
-cp "$BASH_DIR"/fixtures/saml20-sp-remote.php  "$PREPARE_DIR"/private/simplesamlphp/metadata/saml20-sp-remote.php
+cp "$BASH_DIR"/1.18/saml20-sp-remote.php  "$PREPARE_DIR"/private/simplesamlphp/metadata/saml20-sp-remote.php
 cp "$BASH_DIR"/fixtures/shib13-sp-remote.php  "$PREPARE_DIR"/private/simplesamlphp/metadata/shib13-sp-remote.php
 
 # Enable the exampleauth module
@@ -135,7 +135,7 @@ terminus build:workflow:wait "$SITE_ENV"
 ###
 # Copy the Pantheon.yml to switch PHP to 7.4
 ###
-cp "$BASH_DIR"/fixtures/pantheon.php74.yml "$PREPARE_DIR"/pantheon.yml
+cp "$BASH_DIR"/1.18/pantheon.php74.yml "$PREPARE_DIR"/pantheon.yml
 git add pantheon.yml
 git commit -m "Set PHP version to 7.4"
 git push

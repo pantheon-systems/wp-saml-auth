@@ -115,7 +115,7 @@ jobs:
           if [ << parameters.simplesamlphp_version >> != '1.18.0' ]; then
             ./bin/behat-prepare.sh
           else
-            ./bin/behat-prepare-simplesaml1.18.0.sh
+            ./bin/1.18/behat-prepare-simplesaml1.18.0.sh
           fi
 
           echo ""
