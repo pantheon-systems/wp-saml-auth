@@ -143,7 +143,7 @@ terminus build:workflow:wait "$SITE_ENV"
 cp "$BASH_DIR"/pantheon.php74.yml "$PREPARE_DIR"/pantheon.yml
 git add pantheon.yml
 git commit -m "Set PHP version to 7.4"
-git push
+git push || true
 
 ###
 # Set up WordPress, theme, and plugins for the test run
