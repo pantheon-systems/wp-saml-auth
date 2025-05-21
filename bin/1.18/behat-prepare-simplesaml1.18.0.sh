@@ -33,6 +33,7 @@ PANTHEON_GIT_URL=$(terminus connection:info "$SITE_ENV" --field=git_url)
 PANTHEON_SITE_URL="$TERMINUS_ENV-$TERMINUS_SITE.pantheonsite.io"
 PREPARE_DIR="/tmp/$TERMINUS_ENV-$TERMINUS_SITE"
 BASH_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+FIXTURES_DIR="$(dirname "$BASH_DIR")"/fixtures
 
 ###
 # Switch to git mode for pushing the files up
@@ -49,7 +50,7 @@ rm -rf "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"
 # Create a child theme that includes WP SAML Auth configuration details
 mkdir "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"
 cp "$BASH_DIR"/functions.simplesaml1.18.0.php  "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"/functions.php
-cp "$(dirname "$BASH_DIR")"/fixtures/style.css "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"/style.css
+cp "$FIXTURES_DIR"/style.css "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"/style.css
 
 echo "Adding WP Native PHP Sessions to the environment"
 rm -rf "$PREPARE_DIR"/wp-content/plugins/wp-native-php-sessions
@@ -99,9 +100,9 @@ cat "$BASH_DIR"/config.php.additions >> "$PREPARE_DIR"/private/simplesamlphp/con
 
 # Copy identify provider configuration files into their appropriate locations
 cp "$BASH_DIR"/saml20-idp-hosted.php  "$PREPARE_DIR"/private/simplesamlphp/metadata/saml20-idp-hosted.php
-cp "$BASH_DIR"/fixtures/shib13-idp-hosted.php  "$PREPARE_DIR"/private/simplesamlphp/metadata/shib13-idp-hosted.php
+cp "$FIXTURES_DIR"/shib13-idp-hosted.php  "$PREPARE_DIR"/private/simplesamlphp/metadata/shib13-idp-hosted.php
 cp "$BASH_DIR"/saml20-sp-remote.php  "$PREPARE_DIR"/private/simplesamlphp/metadata/saml20-sp-remote.php
-cp "$BASH_DIR"/fixtures/shib13-sp-remote.php  "$PREPARE_DIR"/private/simplesamlphp/metadata/shib13-sp-remote.php
+cp "$FIXTURES_DIR"/shib13-sp-remote.php  "$PREPARE_DIR"/private/simplesamlphp/metadata/shib13-sp-remote.php
 
 # Enable the exampleauth module
 touch "$PREPARE_DIR"/private/simplesamlphp/modules/exampleauth/enable
