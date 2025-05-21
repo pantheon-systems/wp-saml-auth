@@ -64,7 +64,7 @@ rm "$PREPARE_DIR"/wp-native-php-sessions.zip
 # Add the copy of this plugin itself to the environment
 ###
 echo "Copying WP SAML Auth into WordPress"
-cd "$FIXTURES_DIR"/../..
+cd "$BASH_DIR"/../..
 rsync -av \
 	--exclude='node_modules/' \
 	--exclude='simplesamlphp/' \
