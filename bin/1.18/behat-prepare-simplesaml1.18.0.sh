@@ -49,7 +49,7 @@ rm -rf "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"
 # Create a child theme that includes WP SAML Auth configuration details
 mkdir "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"
 cp "$BASH_DIR"/functions.simplesaml1.18.0.php  "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"/functions.php
-cp "$BASH_DIR"/style.css  "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"/style.css
+cp "$BASH_DIR"/../style.css  "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"/style.css
 
 echo "Adding WP Native PHP Sessions to the environment"
 rm -rf "$PREPARE_DIR"/wp-content/plugins/wp-native-php-sessions
