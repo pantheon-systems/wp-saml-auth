@@ -72,9 +72,10 @@ rsync -av \
 	--exclude='.git' \
 	./* "$PREPARE_DIR"/wp-content/plugins/wp-saml-auth
 
+WORKING_DIR="/home/tester/pantheon-systems/wp-saml-auth"
 # Check that the CIRCLE_WORKING _DIRECTORY exists
-if [ ! -d "$CIRCLE_WORKING_DIRECTORY" ]; then
-	echo "CIRCLE_WORKING_DIRECTORY ($CIRCLE_WORKING_DIRECTORY) does not exist"
+if [ ! -d "$WORKING_DIR" ]; then
+	echo "WORKING_DIR ($WORKING_DIR) does not exist"
 	exit 1
 fi
 
@@ -84,27 +85,27 @@ if [ ! -f "$BASH_DIR"/1-adminnotice.feature ]; then
 	exit 1
 fi
 
-# Check that $CIRCLE_WORKING_DIRECTORY/tests exists
-if [ ! -d "$CIRCLE_WORKING_DIRECTORY/tests" ]; then
-	echo "$CIRCLE_WORKING_DIRECTORY/tests does not exist"
+# Check that $WORKING_DIR/tests exists
+if [ ! -d "$WORKING_DIR/tests" ]; then
+	echo "$WORKING_DIR/tests does not exist"
 	exit 1
 fi
 
-# Check that $CIRCLE_WORKING_DIRECTORY/tests contains a behat directory
-if [ ! -d "$CIRCLE_WORKING_DIRECTORY/tests/behat" ]; then
-	echo "$CIRCLE_WORKING_DIRECTORY/tests/behat does not exist"
+# Check that $WORKING_DIR/tests contains a behat directory
+if [ ! -d "$WORKING_DIR/tests/behat" ]; then
+	echo "$WORKING_DIR/tests/behat does not exist"
 	exit 1
 fi
 
-# Check that $CIRCLE_WORKING_DIRECTORY/tests/behat contains 0-login.feature
-if [ ! -f "$CIRCLE_WORKING_DIRECTORY/tests/behat/0-login.feature" ]; then
-	echo "$CIRCLE_WORKING_DIRECTORY/tests/behat/0-login.feature does not exist"
+# Check that $WORKING_DIR/tests/behat contains 0-login.feature
+if [ ! -f "$WORKING_DIR/tests/behat/0-login.feature" ]; then
+	echo "$WORKING_DIR/tests/behat/0-login.feature does not exist"
 	exit 1
 fi
 
 # If we got through all that stuff, we should be good to copy the file now.
-echo "Copying 1-adminnotice.feature to local Behat tests directory (${CIRCLE_WORKING_DIRECTORY}/tests/behat/)"
-cp "$BASH_DIR"/1-adminnotice.feature "$CIRCLE_WORKING_DIRECTORY"/tests/behat/
+echo "Copying 1-adminnotice.feature to local Behat tests directory (${WORKING_DIR}/tests/behat/)"
+cp "$BASH_DIR"/1-adminnotice.feature "$WORKING_DIR"/tests/behat/
 
 ###
 # Add SimpleSAMLphp to the environment
