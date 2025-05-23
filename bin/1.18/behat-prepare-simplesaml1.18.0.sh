@@ -72,7 +72,7 @@ rsync -av \
 	--exclude='.git' \
 	./* "$PREPARE_DIR"/wp-content/plugins/wp-saml-auth
 
-PROJECT_ROOT="~/project"
+PROJECT_ROOT="/home/tester"
 echo "Copying 1-adminnotice.feature to local Behat tests directory (${PROJECT_ROOT}/tests/behat/)"
 # $BASH_DIR is the absolute path to bin/1.18/
 # PROJECT_ROOT is derived as two levels up from BASH_DIR
