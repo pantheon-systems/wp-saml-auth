@@ -72,8 +72,11 @@ rsync -av \
 	--exclude='.git' \
 	./* "$PREPARE_DIR"/wp-content/plugins/wp-saml-auth
 
-echo "Copying 1-adminnotice.feature to Behat tests directory ($PREPARE_DIR/tests/behat/)"
-cp "$BASH_DIR"/1-adminnotice.feature "$PREPARE_DIR"/tests/behat/
+PROJECT_ROOT="~/project"
+echo "Copying 1-adminnotice.feature to local Behat tests directory (${PROJECT_ROOT}/tests/behat/)"
+# $BASH_DIR is the absolute path to bin/1.18/
+# PROJECT_ROOT is derived as two levels up from BASH_DIR
+cp "$BASH_DIR"/1-adminnotice.feature "$PROJECT_ROOT"/tests/behat/
 
 ###
 # Add SimpleSAMLphp to the environment
