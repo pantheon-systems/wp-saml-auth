@@ -9,6 +9,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - uses: pantheon-systems/validate-readme-spacing@v1
+  phpcompatibility:
+      uses: pantheon-systems/phpcompatibility-action@issue-8
+      with:
+        test-versions: 7.4-
+        paths: ${{ github.workspace }}/src
+        extensions: 'php,inc'
   wporg-validation:
     name: WP.org Validator
     runs-on: ubuntu-latest
