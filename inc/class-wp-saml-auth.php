@@ -437,51 +437,103 @@ class WP_SAML_Auth {
 	}
 
 	/**
-	 * Get the installed SimpleSAMLphp version
+	 * Get the installed SimpleSAMLphp version.
+	 * Attempts to find SimpleSAMLphp first via the configured option,
+	 * then by checking common installation paths.
 	 *
-	 * @return string|false Version string if found, false if not found
+	 * @return string|false Version string if found, false if not found.
 	 */
 	public function get_simplesamlphp_version() {
-		$simplesamlphp_path = self::get_option( 'simplesamlphp_autoload' );
-		if ( ! $simplesamlphp_path || ! file_exists( $simplesamlphp_path ) ) {
-			return false;
-		}
+		$potential_ssp_base_dirs = [];
+		$simplesamlphp_autoloader_from_option = self::get_option( 'simplesamlphp_autoload' );
 
-		// Try to get SimpleSAMLphp version from the SimpleSAML\Configuration class.
-		if ( class_exists( 'SimpleSAML\Configuratin' ) ) {
-			$simple_saml_config = \SimpleSAML\Configuration::getInstance();
-			if ( method_exists( $simple_saml_config, 'getVersion' ) ) {
-				return $simple_saml_config->getVersion();
+		// 1. Check the configured 'simplesamlphp_autoload' path first.
+		if ( ! empty( $simplesamlphp_autoloader_from_option ) && file_exists( $simplesamlphp_autoloader_from_option ) ) {
+			@include_once $simplesamlphp_autoloader_from_option;
+			$base_dir_from_option = dirname( dirname( $simplesamlphp_autoloader_from_option ) );
+			if ( is_dir( $base_dir_from_option ) ) {
+				$potential_ssp_base_dirs[] = rtrim($base_dir_from_option, '/\\');
 			}
 		}
 
-		// Try to get version from composer.json.
-		$composer_path = dirname( dirname( $simplesamlphp_path ) ) . '/composer.json';
-		if ( file_exists( $composer_path ) ) {
-			$composer_data = json_decode( file_get_contents( $composer_path ), true );
-			if ( isset( $composer_data['version'] ) ) {
-				return $composer_data['version'];
+		// 2. Add common guessed base paths. These are checked regardless of the option.
+		$guessed_base_paths = [
+			ABSPATH . 'private/simplesamlphp',
+			ABSPATH . 'simplesamlphp',
+		];
+
+		foreach ( $guessed_base_paths as $guessed_base ) {
+			$trimmed_guessed_base = rtrim($guessed_base, '/\\');
+			if ( is_dir( $trimmed_guessed_base ) ) {
+				$potential_ssp_base_dirs[] = $trimmed_guessed_base;
+				// If an autoloader exists in a guessed path, try to include it.
+				$guessed_autoloader = $trimmed_guessed_base . '/lib/_autoload.php';
+				if ( file_exists( $guessed_autoloader ) ) {
+					@include_once $guessed_autoloader;
+				}
 			}
 		}
 
-		// Try to get version from VERSION file.
-		$version_path = dirname( dirname( $simplesamlphp_path ) ) . '/VERSION';
-		if ( file_exists( $version_path ) ) {
-			$version = trim( file_get_contents( $version_path ) );
-			if ( ! empty( $version ) ) {
-				return $version;
-			}
+		$potential_ssp_base_dirs = array_unique( array_filter( $potential_ssp_base_dirs, 'is_string' ) );
+
+		// 3. Try to get version from SimpleSAML\Configuration or SimpleSAML_Configuration class.
+		if ( class_exists( 'SimpleSAML\Configuration' ) ) { // Corrected typo
+			try {
+				$simple_saml_config = \SimpleSAML\Configuration::getInstance();
+				if ( method_exists( $simple_saml_config, 'getVersion' ) ) {
+					$ssp_version = $simple_saml_config->getVersion();
+					if ( ! empty( $ssp_version ) && is_string( $ssp_version ) ) {
+						return $ssp_version;
+					}
+				}
+			} catch ( \Exception $e ) { /* Ignore */ }
 		}
 
-		// Try to get version from config/version.php.
-		$version_php_path = dirname( dirname( $simplesamlphp_path ) ) . '/config/version.php';
-		if ( file_exists( $version_php_path ) ) {
-			$version_data = include $version_php_path;
-			if ( isset( $version_data['version'] ) ) {
-				return $version_data['version'];
-			}
+		if ( class_exists( 'SimpleSAML_Configuration' ) ) {
+			try {
+				if ( is_callable( [ 'SimpleSAML_Configuration', 'getConfig' ] ) ) {
+					$simple_saml_config_obj = \SimpleSAML_Configuration::getConfig();
+					if ( is_object( $simple_saml_config_obj ) && method_exists( $simple_saml_config_obj, 'getVersion' ) ) {
+						$ssp_version = $simple_saml_config_obj->getVersion();
+						if ( ! empty( $ssp_version ) && is_string( $ssp_version ) ) {
+							return $ssp_version;
+						}
+					}
+				}
+			} catch ( \Exception $e ) { /* Ignore */ }
 		}
 
+		// 4. Iterate through each potential base directory and check for version files.
+		foreach ( $potential_ssp_base_dirs as $base_dir ) {
+			if ( ! is_dir( $base_dir ) ) { continue; }
+
+			$composer_path = $base_dir . '/composer.json';
+			if ( file_exists( $composer_path ) ) {
+				$composer_data_json = @file_get_contents( $composer_path );
+				if ( $composer_data_json ) {
+					$composer_data = json_decode( $composer_data_json, true );
+					if ( is_array( $composer_data ) && isset( $composer_data['version'] ) && ! empty( $composer_data['version'] ) && is_string( $composer_data['version'] ) ) {
+						return $composer_data['version'];
+					}
+				}
+			}
+
+			$version_file_path = $base_dir . '/VERSION';
+			if ( file_exists( $version_file_path ) ) {
+				$version_str = trim( @file_get_contents( $version_file_path ) );
+				if ( ! empty( $version_str ) && is_string( $version_str ) ) {
+					return $version_str;
+				}
+			}
+
+			$version_php_path = $base_dir . '/config/version.php';
+			if ( file_exists( $version_php_path ) ) {
+				$version_data = include $version_php_path;
+				if ( is_array( $version_data ) && isset( $version_data['version'] ) && ! empty( $version_data['version'] ) && is_string( $version_data['version'] ) ) {
+					return $version_data['version'];
+				}
+			}
+		}
 		return false;
 	}
 
@@ -514,60 +566,122 @@ class WP_SAML_Auth {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
-		if ( ! empty( $_GET['page'] )
-			&& 'wp-saml-auth-settings' === $_GET['page'] ) {
-			return;
-		}
-		$connection_type = self::get_option( 'connection_type' );
+
+		$simplesamlphp_version = $this->get_simplesamlphp_version();
+		$simplesamlphp_version_status = $this->check_simplesamlphp_version( $simplesamlphp_version );
+		$plugin_page = 'https://wordpress.org/plugins/wp-saml-auth';
+
+		// Using 'internal' (default) connection type.
 		if ( 'internal' === $connection_type ) {
 			if ( file_exists( WP_SAML_AUTH_AUTOLOADER ) ) {
 				require_once WP_SAML_AUTH_AUTOLOADER;
 			}
+			// If the OneLogin class does not exist, OneLogin SAML didn't load properly.
 			if ( ! class_exists( 'OneLogin\Saml2\Auth' ) ) {
-				// Translators: Links to the WP SAML Auth plugin.
-				echo '<div class="message error"><p>' . wp_kses_post( sprintf( __( "WP SAML Auth wasn't able to find the <code>OneLogin\Saml2\Auth</code> class. Please verify your Composer autoloader, or <a href='%s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ), 'https://wordpress.org/plugins/wp-saml-auth/' ) ) . '</p></div>';
+				wp_admin_notice(
+					sprintf(
+						// Translators: Links to the WP SAML Auth plugin.
+						__( "WP SAML Auth wasn't able to find the <code>OneLogin\Saml2\Auth</code> class. Please verify your Composer autoloader, or <a href='%s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ),
+						'https://wordpress.org/plugins/wp-saml-auth/'
+					),
+					[
+						'type' => 'error',
+						'dismissible' => true,
+						'attributes' => [
+							'data-slug' => 'wp-saml-auth',
+							'data-type' => 'onelogin-not-found',
+						],
+					]
+				);
 			}
-		} else {
-			$simplesamlphp_path = self::get_option( 'simplesamlphp_autoload' );
-			if ( file_exists( $simplesamlphp_path ) ) {
-				require_once $simplesamlphp_path;
-			}
-			if ( class_exists( 'SimpleSAML\Auth\Simple' ) ) {
-				$this->simplesamlphp_class = 'SimpleSAML\Auth\Simple';
-			}
-			if ( ! class_exists( $this->simplesamlphp_class ) ) {
-				echo '<div class="message error"><p>' . wp_kses_post( sprintf( __( "WP SAML Auth wasn't able to find the <code>%1\$s</code> class. Please check the <code>simplesamlphp_autoload</code> configuration option, or <a href='%2\$s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ), $this->simplesamlphp_class, 'https://wordpress.org/plugins/wp-saml-auth/' ) ) . '</p></div>';
-			} else {
-				// Check SimpleSAMLphp version.
-				$version = $this->get_simplesamlphp_version();
-				$version_status = $this->check_simplesamlphp_version( $version );
+			return;
+		}
 
-				if ( 'critical' === $version_status ) {
-					$min_version = self::get_option( 'critical_simplesamlphp_version' );
-					echo '<div class="notice notice-error"><p>' . wp_kses_post( sprintf(
+		// If we have a SimpleSAMLphp version but the connection type is set, we haven't set up SimpleSAMLphp correctly.
+		if ( ! $simplesamlphp_version && $connection_type === 'simplesaml' ) {
+			// Only show this notice if we're on the settings page.
+			if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'wp-saml-auth-settings' ) {
+				return;
+			}
+			wp_admin_notice(
+				sprintf(
+					// Translators: %s is the link to the plugin page.
+					__( 'SimpleSAMLphp is defined as the SAML connection type, but the SimpleSAMLphp library was not found.Visit the <a href="%s">plugin page</a> for more information', 'wp-saml-auth' ),
+					$plugin_page
+				),
+				[
+					'type' => 'error',
+					'dismissible' => true,
+					'attributes' => [
+						'data-slug' => 'wp-saml-auth',
+						'data-type' => 'simplesamlphp-not-found',
+					],
+				]
+			);
+			return;
+		}
+
+		// Check SimpleSAMLphp version.
+		if ( $simplesamlphp_version !== false ) {
+			if ( 'critical' === $simplesamlphp_version_status ) {
+				$min_version = self::get_option( 'critical_simplesamlphp_version' );
+				wp_admin_notice(
+					sprintf(
 						// Translators: 1 is the installed version of SimpleSAMLphp, 2 is the minimum version and 3 is the most secure version.
-						__( '<strong>Security Alert:</strong> Your SimpleSAMLphp version (%1$s) has a critical security vulnerability (CVE-2023-26881). Please update to version %2$s or later. <a href="%3$s">Learn more</a>.', 'wp-saml-auth' ),
-						esc_html( $version ),
+						__( '<strong>Security Alert:</strong> The SimpleSAMLphp version used by the WP SAML Auth plugin (%1$s) has a critical security vulnerability (CVE-2023-26881). Please update to version %2$s or later. <a href="%3$s">Learn more</a>.', 'wp-saml-auth' ),
+						esc_html( $simplesamlphp_version ),
 						esc_html( $min_version ),
 						esc_url( admin_url( 'options-general.php?page=wp-saml-auth-settings' ) )
-					) ) . '</p></div>';
-				} elseif ( 'warning' === $version_status ) {
-					$min_version = self::get_option( 'min_simplesamlphp_version' );
-					echo '<div class="notice notice-warning"><p>' . wp_kses_post( sprintf(
+					),
+					[
+						'type' => 'error',
+						'dismissible' => false,
+						'attributes' => [
+							'data-slug' => 'wp-saml-auth',
+							'data-type' => 'simplesamlphp-critical-vulnerability',
+						],
+					]
+				);
+			} elseif ( 'warning' === $simplesamlphp_version_status ) {
+				$min_version = self::get_option( 'min_simplesamlphp_version' );
+				wp_admin_notice(
+					sprintf(
 						// Translators: 1 is the installed version of SimpleSAMLphp, 2 is the minimum version and 3 is the most secure version.
-						__( '<strong>Security Recommendation:</strong> Your SimpleSAMLphp version (%1$s) is older than the recommended secure version. Please consider updating to version %2$s or later. <a href="%3$s">Learn more</a>.', 'wp-saml-auth' ),
-						esc_html( $version ),
+						__( '<strong>Security Recommendation:</strong> The  SimpleSAMLphp version used by the WP SAML Auth plugin (%1$s) is older than the recommended secure version. Please consider updating to version %2$s or later. <a href="%3$s">Learn more</a>.', 'wp-saml-auth' ),
+						esc_html( $simplesamlphp_version ),
 						esc_html( $min_version ),
 						esc_url( admin_url( 'options-general.php?page=wp-saml-auth-settings' ) )
-					) ) . '</p></div>';
-				} elseif ( 'unknown' === $version_status ) {
-					echo '<div class="notice notice-warning"><p>' . wp_kses_post( sprintf(
+					),
+					[
+						'type' => 'warning',
+						'dismissible' => true,
+						'attributes' => [
+							'data-slug' => 'wp-saml-auth',
+							'data-type' => 'simplesamlphp-version-warning',
+						],
+					]
+				);
+			} elseif ( 'unknown' === $simplesamlphp_version_status ) {
+				// Only show this notice if we're on the settings page.
+				if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'wp-saml-auth-settings' ) {
+					return;
+				}
+				wp_admin_notice(
+					sprintf(
 						// Translators: 1 is the minimum recommended version of SimpleSAMLphp. 2 is a link to the WP SAML Auth settings page.
-						__( '<strong>Warning:</strong> Unable to determine your SimpleSAMLphp version. Please ensure you are using version %1$s or later for security. <a href="%2$s">Learn more</a>.', 'wp-saml-auth' ),
+						__( '<strong>Warning:</strong> WP SAML Auth was unable to determine your SimpleSAMLphp version. Please ensure you are using version %1$s or later for security. <a href="%2$s">Learn more</a>.', 'wp-saml-auth' ),
 						esc_html( self::get_option( 'min_simplesamlphp_version' ) ),
 						esc_url( admin_url( 'options-general.php?page=wp-saml-auth-settings' ) )
-					) ) . '</p></div>';
-				}
+					),
+					[
+						'type' => 'warning',
+						'dismissible' => true,
+						'attributes' => [
+							'data-slug' => 'wp-saml-auth',
+							'data-type' => 'simplesamlphp-version-unknown',
+						],
+					]
+				);
 			}
 		}
 	}
