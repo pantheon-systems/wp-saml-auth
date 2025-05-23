@@ -452,7 +452,7 @@ class WP_SAML_Auth {
 			@include_once $simplesamlphp_autoloader_from_option;
 			$base_dir_from_option = dirname( dirname( $simplesamlphp_autoloader_from_option ) );
 			if ( is_dir( $base_dir_from_option ) ) {
-				$potential_ssp_base_dirs[] = rtrim($base_dir_from_option, '/\\');
+				$potential_ssp_base_dirs[] = rtrim( $base_dir_from_option, '/\\' );
 			}
 		}
 
@@ -463,7 +463,7 @@ class WP_SAML_Auth {
 		];
 
 		foreach ( $guessed_base_paths as $guessed_base ) {
-			$trimmed_guessed_base = rtrim($guessed_base, '/\\');
+			$trimmed_guessed_base = rtrim( $guessed_base, '/\\' );
 			if ( is_dir( $trimmed_guessed_base ) ) {
 				$potential_ssp_base_dirs[] = $trimmed_guessed_base;
 				// If an autoloader exists in a guessed path, try to include it.
@@ -486,7 +486,8 @@ class WP_SAML_Auth {
 						return $ssp_version;
 					}
 				}
-			} catch ( \Exception $e ) { /* Ignore */ }
+			} catch ( \Exception $e ) {
+				/* Ignore */ }
 		}
 
 		if ( class_exists( 'SimpleSAML_Configuration' ) ) {
@@ -500,12 +501,14 @@ class WP_SAML_Auth {
 						}
 					}
 				}
-			} catch ( \Exception $e ) { /* Ignore */ }
+			} catch ( \Exception $e ) {
+				/* Ignore */ }
 		}
 
 		// 4. Iterate through each potential base directory and check for version files.
 		foreach ( $potential_ssp_base_dirs as $base_dir ) {
-			if ( ! is_dir( $base_dir ) ) { continue; }
+			if ( ! is_dir( $base_dir ) ) {
+				continue; }
 
 			$composer_path = $base_dir . '/composer.json';
 			if ( file_exists( $composer_path ) ) {
