@@ -10,6 +10,11 @@ jobs:
         uses: actions/checkout@v3
       - uses: pantheon-systems/validate-readme-spacing@v1
   phpcompatibility:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: PHP Compatibility
       uses: pantheon-systems/phpcompatibility-action@issue-8
       with:
         test-versions: 7.4-
