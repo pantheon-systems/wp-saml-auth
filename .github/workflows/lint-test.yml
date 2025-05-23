@@ -18,7 +18,6 @@ jobs:
       uses: pantheon-systems/phpcompatibility-action@issue-8
       with:
         test-versions: 7.4-
-        paths: ${{ github.workspace }}/src
         extensions: 'php,inc'
   wporg-validation:
     name: WP.org Validator
