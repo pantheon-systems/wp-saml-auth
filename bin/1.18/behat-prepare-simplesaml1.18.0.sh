@@ -72,6 +72,9 @@ rsync -av \
 	--exclude='.git' \
 	./* "$PREPARE_DIR"/wp-content/plugins/wp-saml-auth
 
+echo "Copying 1-adminnotice.feature to Behat tests directory ($PREPARE_DIR/tests/behat/)"
+cp "$BASH_DIR"/1-adminnotice.feature "$PREPARE_DIR"/tests/behat/
+
 ###
 # Add SimpleSAMLphp to the environment
 # SimpleSAMLphp is installed to ~/code/private, and then symlinked into the
