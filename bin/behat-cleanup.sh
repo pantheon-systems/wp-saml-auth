@@ -34,15 +34,15 @@ ENV_LIST_TSV=$(terminus env:list "$TERMINUS_SITE" --fields=id,created --format=t
 if [ -z "$ENV_LIST_TSV" ]; then
   echo "Warning: Failed to retrieve environment list or no environments found. Skipping cleanup of old 'ci-' environments."
 else
-  # Get the IDs of the 5 oldest 'ci-' environments
+  # Get the IDs of the 10 oldest 'ci-' environments
   # 1. Filter for lines where the first column (id) starts with "ci-"
   # 2. Sort by the second column (created date)
-  # 3. Take the top 5
+  # 3. Take the top 10
   # 4. Extract the first column (id)
   OLDEST_CI_ENVS=$(echo "$ENV_LIST_TSV" | \
     grep '^ci-' | \
     sort -k2,2 | \
-    head -n 5 | \
+    head -n 10 | \
     awk '{print $1}')
 
   if [ -z "$OLDEST_CI_ENVS" ]; then
