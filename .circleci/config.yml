@@ -10,9 +10,6 @@ workflows:
           name: "Test with SimpleSAMLphp 2.0.0"
           simplesamlphp_version: "2.0.0"
       - test-behat:
-          name: "Test with SimpleSAMLphp 2.3.7"
-          simplesamlphp_version: "2.3.7"
-      - test-behat:
           name: "Test with SimpleSAMLphp 2.4.0"
           simplesamlphp_version: "2.4.0"
       - test-phpunit:
@@ -43,9 +40,6 @@ workflows:
           name: "Test with SimpleSAMLphp 2.0.0"
           simplesamlphp_version: "2.0.0"
       - test-behat:
-          name: "Test with SimpleSAMLphp 2.3.7"
-          simplesamlphp_version: "2.3.7"
-      - test-behat:
           name: "Test with SimpleSAMLphp 2.4.0"
           simplesamlphp_version: "2.4.0"
 jobs:
@@ -56,7 +50,6 @@ jobs:
         enum:
           - "1.18.0"
           - "2.0.0"
-          - "2.3.7"
           - "2.4.0"
     working_directory: ~/pantheon-systems/wp-saml-auth
     docker:
