@@ -82,9 +82,9 @@ if [ $SIMPLESAMLPHP_VERSION == '2.0.0' ]; then
 		exit 1
 	fi
 
-	# Check that "$BASH_DIR"/1-adminnotice.feature exists.
-	if [ ! -f "$BASH_DIR"/1-adminnotice.feature ]; then
-		echo "\"$BASH_DIR/1-adminnotice.feature\" does not exist"
+	# Check that "$BEHAT_PATH"/1-adminnotice.feature exists.
+	if [ ! -f "$BASH_DIR"/fixtures/1-adminnotice.feature ]; then
+		echo "$BASH_DIR/fixtures/1-adminnotice.feature does not exist"
 		exit 1
 	fi
 
@@ -108,7 +108,7 @@ if [ $SIMPLESAMLPHP_VERSION == '2.0.0' ]; then
 
 	# If we got through all that stuff, we should be good to copy the file now.
 	echo "Copying 1-adminnotice.feature to local Behat tests directory (${WORKING_DIR}/tests/behat/)"
-	cp "$BASH_DIR"/1-adminnotice.feature "$WORKING_DIR"/tests/behat/
+	cp "$BASH_DIR"/fixtures/1-adminnotice.feature "$WORKING_DIR"/tests/behat/
 fi
 
 ###
