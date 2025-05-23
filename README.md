@@ -1,7 +1,7 @@
 # WP SAML Auth #
 **Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [outlandish-josh](https://profiles.wordpress.org/outlandish-josh/), [jazzs3quence](https://profiles.wordpress.org/jazzs3quence/), [lcatlett](https://profiles.wordpress.org/lcatlett/)  
 **Tags:** authentication, SAML  
-**Requires at least:** 4.4  
+**Requires at least:** 6.4  
 **Tested up to:** 6.8.1  
 **Requires PHP:** 7.3  
 **Stable tag:** 2.2.0-dev  
@@ -286,6 +286,11 @@ There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Nati
 
 ### 2.0.0 ###
 Minimum supported PHP version is 7.3.
+
+### 2.2.0 ###
+WP SAML Auth 2.2.0 requires WordPress version 6.4 or later.
+
+SimpleSAMLphp recommended version is 2.3.7 or later for `simplesamlphp` SAML authentication type. With "Enforce Security Requirements" enabled, SimpleSAMLphp versions below 2.0.0 will be blocked. 2.0.0 or later is required to fix CVE-2023-26881 (XML signature validation bypass vulnerability).
 
 ## Changelog ##
 
