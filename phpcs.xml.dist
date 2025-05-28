@@ -27,6 +27,11 @@
 		<exclude name="WordPressVIPMinimum.Performance.FetchingRemoteData.FileGetContentsUnknown">
 			<file>*/inc/class-wp-saml-auth.php</file>
 		</exclude>
+
+		<!-- Ignore flagging for debugging code for error_logs -->
+		<exclude name="WordPress.PHP.DevelopmentFunctions.error_log_error_log">
+			<file>*/inc/class-wp-saml-auth.php</file>
+		</exclude>
 	</rule>
 	<rule ref="WordPress-Docs" />
 	<rule ref="PHPCompatibility"/>

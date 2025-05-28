@@ -494,7 +494,7 @@ class WP_SAML_Auth {
 			}
 		}
 
-		// Second, try getInstance()->getVersion() for SimpleSAML\Configuration.
+		// Second, try getVersion for SimpleSAML\Configuration.
 		if ( class_exists( 'SimpleSAML\Configuration' ) ) {
 			try {
 				$simple_saml_config = \SimpleSAML\Configuration::getInstance();
@@ -539,7 +539,7 @@ class WP_SAML_Auth {
 
 			$composer_path = $base_dir . '/composer.json';
 			if ( file_exists( $composer_path ) ) {
-				$composer_data_json = @file_get_contents( $composer_path );
+				$composer_data_json = file_get_contents( $composer_path );
 				if ( $composer_data_json ) {
 					$composer_data = json_decode( $composer_data_json, true );
 					if ( is_array( $composer_data ) && isset( $composer_data['version'] ) && ! empty( $composer_data['version'] ) && is_string( $composer_data['version'] ) ) {
@@ -550,7 +550,7 @@ class WP_SAML_Auth {
 
 			$version_file_path = $base_dir . '/VERSION';
 			if ( file_exists( $version_file_path ) ) {
-				$version_str = trim( @file_get_contents( $version_file_path ) );
+				$version_str = trim( file_get_contents( $version_file_path ) );
 				if ( ! empty( $version_str ) && is_string( $version_str ) ) {
 					return $version_str;
 				}
