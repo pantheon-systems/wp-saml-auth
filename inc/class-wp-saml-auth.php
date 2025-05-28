@@ -437,23 +437,24 @@ class WP_SAML_Auth {
 	}
 
 	/**
-	 * Get the installed SimpleSAMLphp version.
-	 * Attempts to find SimpleSAMLphp first via the configured option,
-	 * then by checking common installation paths.
+	 * Retrieves the path to the SimpleSAMLphp autoloader file.
 	 *
-	 * @return string|false Version string if found, false if not found.
+	 * This method attempts to determine the correct path to the SimpleSAMLphp autoloader
+	 * by checking the following, in order:
+	 *   1. The path configured via the 'simplesamlphp_autoload' option, if set and exists.
+	 *   2. A set of default paths, which can be filtered via 'wp_saml_auth_simplesamlphp_path_array'.
+	 *      For each path, it checks if the directory exists and contains 'lib/_autoload.php'.
+	 *   3. If no valid path is found, it returns the result of the 'wp_saml_auth_ssp_autoloader' filter,
+	 *      which defaults to an empty string.
+	 *
+	 * @return string The path to the SimpleSAMLphp autoloader file, or an empty string if not found.
 	 */
-	public function get_simplesamlphp_version() {
-		$potential_ssp_base_dirs = [];
+	public function get_simplesamlphp_autoloader() {
 		$simplesamlphp_autoloader_from_option = self::get_option( 'simplesamlphp_autoload' );
 
 		// Check the configured 'simplesamlphp_autoload' path first.
 		if ( ! empty( $simplesamlphp_autoloader_from_option ) && file_exists( $simplesamlphp_autoloader_from_option ) ) {
-			include_once $simplesamlphp_autoloader_from_option;
-			$base_dir_from_option = dirname( dirname( $simplesamlphp_autoloader_from_option ) );
-			if ( is_dir( $base_dir_from_option ) ) {
-				$potential_ssp_base_dirs[] = rtrim( $base_dir_from_option, '/\\' );
-			}
+			return $simplesamlphp_autoloader_from_option;
 		}
 
 		/**
@@ -472,16 +473,47 @@ class WP_SAML_Auth {
 			$trimmed_base = rtrim( $base_path, '/\\' );
 
 			if ( is_dir( $trimmed_base ) ) {
-				$potential_ssp_base_dirs[] = $trimmed_base;
 				// If an autoloader exists in a guessed path, try to include it.
 				$ssp_autoloader = $trimmed_base . '/lib/_autoload.php';
 				if ( file_exists( $ssp_autoloader ) ) {
-					include_once $ssp_autoloader;
+					return $ssp_autoloader;
 				}
 			}
 		}
 
-		$potential_ssp_base_dirs = array_unique( array_filter( $potential_ssp_base_dirs, 'is_string' ) );
+		/**
+		 * Define a path to SimpleSAMLphp autoloader file.
+		 *
+		 * @param string $ssp_autoloader The path to the SimpleSAMLphp autoloader file.
+		 */
+		return apply_filters( 'wp_saml_auth_ssp_autoloader', '' );
+	}
+
+	/**
+	 * Get the installed SimpleSAMLphp version.
+	 * Attempts to find SimpleSAMLphp first via the configured option,
+	 * then by checking common installation paths.
+	 *
+	 * @return string|false Version string if found, false if not found.
+	 */
+	public function get_simplesamlphp_version() {
+		$simplesamlphp_autoloader = $this->get_simplesamlphp_autoloader();
+		$base_dir = rtrim( preg_replace( '#/lib/?$#', '', dirname( $simplesamlphp_autoloader ) ), '/\\' );
+
+		try {
+			if ( file_exists( $simplesamlphp_autoloader ) ) {
+				include_once $simplesamlphp_autoloader;
+			}
+		} catch ( \Exception $e ) {
+			// Log an error to the debug log.
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( sprintf(
+					// Translators: %s is the error message returned from the exception.
+					__( 'SimpleSAMLphp autoloader not found. Error: %s', 'wp-saml-auth' ),
+					$e->getMessage()
+				) );
+			}
+		}
 
 		/**
 		 * Try to get version from SimpleSAML\Configuration (SSP 2.0+).
