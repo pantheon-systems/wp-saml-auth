@@ -141,6 +141,8 @@ jobs:
       - image: quay.io/pantheon-public/build-tools-ci:8.x-php8.2
     working_directory: ~/pantheon-systems/wp-saml-auth
     steps:
+      - attach_workspace:
+        at: /tmp/behat-envs
       - checkout
       - run:
           name: Set environment variables
