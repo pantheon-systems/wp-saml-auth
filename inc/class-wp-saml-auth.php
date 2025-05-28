@@ -447,7 +447,7 @@ class WP_SAML_Auth {
 		$potential_ssp_base_dirs = [];
 		$simplesamlphp_autoloader_from_option = self::get_option( 'simplesamlphp_autoload' );
 
-		// 1. Check the configured 'simplesamlphp_autoload' path first.
+		// Check the configured 'simplesamlphp_autoload' path first.
 		if ( ! empty( $simplesamlphp_autoloader_from_option ) && file_exists( $simplesamlphp_autoloader_from_option ) ) {
 			include_once $simplesamlphp_autoloader_from_option;
 			$base_dir_from_option = dirname( dirname( $simplesamlphp_autoloader_from_option ) );
@@ -483,8 +483,10 @@ class WP_SAML_Auth {
 
 		$potential_ssp_base_dirs = array_unique( array_filter( $potential_ssp_base_dirs, 'is_string' ) );
 
-		// 3. Try to get version from SimpleSAML\Configuration (SSP 2.0+).
-		// First, check for the VERSION constant.
+		/**
+		 * Try to get version from SimpleSAML\Configuration (SSP 2.0+).
+		 * First, check for the VERSION constant.
+		 */
 		if ( class_exists( 'SimpleSAML\Configuration' ) && defined( 'SimpleSAML\Configuration::VERSION' ) ) {
 			$ssp_version = \SimpleSAML\Configuration::VERSION;
 			if ( ! empty( $ssp_version ) && is_string( $ssp_version ) ) {
@@ -506,7 +508,7 @@ class WP_SAML_Auth {
 				/* Ignore */ }
 		}
 
-		// 4. Try to get version from legacy SimpleSAML_Configuration class (SSP < 2.0).
+		// Try to get version from legacy SimpleSAML_Configuration class (SSP < 2.0).
 		if ( class_exists( 'SimpleSAML_Configuration' ) ) {
 			try {
 				if ( is_callable( [ 'SimpleSAML_Configuration', 'getConfig' ] ) ) {
@@ -522,7 +524,7 @@ class WP_SAML_Auth {
 				/* Ignore */ }
 		}
 
-		// 5. Iterate through each potential base directory and check for version files.
+		// Iterate through each potential base directory and check for version files.
 		foreach ( $potential_ssp_base_dirs as $base_dir ) {
 			if ( ! is_dir( $base_dir ) ) {
 				continue; }
