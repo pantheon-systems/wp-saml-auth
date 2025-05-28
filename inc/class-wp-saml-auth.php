@@ -519,15 +519,16 @@ class WP_SAML_Auth {
 		 * Try to get version from SimpleSAML\Configuration (SSP 2.0+).
 		 * First, check for the VERSION constant.
 		 */
-		if ( class_exists( 'SimpleSAML\Configuration' ) && defined( 'SimpleSAML\Configuration::VERSION' ) ) {
-			$ssp_version = \SimpleSAML\Configuration::VERSION;
-			if ( ! empty( $ssp_version ) && is_string( $ssp_version ) ) {
-				return $ssp_version;
-			}
-		}
-
-		// Second, try getVersion for SimpleSAML\Configuration.
 		if ( class_exists( 'SimpleSAML\Configuration' ) ) {
+			// Try getting the version from the VERSION constant.
+			if ( defined( 'SimpleSAML\Configuration::VERSION' ) ) {
+				$ssp_version = \SimpleSAML\Configuration::VERSION;
+				if ( ! empty( $ssp_version ) && is_string( $ssp_version ) ) {
+					return $ssp_version;
+				}
+			}
+
+			// Otherwise get the version from getVersion.
 			try {
 				$simple_saml_config = \SimpleSAML\Configuration::getInstance();
 				if ( method_exists( $simple_saml_config, 'getVersion' ) ) {
@@ -539,7 +540,11 @@ class WP_SAML_Auth {
 			} catch ( \Exception $e ) {
 				// Log an error to the debug log.
 				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( 'Error getting SimpleSAMLphp version: ' . $e->getMessage() );
+					error_log( sprintf(
+						// Translators: %s is the error message returned from the exception.
+						__( 'Error getting SimpleSAMLphp version: %s', 'wp-saml-auth' ),
+						$e->getMessage()
+					) );
 				}
 			}
 		}
@@ -559,43 +564,57 @@ class WP_SAML_Auth {
 			} catch ( \Exception $e ) {
 				// Log an error to the debug log.
 				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( 'Error getting SimpleSAMLphp version: ' . $e->getMessage() );
+					error_log( sprintf(
+						// Translators: %s is the error message returned from the exception.
+						__( 'Error getting SimpleSAMLphp version: %s', 'wp-saml-auth' ),
+						$e->getMessage()
+					) );
 				}
 			}
 		}
 
-		// Iterate through each potential base directory and check for version files.
-		foreach ( $potential_ssp_base_dirs as $base_dir ) {
-			if ( ! is_dir( $base_dir ) ) {
-				continue; }
-
-			$composer_path = $base_dir . '/composer.json';
-			if ( file_exists( $composer_path ) ) {
-				$composer_data_json = file_get_contents( $composer_path );
-				if ( $composer_data_json ) {
-					$composer_data = json_decode( $composer_data_json, true );
-					if ( is_array( $composer_data ) && isset( $composer_data['version'] ) && ! empty( $composer_data['version'] ) && is_string( $composer_data['version'] ) ) {
-						return $composer_data['version'];
-					}
-				}
+		if ( ! is_dir( $base_dir ) ) {
+			// Log an error to the debug log if the base directory does not exist.
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( sprintf(
+					// Translators: %s is the base directory we tried.
+					__( 'SimpleSAMLphp base directory does not exist: %s', 'wp-saml-auth' ),
+					$base_dir
+				) );
 			}
+			return false;
+		}
 
-			$version_file_path = $base_dir . '/VERSION';
-			if ( file_exists( $version_file_path ) ) {
-				$version_str = trim( file_get_contents( $version_file_path ) );
-				if ( ! empty( $version_str ) && is_string( $version_str ) ) {
-					return $version_str;
-				}
-			}
-
-			$version_php_path = $base_dir . '/config/version.php';
-			if ( file_exists( $version_php_path ) ) {
-				$version_data = include $version_php_path;
-				if ( is_array( $version_data ) && isset( $version_data['version'] ) && ! empty( $version_data['version'] ) && is_string( $version_data['version'] ) ) {
-					return $version_data['version'];
+		// Check for a Composer file.
+		$composer_path = $base_dir . '/composer.json';
+		if ( file_exists( $composer_path ) ) {
+			$composer_data_json = file_get_contents( $composer_path );
+			if ( $composer_data_json ) {
+				$composer_data = json_decode( $composer_data_json, true );
+				if ( is_array( $composer_data ) && isset( $composer_data['version'] ) && ! empty( $composer_data['version'] ) && is_string( $composer_data['version'] ) ) {
+					return $composer_data['version'];
 				}
 			}
 		}
+
+		// Check for a VERSION file.
+		$version_file_path = $base_dir . '/VERSION';
+		if ( file_exists( $version_file_path ) ) {
+			$version_str = trim( file_get_contents( $version_file_path ) );
+			if ( ! empty( $version_str ) && is_string( $version_str ) ) {
+				return $version_str;
+			}
+		}
+
+		// Check for a version.php file.
+		$version_php_path = $base_dir . '/config/version.php';
+		if ( file_exists( $version_php_path ) ) {
+			$version_data = include $version_php_path;
+			if ( is_array( $version_data ) && isset( $version_data['version'] ) && ! empty( $version_data['version'] ) && is_string( $version_data['version'] ) ) {
+				return $version_data['version'];
+			}
+		}
+
 		return false;
 	}
 
