@@ -24,6 +24,11 @@ workflows:
       - test-phpunit:
           name: "Test with PHP 8.2"
           php_version: "8.2"
+      - behat-cleanup:
+          requires:
+            - "Test with SimpleSAMLphp 1.18.0"
+            - "Test with SimpleSAMLphp 2.0.0"
+            - "Test with SimpleSAMLphp 2.4.0"
   nightly:
     triggers:
       - schedule:
@@ -42,6 +47,11 @@ workflows:
       - test-behat:
           name: "Test with SimpleSAMLphp 2.4.0"
           simplesamlphp_version: "2.4.0"
+      - behat-cleanup:
+          requires:
+            - "Test with SimpleSAMLphp 1.18.0"
+            - "Test with SimpleSAMLphp 2.0.0"
+            - "Test with SimpleSAMLphp 2.4.0"
 jobs:
   test-behat:
     parameters:
@@ -118,7 +128,22 @@ jobs:
           echo "=========================================================================="
           echo ""
           ./bin/behat-test.sh --strict
-          ./bin/behat-cleanup.sh
+  behat-cleanup:
+    docker:
+      - image: quay.io/pantheon-public/build-tools-ci:8.x-php8.2
+    working_directory: ~/pantheon-systems/wp-saml-auth
+    steps:
+      - checkout
+      - run:
+          name: Set environment variables
+          command: |
+            echo 'export TERMINUS_SITE=wp-saml-auth' >> $BASH_ENV
+            echo 'export TERMINUS_ENV=ci-$CIRCLE_BUILD_NUM' >> $BASH_ENV
+            echo 'export SITE_ENV=wp-saml-auth.ci-$CIRCLE_BUILD_NUM' >> $BASH_ENV
+            source $BASH_ENV
+      - run:
+          name: Run Cleanup Script
+          command: ./bin/behat-cleanup.sh
   test-phpunit:
     parameters:
       php_version:
