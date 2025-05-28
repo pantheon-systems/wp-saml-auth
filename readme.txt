@@ -201,6 +201,24 @@ If you need to adapt authentication behavior based on the SAML response, you can
         return $ret;
     }, 10, 2 );
 
+If you have installed SimpleSAMLphp to a non-default path, you can set that path via the `wp_saml_auth_simplesamlphp_path_array` filter. By default, it is assumed that SimpleSAMLphp is installed into one of the following paths:
+* `ABSPATH . 'simplesaml'`
+* `ABSPATH . 'private/simplesamlphp'`
+* `ABSPATH . 'simplesamlphp'`
+
+	add_filter( 'wp_saml_auth_simplesamlphp_path_array', function( $simplesamlphp_path_array ) {
+		// Override default paths with a defined path.
+		return [ ABSPATH . 'path/to/simplesamlphp' ];
+	}
+
+You can also define an explicit path to the SimpleSAMLphp autoloader file (defaults to the `lib/_autoload.php` file under the SimpleSAMLphp path) with the `wp_saml_auth_ssp_autoloader` filter.
+
+	add_filter( 'wp_saml_auth_ssp_autoloader', function( $ssp_autoloader ) {
+		if ( ! file_exists( $ssp_autoloader ) ) {
+			return ABSPATH . 'path/to/simplesamlphp/autoload.php';
+		}
+	}
+
 == WP-CLI Commands ==
 
 This plugin implements a variety of [WP-CLI](https://wp-cli.org) commands. All commands are grouped into the `wp saml-auth` namespace.
