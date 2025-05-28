@@ -306,13 +306,13 @@ There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Nati
 
 ## Upgrade Notice ##
 
-### 2.0.0 ###
-Minimum supported PHP version is 7.3.
-
 ### 2.2.0 ###
 WP SAML Auth 2.2.0 requires WordPress version 6.4 or later.
 
 SimpleSAMLphp recommended version is 2.3.7 or later for `simplesamlphp` SAML authentication type. With "Enforce Security Requirements" enabled, SimpleSAMLphp versions below 2.0.0 will be blocked. 2.0.0 or later is required to fix CVE-2023-26881 (XML signature validation bypass vulnerability).
+
+### 2.0.0 ###
+Minimum supported PHP version is 7.3.
 
 ## Changelog ##
 
