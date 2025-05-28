@@ -51,6 +51,7 @@ else
   fi
   for ENV_ID in $OLDEST_CI_ENVS; do
     echo "Deleting environment: $TERMINUS_SITE.$ENV_ID"
-    terminus multidev:delete "$TERMINUS_SITE.$ENV_ID" --delete-branch --yes
+	# Allow this to fail without failing the workflow.
+    terminus multidev:delete "$TERMINUS_SITE.$ENV_ID" --delete-branch --yes || true
   done
 fi
