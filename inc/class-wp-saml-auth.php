@@ -505,7 +505,11 @@ class WP_SAML_Auth {
 					}
 				}
 			} catch ( \Exception $e ) {
-				/* Ignore */ }
+				// Log an error to the debug log.
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( 'Error getting SimpleSAMLphp version: ' . $e->getMessage() );
+				}
+			}
 		}
 
 		// Try to get version from legacy SimpleSAML_Configuration class (SSP < 2.0).
@@ -521,7 +525,11 @@ class WP_SAML_Auth {
 					}
 				}
 			} catch ( \Exception $e ) {
-				/* Ignore */ }
+				// Log an error to the debug log.
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( 'Error getting SimpleSAMLphp version: ' . $e->getMessage() );
+				}
+			}
 		}
 
 		// Iterate through each potential base directory and check for version files.
