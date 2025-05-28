@@ -455,15 +455,25 @@ class WP_SAML_Auth {
 	 *
 	 * This method attempts to determine the correct path to the SimpleSAMLphp autoloader
 	 * by checking the following, in order:
-	 *   1. The path configured via the 'simplesamlphp_autoload' option, if set and exists.
-	 *   2. A set of default paths, which can be filtered via 'wp_saml_auth_simplesamlphp_path_array'.
+	 *   1. A valid path resulting from the 'wp_saml_auth_ssp_autoloader' filter.
+	 *   2. The path configured via the 'simplesamlphp_autoload' option, if set and exists.
+	 *   3. A set of default paths, which can be filtered via 'wp_saml_auth_simplesamlphp_path_array'.
 	 *      For each path, it checks if the directory exists and contains 'lib/_autoload.php'.
-	 *   3. If no valid path is found, it returns the result of the 'wp_saml_auth_ssp_autoloader' filter,
-	 *      which defaults to an empty string.
 	 *
 	 * @return string The path to the SimpleSAMLphp autoloader file, or an empty string if not found.
 	 */
 	public function get_simplesamlphp_autoloader() {
+		/**
+		 * Define a path to SimpleSAMLphp autoloader file.
+		 *
+		 * @param string $ssp_autoloader The path to the SimpleSAMLphp autoloader file.
+		 */
+		$simplesamlphp_autoloader = apply_filters( 'wp_saml_auth_ssp_autoloader', '' );
+
+		if ( ! empty( $simplesamlphp_autoloader ) && file_exists( $simplesamlphp_autoloader ) ) {
+			return $simplesamlphp_autoloader;
+		}
+
 		$simplesamlphp_autoloader_from_option = self::get_option( 'simplesamlphp_autoload' );
 
 		// Check the configured 'simplesamlphp_autoload' path first.
@@ -488,19 +498,15 @@ class WP_SAML_Auth {
 
 			if ( is_dir( $trimmed_base ) ) {
 				// If an autoloader exists in a guessed path, try to include it.
-				$ssp_autoloader = $trimmed_base . '/lib/_autoload.php';
-				if ( file_exists( $ssp_autoloader ) ) {
-					return $ssp_autoloader;
+				$simplesamlphp_autoloader = $trimmed_base . '/lib/_autoload.php';
+				if ( file_exists( $simplesamlphp_autoloader ) ) {
+					return $simplesamlphp_autoloader;
 				}
 			}
 		}
 
-		/**
-		 * Define a path to SimpleSAMLphp autoloader file.
-		 *
-		 * @param string $ssp_autoloader The path to the SimpleSAMLphp autoloader file.
-		 */
-		return apply_filters( 'wp_saml_auth_ssp_autoloader', '' );
+		// If we got here, this should be an empty string.
+		return $simplesamlphp_autoloader;
 	}
 
 	/**
