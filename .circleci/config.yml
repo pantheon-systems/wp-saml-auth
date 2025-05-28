@@ -108,11 +108,11 @@ jobs:
     - run:
         name: Save environment name for cleanup
         command: |
-          echo "wp-saml-auth.ci-$CIRCLE_BUILD_NUM" > /tmp/site_env.txt
+          echo "wp-saml-auth.ci-$CIRCLE_BUILD_NUM" > "/tmp/site_env_<< parameters.simplesamlphp_version >>.txt"
     - persist_to_workspace:
         root: /tmp
         paths:
-          - site_env.txt
+          - "site_env_<< parameters.simplesamlphp_version >>.txt"
     - run:
         name: Validate fixture version
         command: ./bin/validate-fixture-version.sh
