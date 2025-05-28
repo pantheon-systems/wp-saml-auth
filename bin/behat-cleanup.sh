@@ -17,10 +17,17 @@ if [ -z "$TERMINUS_SITE" ] || [ -z "$TERMINUS_ENV" ]; then
 	exit 1
 fi
 
+
 ###
-# Delete the environment used for this test run.
+# Loop through all collected site env files
 ###
-terminus multidev:delete "$SITE_ENV" --delete-branch --yes
+for env_file in /tmp/behat-envs/site_env_*.txt; do
+  [ -f "$env_file" ] || continue
+  SITE_ENV_FROM_FILE=$(cat "$env_file")
+
+  echo "Deleting test environment: $SITE_ENV_FROM_FILE"
+  terminus multidev:delete "$SITE_ENV_FROM_FILE" --delete-branch --yes || true
+done
 
 ###
 # Also delete the oldest 5 multidevs that start with ci-

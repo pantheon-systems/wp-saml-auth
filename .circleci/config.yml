@@ -106,10 +106,18 @@ jobs:
         fi
         terminus auth:login --machine-token=$TERMINUS_TOKEN
     - run:
+        name: Save environment name for cleanup
+        command: |
+          echo "wp-saml-auth.ci-$CIRCLE_BUILD_NUM" > /tmp/site_env.txt
+    - persist_to_workspace:
+        root: /tmp
+        paths:
+          - site_env.txt
+    - run:
         name: Validate fixture version
         command: ./bin/validate-fixture-version.sh
     - run:
-        name: Prepare, run Behat and maybe cleanup
+        name: Prepare and run Behat tests
         command: |
           set -e
           source $BASH_ENV
@@ -141,6 +149,12 @@ jobs:
             echo 'export TERMINUS_ENV=ci-$CIRCLE_BUILD_NUM' >> $BASH_ENV
             echo 'export SITE_ENV=wp-saml-auth.ci-$CIRCLE_BUILD_NUM' >> $BASH_ENV
             source $BASH_ENV
+      - run: |
+          if [ -z "$TERMINUS_TOKEN" ]; then
+            echo "TERMINUS_TOKEN environment variables missing; assuming unauthenticated build"
+            exit 0
+          fi
+          terminus auth:login --machine-token=$TERMINUS_TOKEN
       - run:
           name: Run Cleanup Script
           command: ./bin/behat-cleanup.sh
