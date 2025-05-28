@@ -456,15 +456,28 @@ class WP_SAML_Auth {
 			}
 		}
 
-		// 2. Add the default path for simplesaml. This is checked regardless of the option.
-		$base_path = ABSPATH . 'simplesaml';
-		$trimmed_base = rtrim( $base_path, '/\\' );
-		if ( is_dir( $trimmed_base ) ) {
-			$potential_ssp_base_dirs[] = $trimmed_base;
-			// If an autoloader exists in a guessed path, try to include it.
-			$ssp_autoloader = $trimmed_base . '/lib/_autoload.php';
-			if ( file_exists( $ssp_autoloader ) ) {
-				include_once $ssp_autoloader;
+		/**
+		 * Add the default path for simplesaml and allow it to be filtered.
+		 * This is checked regardless of whether an option is set.
+		 *
+		 * @param array $simplesamlphp_path_array An array of paths to check for SimpleSAMLphp.
+		 */
+		$base_paths = apply_filters( 'wp_saml_auth_simplesamlphp_path_array', [
+			ABSPATH . 'simplesaml',
+			ABSPATH . 'private/simplesamlphp',
+			ABSPATH . 'simplesamlphp',
+		] );
+
+		foreach ( $base_paths as $base_path ) {
+			$trimmed_base = rtrim( $base_path, '/\\' );
+
+			if ( is_dir( $trimmed_base ) ) {
+				$potential_ssp_base_dirs[] = $trimmed_base;
+				// If an autoloader exists in a guessed path, try to include it.
+				$ssp_autoloader = $trimmed_base . '/lib/_autoload.php';
+				if ( file_exists( $ssp_autoloader ) ) {
+					include_once $ssp_autoloader;
+				}
 			}
 		}
 
