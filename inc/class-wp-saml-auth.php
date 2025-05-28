@@ -85,10 +85,24 @@ class WP_SAML_Auth {
 			$auth_config    = self::get_option( 'internal_config' );
 			$this->provider = new OneLogin\Saml2\Auth( $auth_config );
 		} else {
-			$simplesamlphp_path = self::get_option( 'simplesamlphp_autoload' );
-			if ( file_exists( $simplesamlphp_path ) ) {
-				require_once $simplesamlphp_path;
+			$simplesamlphp_autoloader = $this->get_simplesamlphp_autoloader();
+
+			// If the autoloader exists, load it.
+			if ( ! empty( $simplesamlphp_autoloader ) && file_exists( $simplesamlphp_autoloader ) ) {
+				require_once $simplesamlphp_autoloader;
+			} else {
+				// Autoloader not found.
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					$error_message = sprintf(
+						// Translators: %s is the path to the SimpleSAMLphp autoloader file (if found).
+						__( 'WP SAML Auth: SimpleSAMLphp autoloader could not be loaded for set_provider. Path determined: %s', 'wp-saml-auth' ),
+						empty( $simplesamlphp_autoloader ) ? '[empty]' : esc_html( $simplesamlphp_autoloader )
+					);
+					error_log( $error_message );
+				}
+				return;
 			}
+
 			if ( class_exists( 'SimpleSAML\Auth\Simple' ) ) {
 				$this->simplesamlphp_class = 'SimpleSAML\Auth\Simple';
 			}
