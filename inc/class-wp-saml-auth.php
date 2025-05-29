@@ -684,7 +684,7 @@ class WP_SAML_Auth {
 					sprintf(
 						// Translators: Links to the WP SAML Auth plugin.
 						__( "WP SAML Auth wasn't able to find the <code>OneLogin\Saml2\Auth</code> class. Please verify your Composer autoloader, or <a href='%s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ),
-						'https://wordpress.org/plugins/wp-saml-auth/'
+						$plugin_page
 					),
 					[
 						'type' => 'error',
