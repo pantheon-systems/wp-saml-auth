@@ -85,7 +85,7 @@ class WP_SAML_Auth {
 			$auth_config    = self::get_option( 'internal_config' );
 			$this->provider = new OneLogin\Saml2\Auth( $auth_config );
 		} else {
-			$simplesamlphp_autoloader = $this->get_simplesamlphp_autoloader();
+			$simplesamlphp_autoloader = self::get_simplesamlphp_autoloader();
 
 			// If the autoloader exists, load it.
 			if ( ! empty( $simplesamlphp_autoloader ) && file_exists( $simplesamlphp_autoloader ) ) {
@@ -462,7 +462,7 @@ class WP_SAML_Auth {
 	 *
 	 * @return string The path to the SimpleSAMLphp autoloader file, or an empty string if not found.
 	 */
-	public function get_simplesamlphp_autoloader() {
+	public static function get_simplesamlphp_autoloader() {
 		/**
 		 * Define a path to SimpleSAMLphp autoloader file.
 		 *
@@ -517,7 +517,7 @@ class WP_SAML_Auth {
 	 * @return string|false Version string if found, false if not found.
 	 */
 	public function get_simplesamlphp_version() {
-		$simplesamlphp_autoloader = $this->get_simplesamlphp_autoloader();
+		$simplesamlphp_autoloader = self::get_simplesamlphp_autoloader();
 		$base_dir = rtrim( preg_replace( '#/lib/?$#', '', dirname( $simplesamlphp_autoloader ) ), '/\\' );
 
 		try {
