@@ -38,7 +38,7 @@
 
 	<!-- Minimum PHP and WP versions -->
 	<config name="testVersion" value="7.3-"/>
-	<config name="minimum_supported_wp_version" value="4.4"/>
+	<config name="minimum_supported_wp_version" value="6.4"/>
 
 	<exclude-pattern>*/bin/*</exclude-pattern>
 	<exclude-pattern>*/node_modules/*</exclude-pattern>
