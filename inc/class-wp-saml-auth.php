@@ -488,7 +488,7 @@ class WP_SAML_Auth {
 		if ( ! self::$is_resolving_autoloader_via_option ) {
 			self::$is_resolving_autoloader_via_option = true;
 			$simplesamlphp_autoloader = self::get_option( 'simplesamlphp_autoload' );
-			self::$is_resolving_autoloader_via_option = false; // Reset recursion guard
+			self::$is_resolving_autoloader_via_option = false; // Reset recursion guard.
 
 			// Check the configured 'simplesamlphp_autoload' path first.
 			if ( ! empty( $simplesamlphp_autoloader ) && file_exists( $simplesamlphp_autoloader ) ) {
