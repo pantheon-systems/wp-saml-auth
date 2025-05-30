@@ -40,7 +40,7 @@ function wpsa_filter_option( $value, $option_name ) {
 		 *
 		 * @param string
 		 */
-		'simplesamlphp_autoload' => file_exists( __DIR__ . '/simplesamlphp/lib/_autoload.php' ) ? __DIR__ . '/simplesamlphp/lib/_autoload.php' : __DIR__ . '/simplesamlphp/vendor/autoload.php',
+		'simplesamlphp_autoload' => class_exists( 'WP_SAML_Auth' ) ? WP_SAML_Auth::get_simplesamlphp_autoloader() : '',
 		/**
 		 * Authentication source to pass to SimpleSAMLphp
 		 *
