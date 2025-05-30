@@ -14,7 +14,6 @@
 
 /**
  * Bootstrap the WP SAML Auth plugin.
- *
  */
 function wpsa_boostrap() {
 	if ( ! defined( 'WP_SAML_AUTH_AUTOLOADER' ) ) {

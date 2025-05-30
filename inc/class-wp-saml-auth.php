@@ -506,7 +506,7 @@ class WP_SAML_Auth {
 			ABSPATH . 'simplesaml',
 			ABSPATH . 'private/simplesamlphp',
 			ABSPATH . 'simplesamlphp',
-			plugin_dir_path( dirname( __FILE__ ) ) . 'simplesamlphp',
+			plugin_dir_path( __DIR__ ) . 'simplesamlphp',
 		] );
 
 		foreach ( $base_paths as $base_path ) {
