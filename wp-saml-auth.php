@@ -13,6 +13,36 @@
  */
 
 /**
+ * Bootstrap the WP SAML Auth plugin.
+ *
+ */
+function wpsa_boostrap() {
+	if ( ! defined( 'WP_SAML_AUTH_AUTOLOADER' ) ) {
+		define( 'WP_SAML_AUTH_AUTOLOADER', __DIR__ . '/vendor/autoload.php' );
+	}
+
+	require_once __DIR__ . '/inc/class-wp-saml-auth.php';
+	WP_SAML_Auth::get_instance();
+
+	require_once __DIR__ . '/inc/class-wp-saml-auth-options.php';
+	add_filter( 'wp_saml_auth_option', 'wpsa_filter_option', 0, 2 );
+	WP_SAML_Auth_Options::get_instance();
+
+	if ( defined( 'WP_CLI' ) && WP_CLI ) {
+		require_once __DIR__ . '/inc/class-wp-saml-auth-cli.php';
+		WP_CLI::add_command( 'saml-auth', 'WP_SAML_Auth_CLI' );
+	}
+
+	/**
+	 * Initialize the WP SAML Auth plugin settings page.
+	 */
+	require_once __DIR__ . '/inc/class-wp-saml-auth-settings.php';
+	if ( is_admin() ) {
+		WP_SAML_Auth_Settings::get_instance();
+	}
+}
+
+/**
  * Provides default options for WP SAML Auth.
  *
  * @param mixed  $value       Configuration value.
@@ -178,35 +208,6 @@ function wpsa_filter_option( $value, $option_name ) {
 	$value = isset( $defaults[ $option_name ] ) ? $defaults[ $option_name ] : $value;
 	return $value;
 }
-add_filter( 'wp_saml_auth_option', 'wpsa_filter_option', 0, 2 );
 
-if ( ! defined( 'WP_SAML_AUTH_AUTOLOADER' ) ) {
-	define( 'WP_SAML_AUTH_AUTOLOADER', __DIR__ . '/vendor/autoload.php' );
-}
-
-/**
- * Initialize the WP SAML Auth plugin.
- *
- * Core logic for the plugin is in the WP_SAML_Auth class.
- */
-require_once __DIR__ . '/inc/class-wp-saml-auth.php';
-WP_SAML_Auth::get_instance();
-
-if ( defined( 'WP_CLI' ) && WP_CLI ) {
-	require_once __DIR__ . '/inc/class-wp-saml-auth-cli.php';
-	WP_CLI::add_command( 'saml-auth', 'WP_SAML_Auth_CLI' );
-}
-
-/**
- * Initialize the WP SAML Auth plugin settings page.
- */
-require_once __DIR__ . '/inc/class-wp-saml-auth-settings.php';
-if ( is_admin() ) {
-	WP_SAML_Auth_Settings::get_instance();
-}
-
-/**
- * Initialize the WP SAML Auth options from WordPress DB.
- */
-require_once __DIR__ . '/inc/class-wp-saml-auth-options.php';
-WP_SAML_Auth_Options::get_instance();
+// Bootstrap the plugin.
+wpsa_boostrap();
