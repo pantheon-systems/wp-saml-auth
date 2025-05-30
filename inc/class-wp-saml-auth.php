@@ -33,6 +33,13 @@ class WP_SAML_Auth {
 	private $simplesamlphp_class = 'SimpleSAML_Auth_Simple';
 
 	/**
+	 * Guard flag to prevent recursion when resolving the autoloader via option.
+	 *
+	 * @var bool
+	 */
+	private static $is_resolving_autoloader_via_option = false;
+
+	/**
 	 * Get the controller instance
 	 *
 	 * @return object
@@ -474,11 +481,19 @@ class WP_SAML_Auth {
 			return $simplesamlphp_autoloader;
 		}
 
-		$simplesamlphp_autoloader_from_option = self::get_option( 'simplesamlphp_autoload' );
+		/*
+		 * If self::$is_resolving_autoloader_via_option is true, this call is recursive
+		 * (from wpsa_filter_option for 'simplesamlphp_autoload' default), so skip option check.
+		 */
+		if ( ! self::$is_resolving_autoloader_via_option ) {
+			self::$is_resolving_autoloader_via_option = true;
+			$simplesamlphp_autoloader = self::get_option( 'simplesamlphp_autoload' );
+			self::$is_resolving_autoloader_via_option = false; // Reset recursion guard
 
-		// Check the configured 'simplesamlphp_autoload' path first.
-		if ( ! empty( $simplesamlphp_autoloader_from_option ) && file_exists( $simplesamlphp_autoloader_from_option ) ) {
-			return $simplesamlphp_autoloader_from_option;
+			// Check the configured 'simplesamlphp_autoload' path first.
+			if ( ! empty( $simplesamlphp_autoloader ) && file_exists( $simplesamlphp_autoloader ) ) {
+				return $simplesamlphp_autoloader;
+			}
 		}
 
 		/**
@@ -491,6 +506,7 @@ class WP_SAML_Auth {
 			ABSPATH . 'simplesaml',
 			ABSPATH . 'private/simplesamlphp',
 			ABSPATH . 'simplesamlphp',
+			plugin_dir_path( dirname( __FILE__ ) ) . 'simplesamlphp',
 		] );
 
 		foreach ( $base_paths as $base_path ) {
@@ -498,11 +514,17 @@ class WP_SAML_Auth {
 
 			if ( is_dir( $trimmed_base ) ) {
 				// If an autoloader exists in a guessed path, try to include it.
-				$simplesamlphp_autoloader = $trimmed_base . '/lib/_autoload.php';
-				if ( file_exists( $simplesamlphp_autoloader ) ) {
-					return $simplesamlphp_autoloader;
+				$simplesamlphp_autoloader_path = $trimmed_base . '/lib/_autoload.php';
+				if ( file_exists( $simplesamlphp_autoloader_path ) ) {
+					return $simplesamlphp_autoloader_path;
 				}
 			}
+		}
+
+		// Fallback for plugin-relative vendor autoloader if filter/option failed or in recursive call for default.
+		$simplesamlphp_vendor_path = WP_PLUGIN_DIR . '/' . basename( dirname( __DIR__ ) ) . '/simplesamlphp/vendor/autoload.php';
+		if ( file_exists( $simplesamlphp_vendor_path ) ) {
+			return $simplesamlphp_vendor_path;
 		}
 
 		// If we got here, this should be an empty string.
