@@ -4,7 +4,7 @@ namespace PantheonSystems\WPSamlAuth\Behat;
 
 use Behat\Behat\Context\Context;
 use Behat\Behat\Context\SnippetAcceptingContext;
-use Behat\MinkExtension\Context\MinkContext;
+use Symfony\Component\DomCrawler\Crawler;
 use Behat\Behat\Hook\Scope\BeforeScenarioScope;
 
 /**
@@ -32,7 +32,57 @@ class AdminLogIn implements Context, SnippetAcceptingContext {
         $this->minkContext->fillField('username', getenv('WORDPRESS_ADMIN_USERNAME'));
         $this->minkContext->fillField('password', getenv('WORDPRESS_ADMIN_PASSWORD'));
         $this->minkContext->pressButton('submit');
-        $this->minkContext->pressButton('Submit');
+
+		// Follow any meta or JS-based redirect manually
+    	$this->followSamlRedirectManually();
+
         $this->minkContext->assertPageAddress("wp-admin/");
     }
+
+	/**
+	 * @Then I follow the SAML redirect manually
+	 */
+	public function followSamlRedirectManually() {
+		$session = $this->minkContext->getSession();
+		$html = $session->getPage()->getContent();
+
+		$this->minkContext->printLastResponse(); // Optional debugging
+
+		// Meta refresh
+		if (preg_match('/<meta http-equiv="refresh" content="\d+;url=([^"]+)"/i', $html, $matches)) {
+			$this->minkContext->visit(html_entity_decode($matches[1]));
+			return;
+		}
+
+		// JS redirect
+		if (preg_match('/window\.location\s*=\s*"([^"]+)"/i', $html, $matches)) {
+			$this->minkContext->visit(html_entity_decode($matches[1]));
+			return;
+		}
+
+		// DOM parsing
+		$crawler = new Crawler($html);
+		$form = $crawler->filter('form')->first();
+
+		if (!$form->count()) {
+			throw new \Exception('No form found to submit SAML response.');
+		}
+
+		$action = $form->attr('action');
+		$inputs = $form->filter('input');
+
+		$formFields = [];
+		foreach ($inputs as $input) {
+			$name = $input->getAttribute('name');
+			$value = $input->getAttribute('value') ?? '';
+			if ($name) {
+				$formFields[$name] = $value;
+			}
+		}
+
+		// Submit using Goutte client
+		$client = $session->getDriver()->getClient();
+		$client->request('POST', $action, $formFields);
+	}
+
 }

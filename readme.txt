@@ -1,18 +1,16 @@
 === WP SAML Auth ===
 Contributors: getpantheon, danielbachhuber, Outlandish Josh, jspellman, jazzs3quence
 Tags: authentication, SAML
-Requires at least: 4.4
-Tested up to: 6.3
+Requires at least: 6.4
+Tested up to: 6.8.1
 Requires PHP: 7.3
-Stable tag: 2.1.5-dev
+Stable tag: 2.2.0-dev
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
 SAML authentication for WordPress.
 
 == Description ==
-
-[![Travis CI](https://travis-ci.org/pantheon-systems/wp-saml-auth.svg?branch=master)](https://travis-ci.org/pantheon-systems/wp-saml-auth) [![CircleCI](https://circleci.com/gh/pantheon-systems/wp-saml-auth/tree/master.svg?style=svg)](https://circleci.com/gh/pantheon-systems/wp-saml-auth/tree/master)
 
 SAML authentication for WordPress, using the bundled OneLogin SAML library or optionally installed [SimpleSAMLphp](https://simplesamlphp.org/). OneLogin provides a SAML authentication bridge; SimpleSAMLphp provides SAML plus a variety of other authentication mechanisms. This plugin acts as a bridge between WordPress and the authentication library.
 
@@ -39,6 +37,8 @@ Once you've activated the plugin, and have access to a functioning SAML Identity
 If you're connecting directly to an existing IdP, you should use the bundled OneLogin SAML library. The necessary and most common settings are available in the WordPress backend.
 
 If you have more complex authentication needs, then you can also use a SimpleSAMLphp installation running in the same environment. These settings are not configurable through the WordPress backend; they'll need to be defined with a filter. And, if you have a filter in place, the WordPress backend settings will be removed.
+
+**Note:** A security vulnerability was found in SimpleSAMLphp versions 2.0.0 and below. It is highly recommended if you are using SimpleSAMLphp with WP SAML Auth that you update your SimpleSAMLphp library to 2.4.0 or above. (See [CVE-2025-27773](https://nvd.nist.gov/vuln/detail/CVE-2025-27773) and [The SimpleSAMLphp SAML2 library incorrectly verifies signatures for HTTP-Redirect bindings](https://github.com/advisories/GHSA-46r4-f8gj-xg56) for more information.)
 
 Additional explanation of each setting can be found in the code snippet below.
 
@@ -201,6 +201,24 @@ If you need to adapt authentication behavior based on the SAML response, you can
         return $ret;
     }, 10, 2 );
 
+If you have installed SimpleSAMLphp to a non-default path, you can set that path via the `wp_saml_auth_simplesamlphp_path_array` filter. By default, it is assumed that SimpleSAMLphp is installed into one of the following paths:
+* `ABSPATH . 'simplesaml'`
+* `ABSPATH . 'private/simplesamlphp'`
+* `ABSPATH . 'simplesamlphp'`
+
+	add_filter( 'wp_saml_auth_simplesamlphp_path_array', function( $simplesamlphp_path_array ) {
+		// Override default paths with a defined path.
+		return [ ABSPATH . 'path/to/simplesamlphp' ];
+	}
+
+You can also define an explicit path to the SimpleSAMLphp autoloader file (defaults to the `lib/_autoload.php` file under the SimpleSAMLphp path) with the `wp_saml_auth_ssp_autoloader` filter.
+
+	add_filter( 'wp_saml_auth_ssp_autoloader', function( $ssp_autoloader ) {
+		if ( ! file_exists( $ssp_autoloader ) ) {
+			return ABSPATH . 'path/to/simplesamlphp/autoload.php';
+		}
+	}
+
 == WP-CLI Commands ==
 
 This plugin implements a variety of [WP-CLI](https://wp-cli.org) commands. All commands are grouped into the `wp saml-auth` namespace.
@@ -270,15 +288,30 @@ There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Nati
 
 Please report security bugs found in the source code of the WP SAML Auth plugin through the [Patchstack Vulnerability Disclosure Program](https://patchstack.com/database/vdp/wp-saml-auth). The Patchstack team will assist you with verification, CVE assignment, and notify the developers of this plugin.
 
+= What are the security requirements for SimpleSAMLphp? =
+
+If you're using the SimpleSAMLphp connection type:
+* **Critical Security Requirement:** Version 2.0.0 or later is required to fix CVE-2023-26881 (XML signature validation bypass vulnerability).
+* **Recommended Security Requirement:** Version 2.3.7 or later is recommended for additional security fixes.
+* Authentication will be blocked for versions below 2.0.0 when "Enforce Security Requirements" is enabled.
+* It's always recommended to use the latest stable version of SimpleSAMLphp for security and compatibility.
+
 == Upgrade Notice ==
+= 2.2.0 =
+WP SAML Auth 2.2.0 requires WordPress version 6.4 or later.
+
+SimpleSAMLphp recommended version is 2.3.7 or later for `simplesamlphp` SAML authentication type. With "Enforce Security Requirements" enabled, SimpleSAMLphp versions below 2.0.0 will be blocked. 2.0.0 or later is required to fix CVE-2023-26881 (XML signature validation bypass vulnerability).
 
 = 2.0.0 =
 Minimum supported PHP version is 7.3.
 
+
 == Changelog ==
 
-= 2.1.5-dev =
+= 2.2.0-dev =
 * Add a hook to modify returned attributes. [[#379](https://github.com/pantheon-systems/wp-saml-auth/pull/379/)]
+* Updates [`onelogin/php-saml`](https://github.com/SAML-Toolkits/php-saml) to 4.2.0. [[#402](https://github.com/pantheon-systems/wp-saml-auth/pull/402/)]
+* Adds warnings and the option to disable SAML when using a vulnerable version of simplesamlphp [[#402](https://github.com/pantheon-systems/wp-saml-auth/pull/402/)]
 
 = 2.1.4 (November 27, 2023) =
 * Fix typo in the label for the certificate path [[#352](https://github.com/pantheon-systems/wp-saml-auth/pull/352)]

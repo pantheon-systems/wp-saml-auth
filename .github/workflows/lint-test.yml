@@ -29,3 +29,13 @@ jobs:
         run: |
           composer install
           composer lint
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run ShellCheck
+        run: |
+          shellcheck --version
+          shellcheck bin/*.sh

@@ -22,16 +22,29 @@
 		<exclude name="Squiz.Commenting.FunctionComment.MissingParamTag">
 			<file>*/inc/class-wp-saml-auth-cli.php</file>
 		</exclude>
+
+		<!-- Ignore file_get_contents warnings -->
+		<exclude name="WordPressVIPMinimum.Performance.FetchingRemoteData.FileGetContentsUnknown">
+			<file>*/inc/class-wp-saml-auth.php</file>
+		</exclude>
+
+		<!-- Ignore flagging for debugging code for error_logs -->
+		<exclude name="WordPress.PHP.DevelopmentFunctions.error_log_error_log">
+			<file>*/inc/class-wp-saml-auth.php</file>
+		</exclude>
 	</rule>
 	<rule ref="WordPress-Docs" />
 	<rule ref="PHPCompatibility"/>
 
 	<!-- Minimum PHP and WP versions -->
 	<config name="testVersion" value="7.3-"/>
-	<config name="minimum_supported_wp_version" value="4.4"/>
+	<config name="minimum_supported_wp_version" value="6.4"/>
 
 	<exclude-pattern>*/bin/*</exclude-pattern>
 	<exclude-pattern>*/node_modules/*</exclude-pattern>
 	<exclude-pattern>*/tests/*</exclude-pattern>
 	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>/simplesamlphp/*</exclude-pattern>
+	<!-- Ignore PHP-related errors. -->
+	<ini name="error_reporting" value="E_ALL &#38; ~E_DEPRECATED" />
 </ruleset>

@@ -4,8 +4,8 @@
  *
  * See: https://simplesamlphp.org/docs/stable/simplesamlphp-reference-idp-hosted
  */
-$host = 'https://' . $_SERVER['HTTP_HOST'] . '/simplesaml';
-$metadata[$host] = array(
+
+$metadata['__DYNAMIC:1__'] = array(
 	/*
 	 * The hostname of the server (VHOST) that will use this SAML entity.
 	 *
@@ -22,17 +22,11 @@ $metadata[$host] = array(
 	 * 'config/authsources.php'.
 	 */
 	'auth' => 'example-userpass',
-    'redirect.sign' => true, // optional, helpful for debugging
-    'simplesaml.attributes' => true, // optional
-    'UIInfo' => ['DisplayName' => ['en' => 'WP Test IdP']],
+
 	'attributes.NameFormat' => 'urn:oasis:names:tc:SAML:2.0:attrname-format:uri',
 	'authproc' => array(
-		10 => array(
-			'class' => 'core:AttributeLimit',
-			'uid',
-			'mail',
-			'eduPersonAffiliation',
-		),
+	    // Convert LDAP names to oids.
+	    100 => array('class' => 'core:AttributeMap', 'name2oid'),
 	),
 
 	/*
