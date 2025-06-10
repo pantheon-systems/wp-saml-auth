@@ -1,0 +1,41 @@
+name: PHP Code Beautifier
+on: [pull_request]
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  phpcbf:
+    name: PHPCBF & Commit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - name: Install Composer dependencies and run PHPCBF
+        run: |
+          composer install
+          composer phpcbf || true # Allow the workflow to continue even if PHPCBF fails
+      - name: Commit changes to PR
+        id: git-auto-commit
+        env:
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          git config --global user.email "bot@getpantheon.com"
+          git config --global user.name "Pantheon Robot"
+          DIFF=$(git diff-index --quiet HEAD || echo "true")
+          if [ "$DIFF" == "true" ]; then
+            git add .
+            git commit -m "PHPCBF: Fix coding standards" --no-verify
+            git push origin "${PR_BRANCH}"
+            echo "changes_detected=true" >> $GITHUB_ENV
+          else
+            echo "changes_detected=false" >> $GITHUB_ENV
+          fi
+      - name: Add PR Comment
+        if: env.changes_detected == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          CURRENT_COMMIT=$(git rev-parse --short HEAD)
+          gh pr comment ${{ github.event.pull_request.number }} -b "Hi from your friendly robot! :robot: I fixed PHPCS issues with \`phpcbf\` on $CURRENT_COMMIT. Please review the changes."

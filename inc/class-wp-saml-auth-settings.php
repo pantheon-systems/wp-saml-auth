@@ -121,6 +121,11 @@ class WP_SAML_Auth_Settings {
 					printf( '<select name="%1$s" id="%1$s">%2$s</select>', esc_attr( $uid ), $markup ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 				}
 				break;
+			case 'html':
+				if ( ! empty( $arguments['html'] ) ) {
+					echo wp_kses_post( $arguments['html'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				}
+				break;
 			case 'text':
 			case 'url':
 				printf(
@@ -297,6 +302,7 @@ class WP_SAML_Auth_Settings {
 	public static function setup_sections() {
 		self::$sections = [
 			'general'    => '',
+			'security'   => __( 'Security Settings', 'wp-saml-auth' ),
 			'sp'         => __( 'Service Provider Settings', 'wp-saml-auth' ),
 			'idp'        => __( 'Identity Provider Settings', 'wp-saml-auth' ),
 			'attributes' => __( 'Attribute Mappings', 'wp-saml-auth' ),
@@ -347,6 +353,31 @@ class WP_SAML_Auth_Settings {
 				'type'        => 'url',
 				'description' => __( 'The base url to be used when constructing URLs.', 'wp-saml-auth' ),
 				'default'     => home_url(),
+			],
+			// Security section.
+			[
+				'section'     => 'security',
+				'uid'         => 'security_info',
+				'label'       => __( 'Security Information', 'wp-saml-auth' ),
+				'type'        => 'html',
+				'html'        => '<div class="wp-saml-auth-security-info">' .
+					'<p><strong>' . __( 'SimpleSAMLphp Security Requirements:', 'wp-saml-auth' ) . '</strong></p>' .
+					'<ul>' .
+					// Translators: %s maps to the critical version of SimpleSAMLphp.
+					'<li>' . sprintf( __( '<strong>Critical Security Requirement:</strong> Version %s or later is required to fix CVE-2023-26881 (XML signature validation bypass vulnerability).', 'wp-saml-auth' ), WP_SAML_Auth::get_option( 'critical_simplesamlphp_version' ) ) . '</li>' .
+					// Translators: %s maps to the minimum version of SimpleSAMLphp.
+					'<li>' . sprintf( __( '<strong>Recommended Security Requirement:</strong> Version %s or later is recommended for additional security fixes.', 'wp-saml-auth' ), WP_SAML_Auth::get_option( 'min_simplesamlphp_version' ) ) . '</li>' .
+					'</ul>' .
+					'<p>' . __( 'Authentication will be blocked for versions below the critical security requirement when "Enforce Security Requirements" is enabled.', 'wp-saml-auth' ) . '</p>' .
+					'</div>',
+			],
+			[
+				'section'     => 'security',
+				'uid'         => 'enforce_min_simplesamlphp_version',
+				'label'       => __( 'Enforce Security Requirements', 'wp-saml-auth' ),
+				'type'        => 'checkbox',
+				'description' => __( 'If checked, authentication will be blocked for SimpleSAMLphp versions with critical security vulnerabilities (below 2.0.0).', 'wp-saml-auth' ),
+				'default'     => true,
 			],
 			// sp section.
 			[

@@ -20,27 +20,33 @@
         "php": "^7.3 || ^8.0"
     },
     "require-dev": {
+        "behat/behat": "^3.14",
+        "behat/gherkin": "4.9.0",
         "pantheon-systems/pantheon-wordpress-upstream-tests": "dev-master",
         "pantheon-systems/pantheon-wp-coding-standards": "^2.0",
         "phpunit/phpunit": "^9",
         "symfony/filesystem": "^5",
         "symfony/service-contracts": "^2",
         "symfony/translation-contracts": "^2",
-        "yoast/phpunit-polyfills": "^2.0"
+        "yoast/phpunit-polyfills": "^3.0",
+        "pantheon-systems/wpunit-helpers": "^2.0"
     },
     "scripts": {
         "lint": "@phpcs",
-        "phpcs": "vendor/bin/phpcs",
+        "phpcs": "vendor/bin/phpcs -s",
         "phpcbf": "vendor/bin/phpcbf",
         "phpunit": "vendor/bin/phpunit",
-        "test": "@phpunit"
+        "test": "@phpunit",
+        "test:install": "bin/install-local-tests.sh --skip-db=true",
+        "test:install:withdb": "bin/install-local-tests.sh"
     },
     "autoload": {
         "psr-4": { "PantheonSystems\\WPSamlAuth\\Behat\\": "tests/behat/bootstrap/" }
     },
     "config": {
         "allow-plugins": {
-            "dealerdirect/phpcodesniffer-composer-installer": true
+            "dealerdirect/phpcodesniffer-composer-installer": true,
+            "pantheon-systems/wpunit-helpers": true
         }
     }
 }
