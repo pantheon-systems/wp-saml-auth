@@ -24,6 +24,12 @@ workflows:
       - test-phpunit:
           name: "Test with PHP 8.2"
           php_version: "8.2"
+      - test-phpunit:
+          name: "Test with PHP 8.3"
+          php_version: "8.3"
+      - test-phpunit:
+          name: "Test with PHP 8.4"
+          php_version: "8.4"
       - behat-cleanup:
           requires:
             - "Test with SimpleSAMLphp 1.18.0"
@@ -167,6 +173,8 @@ jobs:
         type: enum
         enum:
           - "7.4"
+          - "8.4"
+          - "8.3"
           - "8.2"
           - "8.1"
           - "8.0"
