@@ -34,7 +34,7 @@ class SimpleSAML_Auth_Simple {
 	 * authentication source selected by the 'default-authsource' option in
 	 * 'config.php'.
 	 *
-	 * @return bool  TRUE if the user is authenticated, FALSE if not.
+	 * @return bool TRUE if the user is authenticated, FALSE if not.
 	 */
 	public function isAuthenticated() {
 		return (bool) $this->getCurrentUser();
@@ -95,7 +95,7 @@ class SimpleSAML_Auth_Simple {
 	 *                                   or an array with parameters for the logout. If this parameter is
 	 *                                   NULL, we will return to the current page.
 	 */
-	public function logout( $params = null ) {
+	public function logout( string|array|NULL $params = null ):void {
 		$GLOBALS['wp_saml_auth_current_user'] = false;
 	}
 
