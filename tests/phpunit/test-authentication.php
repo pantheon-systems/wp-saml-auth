@@ -144,7 +144,7 @@ class Test_Authentication extends WP_UnitTestCase {
 		$GLOBALS['wp_saml_auth_current_user'] = $user;
 	}
 
-	public function filter_wp_saml_auth_option( $value, $option_name ) {
+	public function filter_wp_saml_auth_option( string $value, string|null $option_name ): string {
 		if ( isset( $this->options[ $option_name ] ) ) {
 			return $this->options[ $option_name ];
 		}
