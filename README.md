@@ -4,7 +4,7 @@
 **Requires at least:** 6.4  
 **Tested up to:** 6.8.1  
 **Requires PHP:** 7.4  
-**Stable tag:** 2.2.1-dev  
+**Stable tag:** 2.3.1-dev  
 **License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -321,6 +321,8 @@ WP SAML Auth 2.2.0 requires WordPress version 6.4 or later.
 Minimum supported PHP version is 7.3.
 
 ## Changelog ##
+
+### 2.2.1-dev ###
 
 ### 2.2.0 (9 June 2024) ###
 * Add a hook to modify returned attributes. [[#379](https://github.com/pantheon-systems/wp-saml-auth/pull/379/)] (props @anthonybaxter-uwu)
