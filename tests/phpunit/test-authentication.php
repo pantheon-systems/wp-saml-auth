@@ -149,7 +149,7 @@ class Test_Authentication extends WP_UnitTestCase {
 	* @param string|null $option_name
 	* @return string
 	*/
-	public function filter_wp_saml_auth_option( $value, string|null $option_name ): string {
+	public function filter_wp_saml_auth_option( $value, $option_name ) {
 		if ( isset( $this->options[ $option_name ] ) ) {
 			return $this->options[ $option_name ];
 		}
