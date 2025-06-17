@@ -15,7 +15,7 @@ workflows:
       - test-phpunit:
           matrix:
             parameters:
-              php_version: ["7.4", "8.0", "8.1", "8.2", "8.3", "8.4"]
+              php_version: ["7.4", "8.1", "8.2", "8.3", "8.4"]
       - behat-cleanup:
           requires:
             - "Test with SimpleSAMLphp 1.18.0"
@@ -157,7 +157,7 @@ jobs:
     parameters:
       php_version:
         type: enum
-        enum: ["7.4", "8.0", "8.1", "8.2", "8.3", "8.4"]
+        enum: ["7.4", "8.1", "8.2", "8.3", "8.4"]
     working_directory: ~/pantheon-systems/wp-saml-auth
     docker:
       - image: cimg/php:<< parameters.php_version >>
