@@ -313,7 +313,7 @@ Minimum supported PHP version is 7.3.
 
 = 2.2.1-dev =
 * Adds PHP 8.4 compatibility [[#410](https://github.com/pantheon-systems/wp-saml-auth/pull/410)].
-* Upgrades minimum supported PHP version to 7.4.
+* Increases minimum supported PHP version to 7.4.
 
 = 2.2.0 (9 June 2024) =
 * Add a hook to modify returned attributes. [[#379](https://github.com/pantheon-systems/wp-saml-auth/pull/379/)]
