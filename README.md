@@ -3,8 +3,8 @@
 **Tags:** authentication, SAML  
 **Requires at least:** 6.4  
 **Tested up to:** 6.8.1  
-**Supported PHP Versions:** 7.3 - 8.4 
-**Stable tag:** 2.2.1-dev 
+**Requires PHP:** 7.4  
+**Stable tag:** 2.2.1-dev  
 **License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -307,7 +307,8 @@ There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Nati
 ## Upgrade Notice ##
 
 ### 2.2.1-dev ###
-Confirmed PHP 8.4 compatibility [[#410](https://github.com/pantheon-systems/wp-saml-auth/pull/410)]
+Adds PHP 8.4 compatibility [[#410](https://github.com/pantheon-systems/wp-saml-auth/pull/410)].
+Upgrades minimum supported PHP version to 7.4.
 
 ### 2.2.0 ###
 Security Notice: The recommended version of SimpleSAMLphp library is 2.3.7 or later when using the simplesamlphp SAML authentication type. SimpleSAMLphp 2.0.0 or later is required to fix CVE-2023-26881 (XML signature validation bypass vulnerability).
