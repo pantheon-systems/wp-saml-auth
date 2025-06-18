@@ -3,8 +3,8 @@
 **Tags:** authentication, SAML  
 **Requires at least:** 6.4  
 **Tested up to:** 6.8.1  
-**Supported PHP Versions:** 7.3 - 8.4
-**Stable tag:** 2.2.1-dev
+**Supported PHP Versions:** 7.3 - 8.4 
+**Stable tag:** 2.2.1-dev 
 **License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html
 
