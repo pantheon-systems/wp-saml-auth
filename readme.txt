@@ -3,7 +3,7 @@ Contributors: getpantheon, danielbachhuber, Outlandish Josh, jspellman, jazzs3qu
 Tags: authentication, SAML
 Requires at least: 6.4
 Tested up to: 6.8.1
-Requires PHP: 7.3
+Supported PHP Versions: 7.3 - 8.4
 Stable tag: 2.2.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -309,6 +309,10 @@ Minimum supported PHP version is 7.3.
 
 
 == Changelog ==
+
+
+= 2.2.1-dev =
+* Confirmed PHP 8.4 compatibility [[#410](https://github.com/pantheon-systems/wp-saml-auth/pull/410)]
 
 = 2.2.0 (9 June 2024) =
 * Add a hook to modify returned attributes. [[#379](https://github.com/pantheon-systems/wp-saml-auth/pull/379/)]
