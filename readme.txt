@@ -309,6 +309,7 @@ Minimum supported PHP version is 7.3.
 
 
 == Changelog ==
+= 2.2.1-dev =
 
 = 2.2.1-dev =
 * Adds PHP 8.4 compatibility [[#410](https://github.com/pantheon-systems/wp-saml-auth/pull/410)].
