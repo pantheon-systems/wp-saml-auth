@@ -717,7 +717,7 @@ class WP_SAML_Auth {
 				);
 			}
 		} else {
-			// Get the simplesamlphp version and status
+			// Get the SimpleSAMLphp version and status.
 			$simplesamlphp_version = $this->get_simplesamlphp_version();
 			$simplesamlphp_version_status = $this->check_simplesamlphp_version( $simplesamlphp_version );
 
