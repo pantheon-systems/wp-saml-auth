@@ -108,7 +108,7 @@ class WP_SAML_Auth {
 				}
 			}
 
-			// test again in case `require_once $simplesamlphp_autoloader` didn't work.
+			// test again in case `require_once $simplesamlphp_autoloader` didn't find it.
 			if ( ! class_exists( $this->simplesamlphp_class ) ) {
 				$this->maybeLogError();
 				return;
