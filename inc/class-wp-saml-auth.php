@@ -92,25 +92,25 @@ class WP_SAML_Auth {
 			$auth_config    = self::get_option( 'internal_config' );
 			$this->provider = new OneLogin\Saml2\Auth( $auth_config );
 		} else {
-      $this->simplesamlphp_class = 'SimpleSAML\Auth\Simple';
-      
-      // if object doesn't exist, find the autoloader
-      if ( ! class_exists( $this->simplesamlphp_class ) ) {
-        $simplesamlphp_autoloader = self::get_simplesamlphp_autoloader();
-        
-        // If the autoloader exists, load it.
-        if (!empty($simplesamlphp_autoloader) && file_exists($simplesamlphp_autoloader)) {
-          require_once $simplesamlphp_autoloader;
-        } else {
-          // Autoloader not found.
-          $this->maybeLogError($simplesamlphp_autoloader);
-          return;
-        }
-      }
-
-      // test again in case `require_once $simplesamlphp_autoloader` didn't work.
+			$this->simplesamlphp_class = 'SimpleSAML\Auth\Simple';
+			
+			// if object doesn't exist, find the autoloader
 			if ( ! class_exists( $this->simplesamlphp_class ) ) {
-        $this->maybeLogError();
+				$simplesamlphp_autoloader = self::get_simplesamlphp_autoloader();
+
+				// If the autoloader exists, load it.
+				if (!empty($simplesamlphp_autoloader) && file_exists($simplesamlphp_autoloader)) {
+					require_once $simplesamlphp_autoloader;
+				} else {
+					// Autoloader not found.
+					$this->maybeLogError($simplesamlphp_autoloader);
+					return;
+				}
+			}
+
+			// test again in case `require_once $simplesamlphp_autoloader` didn't work.
+			if ( ! class_exists( $this->simplesamlphp_class ) ) {
+				$this->maybeLogError();
 				return;
 			}
    
@@ -118,25 +118,25 @@ class WP_SAML_Auth {
 		}
 	}
   
-  /**
-   * Use error_log when WP_DEBUG is set
-   *
-   * @param string $path Path to autoloader
-   * @return void
-   */
-  protected function maybeLogError( $path = '' ) {
-    if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-      $error_message = empty( $path )
-        ? __( 'WP SAML Auth: SimpleSAMLphp autoloader could not be loaded for set_provider.', 'wp-saml-auth')
-        : sprintf(
-          // Translators: %s is the path to the SimpleSAMLphp autoloader file (if found).
-          __( 'WP SAML Auth: SimpleSAMLphp autoloader could not be loaded for set_provider. Path determined: %s', 'wp-saml-auth'),
-          esc_html($path)
-        );
-      
-      error_log($error_message);
-    }
-  }
+	/**
+	 * Use error_log when WP_DEBUG is set
+	 *
+	 * @param string $path Path to autoloader
+	 * @return void
+	 */
+	protected function maybeLogError( $path = '' ) {
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			$error_message = empty( $path )
+				? __( 'WP SAML Auth: SimpleSAMLphp autoloader could not be loaded for set_provider.', 'wp-saml-auth')
+				: sprintf(
+					// Translators: %s is the path to the SimpleSAMLphp autoloader file (if found).
+					__( 'WP SAML Auth: SimpleSAMLphp autoloader could not be loaded for set_provider. Path determined: %s', 'wp-saml-auth'),
+					esc_html($path)
+				);
+
+			error_log($error_message);
+		}
+	}
 
 	/**
 	 * Initialize the controller logic on the 'init' hook
