@@ -2,7 +2,8 @@ name: Build, Tag, and Release
 on:
   push:
     branches:
-      - 'master'
+      - 'develop'
+      - 'pre-release'
 
 permissions:
   pull-requests: write
@@ -22,3 +23,4 @@ jobs:
         build_composer_assets: "true"
         generate_release_notes: "true"
         draft: "true"
+        prerelease: "true"
