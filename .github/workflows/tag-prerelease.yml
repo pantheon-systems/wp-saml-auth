@@ -24,3 +24,4 @@ jobs:
         generate_release_notes: "true"
         draft: "true"
         prerelease: "true"
+        main_plugin_file: wp-saml-auth.php

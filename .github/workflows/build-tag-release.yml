@@ -22,4 +22,3 @@ jobs:
         build_composer_assets: "true"
         generate_release_notes: "true"
         draft: "true"
-        main_plugin_file: wp-saml-auth.php
