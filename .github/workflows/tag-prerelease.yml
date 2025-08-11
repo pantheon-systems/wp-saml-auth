@@ -1,8 +1,8 @@
-name: Build, Tag, and Release
+name: Build & Tag, and Pre-release
 on:
   push:
     branches:
-      - 'master'
+      - 'develop'
 
 permissions:
   pull-requests: write
@@ -22,3 +22,5 @@ jobs:
         build_composer_assets: "true"
         generate_release_notes: "true"
         draft: "true"
+        prerelease: "true"
+        main_plugin_file: wp-saml-auth.php
