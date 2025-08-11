@@ -1,9 +1,8 @@
-name: Build, Tag, and Release
+name: Build & Tag, and Pre-release
 on:
   push:
     branches:
       - 'develop'
-      - 'pre-release'
 
 permissions:
   pull-requests: write
