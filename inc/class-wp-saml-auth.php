@@ -691,8 +691,6 @@ class WP_SAML_Auth {
 		}
 
 		$connection_type = self::get_option( 'connection_type' );
-		$simplesamlphp_version = $this->get_simplesamlphp_version();
-		$simplesamlphp_version_status = $this->check_simplesamlphp_version( $simplesamlphp_version );
 		$plugin_page = 'https://wordpress.org/plugins/wp-saml-auth';
 
 		// Using 'internal' (default) connection type.
@@ -718,9 +716,13 @@ class WP_SAML_Auth {
 					]
 				);
 			}
+			return;
 		}
+		// Get the SimpleSAMLphp version and status.
+		$simplesamlphp_version = $this->get_simplesamlphp_version();
+		$simplesamlphp_version_status = $this->check_simplesamlphp_version( $simplesamlphp_version );
 
-		// If we have a SimpleSAMLphp version but the connection type is set, we haven't set up SimpleSAMLphp correctly.
+		// If we don't have a SimpleSAMLphp version but the connection type is set, we haven't set up SimpleSAMLphp correctly.
 		if ( ! $simplesamlphp_version && $connection_type === 'simplesaml' ) {
 			// Only show this notice if we're on the settings page.
 			if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'wp-saml-auth-settings' ) {
@@ -729,7 +731,7 @@ class WP_SAML_Auth {
 			wp_admin_notice(
 				sprintf(
 					// Translators: %s is the link to the plugin page.
-					__( 'SimpleSAMLphp is defined as the SAML connection type, but the SimpleSAMLphp library was not found.Visit the <a href="%s">plugin page</a> for more information', 'wp-saml-auth' ),
+					__( 'SimpleSAMLphp is defined as the SAML connection type, but the SimpleSAMLphp library was not found. Visit the <a href="%s">plugin page</a> for more information', 'wp-saml-auth' ),
 					$plugin_page
 				),
 				[
