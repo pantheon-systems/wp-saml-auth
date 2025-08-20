@@ -84,10 +84,8 @@ class AdminLogIn implements Context, SnippetAcceptingContext {
 		$client = $session->getDriver()->getClient();
 		$client->request('POST', $action, $formFields);
 	}
-
-
 	
-	 /**
+	/**
      * @Then my connection type is :arg1
      */
 	public function myConnectionTypeIs($arg1)
