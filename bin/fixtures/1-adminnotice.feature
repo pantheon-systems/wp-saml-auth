@@ -3,7 +3,7 @@ Feature: Admin Notice for SimpleSAMLphp 2.0.0 Vulnerability
   As a site administrator
   I need to see an admin notice regarding the SimpleSAMLphp vulnerability
 
-  Scenario: Admin user with "simplesaml" as connection type sees the SimpleSAMLphp vulnerability notice
+  Scenario: Admin user sees the SimpleSAMLphp vulnerability notice
     Given I log in as an admin
     Then I should be on "/wp-admin/"
     And my connection type is "simplesaml"
