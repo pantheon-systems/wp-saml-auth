@@ -9,11 +9,10 @@ use Behat\Behat\Context\Context;
  * However it does not actually extend it so as to avoid unecessary coupling.
  */
 class AdminConnection implements Context {
-	/**
-	 * @Given my connection type is :type
-	 */
+	
 	 public function myConnectionTypeIs($type)
 	 {
-		update_option('connection_type', $type);
-	 }
+	 	global $connection_type;
+	 	$connection_type = $type;
+		
 }
