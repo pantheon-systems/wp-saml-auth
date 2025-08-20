@@ -86,11 +86,15 @@ class AdminLogIn implements Context, SnippetAcceptingContext {
 	}
 
 
-	// checks the connection type for adminNotice behat test
-	public function myConnectionTypeIs($type)
+	
+	 /**
+     * @Then my connection type is :arg1
+     */
+	public function myConnectionTypeIs($arg1)
 	 {
+	 	// checks the connection type for adminNotice behat test
 	 	global $connection_type;
-	 	$connection_type = $type;
+	 	$connection_type = $arg1;
 	 }
 
 }
