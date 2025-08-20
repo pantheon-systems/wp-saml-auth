@@ -310,6 +310,9 @@ Minimum supported PHP version is 7.3.
 
 == Changelog ==
 
+= 2.2.1-dev (20 August 2025) =
+* Fix warning message on the plugin's settings page for users who aren't using SimpleSAML
+
 = 2.2.0 (9 June 2024) =
 * Add a hook to modify returned attributes. [[#379](https://github.com/pantheon-systems/wp-saml-auth/pull/379/)]
 * Updates [`onelogin/php-saml`](https://github.com/SAML-Toolkits/php-saml) to 4.2.0. [[#402](https://github.com/pantheon-systems/wp-saml-auth/pull/402/)]
