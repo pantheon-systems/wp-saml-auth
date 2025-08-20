@@ -743,8 +743,8 @@ class WP_SAML_Auth {
 			);
 		}
 
-		// Check SimpleSAMLphp version.
-		if ( $simplesamlphp_version !== false ) {
+		// If we have a SimpleSAMLphp version, check SimpleSAMLphp version.
+		if ( $simplesamlphp_version !== false && $connection_type === 'simplesaml' ) {
 			if ( 'critical' === $simplesamlphp_version_status ) {
 				$min_version = self::get_option( 'critical_simplesamlphp_version' );
 				wp_admin_notice(
@@ -764,7 +764,7 @@ class WP_SAML_Auth {
 						],
 					]
 				);
-			} elseif ( 'warning' === $simplesamlphp_version_status ) {
+			} elseif ( 'warning' === $simplesamlphp_version_status && $connection_type === 'simplesaml' ) {
 				$min_version = self::get_option( 'min_simplesamlphp_version' );
 				wp_admin_notice(
 					sprintf(
@@ -784,7 +784,7 @@ class WP_SAML_Auth {
 					]
 				);
 			}
-		} elseif ( 'unknown' === $simplesamlphp_version_status ) {
+		} elseif ( 'unknown' === $simplesamlphp_version_status && $connection_type === 'simplesaml' ) {
 			// Only show this notice if we're on the settings page.
 			if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'wp-saml-auth-settings' ) {
 				return;
