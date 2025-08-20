@@ -14,5 +14,6 @@ class AdminConnection implements Context {
 	 {
 	 	global $connection_type;
 	 	$connection_type = $type;
+	 }
 		
 }
