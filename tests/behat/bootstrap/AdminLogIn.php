@@ -94,4 +94,5 @@ class AdminLogIn implements Context, SnippetAcceptingContext {
 		$client = $session->getDriver()->getClient();
 		$client->request('POST', $action, $formFields);
 	}
+	
 }
