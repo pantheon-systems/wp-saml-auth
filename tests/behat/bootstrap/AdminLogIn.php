@@ -85,4 +85,12 @@ class AdminLogIn implements Context, SnippetAcceptingContext {
 		$client->request('POST', $action, $formFields);
 	}
 
+
+	// checks the connection type for adminNotice behat test
+	public function myConnectionTypeIs($type)
+	 {
+	 	global $connection_type;
+	 	$connection_type = $type;
+	 }
+
 }
