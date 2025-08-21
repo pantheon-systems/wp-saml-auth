@@ -35,8 +35,16 @@ main(){
     FIXTURE_VERSION=$(terminus wp "${TERMINUS_SITE}.dev" -- core version)
     echo "Fixture Version: ${FIXTURE_VERSION}"
 
-    if ! php -r "exit(version_compare('${TESTED_UP_TO}', '${FIXTURE_VERSION}'));"; then
-        echo "${FIXTURE_VERSION} is less than ${TESTED_UP_TO}"
+    # Compare the 'Tested up to' version with the fixture version, ignoring patch releases.
+    if ! php -r "
+        // Strip patch version number from the 'Tested up to' version.
+        \$tested_up_to = preg_replace('/^(\d+\.\d+).*/', '\$1', '${TESTED_UP_TO}');
+        // Strip patch version number from the fixture version.
+        \$fixture_version = preg_replace('/^(\d+\.\d+).*/', '\$1', '${FIXTURE_VERSION}');
+        // Exit with a non-zero status code if the fixture version is less than the 'Tested up to' version.
+        exit(version_compare(\$tested_up_to, \$fixture_version));
+    "; then
+        echo "Fixture version ${FIXTURE_VERSION} is less than the required minor version of ${TESTED_UP_TO}"
         echo "Please update ${TERMINUS_SITE} to at least WordPress ${TESTED_UP_TO}"
         exit 1
     fi
