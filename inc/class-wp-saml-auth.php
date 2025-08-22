@@ -99,11 +99,11 @@ class WP_SAML_Auth {
 				$simplesamlphp_autoloader = self::get_simplesamlphp_autoloader();
 
 				// If the autoloader exists, load it.
-				if ( ! empty( $simplesamlphp_autoloader ) && file_exists( $simplesamlphp_autoloader ) ) {
+				if (!empty($simplesamlphp_autoloader) && file_exists($simplesamlphp_autoloader)) {
 					require_once $simplesamlphp_autoloader;
 				} else {
 					// Autoloader not found.
-					$this->maybeLogError( $simplesamlphp_autoloader );
+					$this->maybeLogError($simplesamlphp_autoloader);
 					return;
 				}
 			}
@@ -127,6 +127,27 @@ class WP_SAML_Auth {
 	protected function maybeLogError( $path = '' ) {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			$error_message = empty( $path )
+				? __( 'WP SAML Auth: SimpleSAMLphp autoloader could not be loaded for set_provider.', 'wp-saml-auth')
+				: sprintf(
+					// Translators: %s is the path to the SimpleSAMLphp autoloader file (if found).
+					__( 'WP SAML Auth: SimpleSAMLphp autoloader could not be loaded for set_provider. Path determined: %s', 'wp-saml-auth'),
+					esc_html($path)
+				);
+
+			error_log($error_message);
+		}
+	}
+
+  
+	/**
+	 * Use error_log when WP_DEBUG is set
+	 *
+	 * @param string $path Path to autoloader
+	 * @return void
+	 */
+	protected function maybeLogError( $path = '' ) {
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			$error_message = empty( $path )
 				? __( 'WP SAML Auth: SimpleSAMLphp autoloader could not be loaded for set_provider.', 'wp-saml-auth' )
 				: sprintf(
 					// Translators: %s is the path to the SimpleSAMLphp autoloader file (if found).
@@ -135,6 +156,16 @@ class WP_SAML_Auth {
 				);
 
 			error_log( $error_message );
+=======
+
+			if ( class_exists( 'SimpleSAML\Auth\Simple' ) ) {
+				$this->simplesamlphp_class = 'SimpleSAML\Auth\Simple';
+			}
+			if ( ! class_exists( $this->simplesamlphp_class ) ) {
+				return;
+			}
+			$this->provider = new $this->simplesamlphp_class( self::get_option( 'auth_source' ) );
+>>>>>>> bb0208c (Check against simplesamlphp)
 		}
 	}
 
@@ -739,7 +770,7 @@ class WP_SAML_Auth {
 		}
 
 		// If we have a SimpleSAMLphp version but the connection type is set, we haven't set up SimpleSAMLphp correctly.
-		if ( ! $simplesamlphp_version && $connection_type === 'simplesaml' ) {
+		if ( ! $simplesamlphp_version && $connection_type === 'simplesamlphp' ) {
 			// Only show this notice if we're on the settings page.
 			if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'wp-saml-auth-settings' ) {
 				return;
@@ -761,8 +792,8 @@ class WP_SAML_Auth {
 			);
 		}
 
-		// If we have a SimpleSAMLphp version, check SimpleSAMLphp version.
-		if ( $simplesamlphp_version !== false && $connection_type === 'simplesaml' ) {
+		// Check SimpleSAMLphp version 
+		if ( $simplesamlphp_version !== false && $connection_type === 'simplesamlphp' ) {
 			if ( 'critical' === $simplesamlphp_version_status ) {
 				$min_version = self::get_option( 'critical_simplesamlphp_version' );
 				wp_admin_notice(
@@ -782,7 +813,7 @@ class WP_SAML_Auth {
 						],
 					]
 				);
-			} elseif ( 'warning' === $simplesamlphp_version_status ) {
+			} elseif ( 'warning' === $simplesamlphp_version_status && $connection_type === 'simplesamlphp' ) {
 				$min_version = self::get_option( 'min_simplesamlphp_version' );
 				wp_admin_notice(
 					sprintf(
@@ -802,7 +833,7 @@ class WP_SAML_Auth {
 					]
 				);
 			}
-		} elseif ( 'unknown' === $simplesamlphp_version_status && $connection_type === 'simplesaml' ) {
+		} elseif ( 'unknown' === $simplesamlphp_version_status && $connection_type === 'simplesamlphp' ) {
 			// Only show this notice if we're on the settings page.
 			if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'wp-saml-auth-settings' ) {
 				return;
