@@ -764,7 +764,7 @@ class WP_SAML_Auth {
 						],
 					]
 				);
-			} elseif ( 'warning' === $simplesamlphp_version_status && $connection_type === 'simplesaml' ) {
+			} elseif ( 'warning' === $simplesamlphp_version_status ) {
 				$min_version = self::get_option( 'min_simplesamlphp_version' );
 				wp_admin_notice(
 					sprintf(
