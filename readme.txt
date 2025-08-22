@@ -2,7 +2,7 @@
 Contributors: getpantheon, danielbachhuber, Outlandish Josh, jspellman, jazzs3quence
 Tags: authentication, SAML
 Requires at least: 6.4
-Tested up to: 6.8.1
+Tested up to: 6.8.2
 Requires PHP: 7.4
 Stable tag: 2.2.1-dev
 License: GPLv2 or later
@@ -300,7 +300,7 @@ If you're using the SimpleSAMLphp connection type:
 = 2.2.0 =
 Security Notice: The recommended version of SimpleSAMLphp library is 2.3.7 or later when using the simplesamlphp SAML authentication type. SimpleSAMLphp 2.0.0 or later is required to fix CVE-2023-26881 (XML signature validation bypass vulnerability).
 
-New: With "Enforce Security Requirements" enabled, SimpleSAMLphp versions below 2.0.0 will be blocked. 
+New: With "Enforce Security Requirements" enabled, SimpleSAMLphp versions below 2.0.0 will be blocked.
 
 WP SAML Auth 2.2.0 requires WordPress version 6.4 or later.
 
@@ -310,7 +310,8 @@ Minimum supported PHP version is 7.3.
 
 == Changelog ==
 
-= 2.2.1-dev =
+= 2.2.1-dev (20 August 2025) =
+* Fix warning message on the plugin's settings page for users who aren't using SimpleSAML
 * Adds PHP 8.4 compatibility [[#410](https://github.com/pantheon-systems/wp-saml-auth/pull/410)].
 * Increases minimum supported PHP version to 7.4.
 

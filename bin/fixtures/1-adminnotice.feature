@@ -6,6 +6,7 @@ Feature: Admin Notice for SimpleSAMLphp 2.0.0 Vulnerability
   Scenario: Admin user sees the SimpleSAMLphp vulnerability notice
     Given I log in as an admin
     Then I should be on "/wp-admin/"
+    And my connection type is "simplesamlphp"
     And I should see "Security Recommendation:" in the "div.notice.notice-warning[data-slug='wp-saml-auth'][data-type='simplesamlphp-version-warning']" element
     And I should see "The SimpleSAMLphp version used by the WP SAML Auth plugin (2.0.0) is older than the recommended secure version. Please consider updating to version 2.3.7 or later. Learn more." in the "div.notice.notice-warning[data-slug='wp-saml-auth'][data-type='simplesamlphp-version-warning'] p" element
     And I go to "/wp-admin/options-general.php"
