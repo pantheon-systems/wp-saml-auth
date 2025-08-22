@@ -12,9 +12,6 @@ function samltheme_parent_theme_enqueue_styles() {
 }
 
 add_filter( 'wp_saml_auth_option', function( $value, $option_name ){
-    if ( 'connection_type' === $option_name ) {
-        return 'internal';
-    }
     if ( 'internal_config' === $option_name ) {
         $value['idp']['entityId'] = home_url( '/simplesaml' );
         $value['idp']['singleSignOnService']['url'] = home_url( '/simplesaml/saml2/idp/SSOService.php' );
