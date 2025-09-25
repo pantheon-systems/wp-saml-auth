@@ -292,19 +292,37 @@ jobs:
           composer install -n --prefer-dist
           chmod +x bin/*.sh
 
-      - name: Run PHPUnit (fetch tests if missing)
+      - name: Run PHPUnit (idempotent, skip DB if present)
         run: |
           set -euo pipefail
+
           rm -rf /tmp/wordpress /tmp/wordpress-tests-lib || true
           mkdir -p /tmp/wordpress /tmp/wordpress-tests-lib
 
-          # Run your installer (installs WP; may or may not fetch tests)
-          timeout 8m composer test:install:withdb || true
+          # Decide which composer script to run based on DB presence
+          if mysql -e "USE \`${DB_NAME}\`;" >/dev/null 2>&1; then
+            echo "DB ${DB_NAME} exists → using composer test:install (skip DB)"
+            INSTALL_CMD="composer test:install"
+          else
+            echo "DB ${DB_NAME} missing → using composer test:install:withdb"
+            INSTALL_CMD="composer test:install:withdb"
+          fi
 
-          # Ensure WordPress test suite exists
+          # Try once; don’t hard-fail here (we’ll self-heal below)
+          timeout 8m ${INSTALL_CMD} || true
+
+          # Ensure WordPress core is present
+          if [ ! -f /tmp/wordpress/wp-includes/version.php ]; then
+            echo "WordPress core not found; downloading…"
+            wp core download --path=/tmp/wordpress --version=latest --locale=en_US --force
+          fi
+
+          # Resolve the installed WP version reliably
+          WPV="$(wp core version --path=/tmp/wordpress 2>/dev/null || echo trunk)"
+
+          # Ensure the WordPress test suite exists
           if [ ! -f /tmp/wordpress-tests-lib/includes/functions.php ]; then
-            echo "Fetching WordPress test suite into /tmp/wordpress-tests-lib…"
-            WPV="$(php -r 'include "/tmp/wordpress/wp-includes/version.php"; echo $wp_version;')"
+            echo "Fetching WordPress test suite (${WPV}) into /tmp/wordpress-tests-lib…"
             BASE="https://develop.svn.wordpress.org"
             TAG_PATH="${BASE}/tags/${WPV}"
             if svn ls "${TAG_PATH}/" >/dev/null 2>&1; then
@@ -320,5 +338,6 @@ jobs:
           # Sanity (non-fatal)
           wp --path=/tmp/wordpress db check || true
 
-          # Run tests
+          # Finally, run the tests
           composer phpunit
+
