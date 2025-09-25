@@ -259,19 +259,13 @@ jobs:
 
       - name: DB sanity check
         run: mysql -h 127.0.0.1 -uroot -proot -e "SELECT CURRENT_USER();"
-        
+
       - name: Clean WP test dirs
         run: |
           rm -rf /tmp/wordpress /tmp/wordpress-tests-lib || true
           mkdir -p /tmp/wordpress /tmp/wordpress-tests-lib
-          ls -la /tmp/wordpress
 
       - name: Seed wp-cli config (non-interactive + creds)
-        env:
-          DB_HOST: 127.0.0.1
-          DB_USER: root
-          DB_PASS: root
-          DB_NAME: wordpress
         run: |
           cat > /tmp/wp-cli.yml <<EOF
           path: /tmp/wordpress
@@ -288,14 +282,13 @@ jobs:
           EOF
           echo "WP_CLI_CONFIG_PATH=/tmp/wp-cli.yml" >> "$GITHUB_ENV"
 
+      - name: Composer deps
+        run: |
+          composer update
+          composer install -n --prefer-dist
+          chmod +x bin/*.sh
+
       - name: Run PHPUnit
-        env:
-          DB_HOST: 127.0.0.1
-          DB_USER: root
-          DB_PASSWORD: root
-          DB_PASS: root
-          DB_NAME: wordpress
-          MYSQL_PWD: root
         run: |
           # Optional: prevent infinite hangs
           timeout 8m composer test:install:withdb
