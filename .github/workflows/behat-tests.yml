@@ -265,6 +265,14 @@ jobs:
           host = 127.0.0.1
           EOF
 
+      - name: Normalize DB env vars for scripts
+        run: |
+          {
+            echo "DB_PASS=${DB_PASSWORD:-root}"          # wp installer expects this
+            echo "WP_DB_PASS=${DB_PASSWORD:-root}"       # just in case
+            echo "WORDPRESS_DB_PASSWORD=${DB_PASSWORD:-root}"
+          } >> "$GITHUB_ENV"
+      
       - name: Run PHPUnit
         env:
           # If your composer scripts expect these DB vars, export them here
