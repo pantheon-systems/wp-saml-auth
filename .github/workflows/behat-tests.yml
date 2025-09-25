@@ -262,14 +262,30 @@ jobs:
           EOF
           echo "WP_CLI_CONFIG_PATH=/tmp/wp-cli.yml" >> "$GITHUB_ENV"
 
+      # cache should be per-PHP so vendors don't bleed across versions
       - name: Cache Composer deps
         uses: actions/cache@v4
         with:
           path: |
             vendor
             ~/.composer/cache
-          key: test-phpunit-deps-${{ hashFiles('composer.lock') }}
-          restore-keys: test-phpunit-deps-
+          key: php-${{ matrix.php_version }}-composer-${{ hashFiles('composer.json') }}
+          restore-keys: |
+            php-${{ matrix.php_version }}-composer-
+
+      # For PHP 7.4/8.0: resolve for this platform
+      - name: Resolve Composer deps (update for this PHP)
+        if: matrix.php_version == '7.4' || matrix.php_version == '8.0'
+        run: |
+          composer update -n --prefer-dist --no-progress --with-all-dependencies
+          chmod +x bin/*.sh
+
+      # For PHP 8.1/8.2: install from lock is fine
+      - name: Install Composer deps (use lock)
+        if: matrix.php_version != '7.4' && matrix.php_version != '8.0'
+        run: |
+          composer install -n --prefer-dist --no-progress
+          chmod +x bin/*.sh
 
       - name: Install Composer deps
         run: |
