@@ -208,7 +208,7 @@ jobs:
       DB_USER: root
       DB_PASSWORD: root
       DB_PASS: root
-      DB_NAME: wordpress
+      DB_NAME: wordpress_test
       MYSQL_PWD: root
 
     steps:
@@ -228,18 +228,20 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y subversion libmagickwand-dev mariadb-client
 
-      - name: DB precheck & create test DB
+      - name: Create test database
+        env:
+          DB_NAME: wordpress_test
         run: |
-          mysqladmin ping -h 127.0.0.1 -proot
-          mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
-          mysql -h 127.0.0.1 -uroot -proot -e "SHOW DATABASES LIKE '${DB_NAME}';"
+          mysqladmin ping
+          mysql -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
+          mysql -e "SHOW DATABASES LIKE '${DB_NAME}';"
 
-      - name: Clean WP test dirs
-        run: |
-          rm -rf /tmp/wordpress /tmp/wordpress-tests-lib || true
-          mkdir -p /tmp/wordpress /tmp/wordpress-tests-lib
-
-      - name: Seed wp-cli config (non-interactive + creds)
+      - name: Seed wp-cli config
+        env:
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASS: root
+          DB_NAME: wordpress_test              # <-- critical
         run: |
           cat > /tmp/wp-cli.yml <<EOF
           path: /tmp/wordpress
@@ -289,6 +291,7 @@ jobs:
 
       - name: Run PHPUnit
         run: |
-          # Optional: prevent infinite hangs
+          rm -rf /tmp/wordpress /tmp/wordpress-tests-lib || true
+          mkdir -p /tmp/wordpress /tmp/wordpress-tests-lib
           timeout 8m composer test:install:withdb
           composer phpunit
