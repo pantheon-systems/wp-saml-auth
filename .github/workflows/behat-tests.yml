@@ -176,12 +176,9 @@ jobs:
   # PHPUnit (matrix: PHP versions)
   # ==============================
   phpunit:
-    # Nightly should still run phpunit; remove this `if` if you want *only*
-    # behat on nightly. Keeping parity with "main" workflow behavior.
     if: ${{ github.event_name != 'schedule' || github.ref_name == 'master' }}
     name: Test with PHP ${{ matrix.php_version }}
     runs-on: ubuntu-latest
-
     strategy:
       fail-fast: false
       matrix:
@@ -194,8 +191,7 @@ jobs:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: wordpress
           MARIADB_ROOT_HOST: '%'
-        ports:
-          - 3306:3306
+        ports: [ "3306:3306" ]
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
           --health-interval=10s --health-timeout=5s --health-retries=10
@@ -211,11 +207,9 @@ jobs:
       MYSQL_PWD: root
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php_version }}
           extensions: imagick, mysqli
@@ -238,7 +232,6 @@ jobs:
           EOF
           chmod 600 "$HOME/.my.cnf"
 
-      # Optional: explicit wait (mysqladmin uses ~/.my.cnf so TCP + creds)
       - name: Wait for MariaDB
         run: |
           for i in {1..30}; do
@@ -246,13 +239,11 @@ jobs:
             echo "Waiting for MariaDB..."; sleep 2
           done
 
-#      - name: Create test database
-#        env:
-#          DB_NAME: wordpress_test
-#        run: |
-#          mysqladmin ping
-#          mysql -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;"
-#          mysql -e "SHOW DATABASES LIKE '${DB_NAME}';"
+      - name: Create test database
+        run: |
+          mysqladmin ping
+          mysql -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;"
+          mysql -e "SHOW DATABASES LIKE '${DB_NAME}';"
 
       - name: Seed wp-cli config (non-interactive + creds)
         run: |
@@ -278,114 +269,40 @@ jobs:
             vendor
             ~/.composer/cache
           key: test-phpunit-deps-${{ hashFiles('composer.lock') }}
-          restore-keys: |
-            test-phpunit-deps-
+          restore-keys: test-phpunit-deps-
 
       - name: Install Composer deps
         run: |
-          composer update
           composer install -n --prefer-dist
           chmod +x bin/*.sh
 
-      - name: Force WP-CLI db args (wrap both wp and php) — fixed
-        run: |
-          set -euo pipefail
-          mkdir -p "$HOME/.local/bin"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
-          # --- wp wrapper ---
-          cat > "$HOME/.local/bin/wp" <<'BASH'
-          #!/usr/bin/env bash
-          set -euo pipefail
-
-          # Find the next real 'wp' in PATH (skip this wrapper)
-          find_real() {
-            local self="$1"
-            # Prefer command -v -a (prints paths, one per line)
-            local first=true
-            while IFS= read -r p; do
-              if $first; then first=false; continue; fi   # skip wrapper (first hit)
-              [[ -n "$p" && "$p" != "$self" ]] && { echo "$p"; return 0; }
-            done < <(command -v -a wp)
-            # Fallbacks
-            for p in /usr/local/bin/wp /usr/bin/wp; do [[ -x "$p" ]] && { echo "$p"; return 0; }; done
-            return 1
-          }
-
-          REAL_WP="$(find_real "$0")"
-          [[ -x "$REAL_WP" ]] || { echo "Could not locate real wp"; exit 127; }
-
-          if [[ "${1:-}" == "config" && "${2:-}" == "create" ]]; then
-            exec "$REAL_WP" "$@" \
-              --dbname="${DB_NAME:-wordpress_test}" \
-              --dbuser="${DB_USER:-root}" \
-              --dbpass="${DB_PASS:-${DB_PASSWORD:-}}" \
-              --dbhost="${DB_HOST:-127.0.0.1}" \
-              --skip-check --force
-          else
-            exec "$REAL_WP" "$@"
-          fi
-          BASH
-          chmod +x "$HOME/.local/bin/wp"
-
-          # --- php wrapper (handles 'php wp-cli.phar config create ...') ---
-          cat > "$HOME/.local/bin/php" <<'BASH'
-          #!/usr/bin/env bash
-          set -euo pipefail
-
-          find_real() {
-            local self="$1"
-            local first=true
-            while IFS= read -r p; do
-              if $first; then first=false; continue; fi
-              [[ -n "$p" && "$p" != "$self" ]] && { echo "$p"; return 0; }
-            done < <(command -v -a php)
-            for p in /usr/bin/php /bin/php; do [[ -x "$p" ]] && { echo "$p"; return 0; }; done
-            return 1
-          }
-
-          REAL_PHP="$(find_real "$0")"
-          [[ -x "$REAL_PHP" ]] || { echo "Could not locate real php"; exit 127; }
-
-          # If caller is 'php wp-cli.phar config create ...', enforce DB args
-          if [[ "${1:-}" =~ wp-cli(\.phar)?$ ]] && [[ "${2:-}" == "config" && "${3:-}" == "create" ]]; then
-            exec "$REAL_PHP" "$1" "${@:2}" \
-              --dbname="${DB_NAME:-wordpress_test}" \
-              --dbuser="${DB_USER:-root}" \
-              --dbpass="${DB_PASS:-${DB_PASSWORD:-}}" \
-              --dbhost="${DB_HOST:-127.0.0.1}" \
-              --skip-check --force
-          else
-            exec "$REAL_PHP" "$@"
-          fi
-          BASH
-          chmod +x "$HOME/.local/bin/php"
-
-          # Sanity: show the resolution order (first should be our wrapper)
-          command -v -a wp || true
-          command -v -a php || true
-
-
-      - name: Run PHPUnit (retry once if wp-config password empty)
+      - name: Run PHPUnit (fetch tests if missing)
         run: |
           set -euo pipefail
           rm -rf /tmp/wordpress /tmp/wordpress-tests-lib || true
           mkdir -p /tmp/wordpress /tmp/wordpress-tests-lib
 
-          if ! timeout 8m composer test:install:withdb; then
-            echo "Initial install failed; checking wp-config.php password…"
-            if [[ -f /tmp/wordpress/wp-config.php ]] && grep -q "define( 'DB_PASSWORD', '' );" /tmp/wordpress/wp-config.php; then
-              echo "DB_PASSWORD is empty; fixing via wp config set and retrying…"
-              wp --path=/tmp/wordpress config set DB_PASSWORD "${DB_PASS:-${DB_PASSWORD:-}}" --type=constant --raw
-              wp --path=/tmp/wordpress db check || true
-              timeout 3m composer test:install:withdb || true
+          # Run your installer (installs WP; may or may not fetch tests)
+          timeout 8m composer test:install:withdb || true
+
+          # Ensure WordPress test suite exists
+          if [ ! -f /tmp/wordpress-tests-lib/includes/functions.php ]; then
+            echo "Fetching WordPress test suite into /tmp/wordpress-tests-lib…"
+            WPV="$(php -r 'include "/tmp/wordpress/wp-includes/version.php"; echo $wp_version;')"
+            BASE="https://develop.svn.wordpress.org"
+            TAG_PATH="${BASE}/tags/${WPV}"
+            if svn ls "${TAG_PATH}/" >/dev/null 2>&1; then
+              SRC="${TAG_PATH}"
+            else
+              echo "Tag ${WPV} not found; using trunk tests"
+              SRC="${BASE}/trunk"
             fi
-            if ! wp --path=/tmp/wordpress db check; then
-              echo "---- DEBUG: wp-cli.yml ----"; cat /tmp/wp-cli.yml || true
-              echo "---- DEBUG: wp-config.php ----"; sed -n '1,200p' /tmp/wordpress/wp-config.php || true
-              echo "---- DEBUG: MySQL grants ----"; mysql -e "SELECT CURRENT_USER(); SHOW GRANTS;"
-              exit 1
-            fi
+            svn co --quiet "${SRC}/tests/phpunit/includes/" "/tmp/wordpress-tests-lib/includes"
+            svn co --quiet "${SRC}/tests/phpunit/data/" "/tmp/wordpress-tests-lib/data"
           fi
 
+          # Sanity (non-fatal)
+          wp --path=/tmp/wordpress db check || true
+
+          # Run tests
           composer phpunit
