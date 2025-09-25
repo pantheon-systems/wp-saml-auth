@@ -194,6 +194,14 @@ jobs:
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: wordpress
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASSWORD: root
+          DB_NAME: wordpress
+          MYSQL_PWD: root
+          WP_DB_HOST: 127.0.0.1
+          WP_DB_USER: root
+          WP_DB_PASSWORD: root
         ports:
           - 3306:3306
         options: >-
@@ -265,6 +273,10 @@ jobs:
           DB_USER: root
           DB_PASSWORD: root
           DB_NAME: wordpress
+          MYSQL_PWD: root
+          WP_DB_HOST: 127.0.0.1
+          WP_DB_USER: root
+          WP_DB_PASSWORD: root
         run: |
           composer test:install:withdb
           composer phpunit
