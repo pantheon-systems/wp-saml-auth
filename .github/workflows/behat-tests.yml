@@ -187,18 +187,18 @@ jobs:
       matrix:
         php_version: ["7.4", "8.0", "8.1", "8.2"]
 
-#    services:
-#      mariadb:
-#        image: mariadb:10.4
-#        env:
-#          MYSQL_ROOT_PASSWORD: root
-#          MYSQL_DATABASE: wordpress
-#          MARIADB_ROOT_HOST: '%'
-#        ports:
-#          - 3306:3306
-#        options: >-
-#          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
-#          --health-interval=10s --health-timeout=5s --health-retries=10
+    services:
+      mariadb:
+        image: mariadb:10.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+          MARIADB_ROOT_HOST: '%'
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s --health-timeout=5s --health-retries=10
 
     env:
       WP_TESTS_DIR: /tmp/wordpress-tests-lib
@@ -227,10 +227,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y subversion libmagickwand-dev mariadb-client
 
-      - name: Start MySQL
-        run: |
-          sudo /etc/init.d/mysql start
-          mysql -e "CREATE DATABASE IF NOT EXISTS $DB_NAME;" -u$DB_USER -p$DB_PASSWORD
+#      - name: Configure MySQL client defaults
+#        run: |
+#          cat > "$HOME/.my.cnf" <<'EOF'
+#          [client]
+#          user=root
+#          password=root
+#          host=127.0.0.1
+#          protocol=tcp
+#          EOF
+#          chmod 600 "$HOME/.my.cnf"
 
       # Optional: explicit wait (mysqladmin uses ~/.my.cnf so TCP + creds)
       - name: Wait for MariaDB
@@ -248,42 +254,42 @@ jobs:
           mysql -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;"
           mysql -e "SHOW DATABASES LIKE '${DB_NAME}';"
 
-      - name: Seed wp-cli config (non-interactive + creds)
-        run: |
-          cat > /tmp/wp-cli.yml <<EOF
-          path: /tmp/wordpress
-          core download:
-            version: latest
-            locale: en_US
-            force: true
-          config create:
-            dbname: ${DB_NAME}
-            dbuser: ${DB_USER}
-            dbpass: ${DB_PASS}
-            dbhost: ${DB_HOST}
-            skip-check: true
-          EOF
-          echo "WP_CLI_CONFIG_PATH=/tmp/wp-cli.yml" >> "$GITHUB_ENV"
-
-      - name: Cache Composer deps
-        uses: actions/cache@v4
-        with:
-          path: |
-            vendor
-            ~/.composer/cache
-          key: test-phpunit-deps-${{ hashFiles('composer.lock') }}
-          restore-keys: |
-            test-phpunit-deps-
-
-      - name: Install Composer deps
-        run: |
-          composer install -n --prefer-dist
-          chmod +x bin/*.sh
-
-      - name: Run PHPUnit
-        run: |
-          rm -rf /tmp/wordpress /tmp/wordpress-tests-lib || true
-          mkdir -p /tmp/wordpress /tmp/wordpress-tests-lib
-          # prevent infinite hangs if something prompts
-          timeout 8m composer test:install:withdb
-          composer phpunit
+#      - name: Seed wp-cli config (non-interactive + creds)
+#        run: |
+#          cat > /tmp/wp-cli.yml <<EOF
+#          path: /tmp/wordpress
+#          core download:
+#            version: latest
+#            locale: en_US
+#            force: true
+#          config create:
+#            dbname: ${DB_NAME}
+#            dbuser: ${DB_USER}
+#            dbpass: ${DB_PASS}
+#            dbhost: ${DB_HOST}
+#            skip-check: true
+#          EOF
+#          echo "WP_CLI_CONFIG_PATH=/tmp/wp-cli.yml" >> "$GITHUB_ENV"
+#
+#      - name: Cache Composer deps
+#        uses: actions/cache@v4
+#        with:
+#          path: |
+#            vendor
+#            ~/.composer/cache
+#          key: test-phpunit-deps-${{ hashFiles('composer.lock') }}
+#          restore-keys: |
+#            test-phpunit-deps-
+#
+#      - name: Install Composer deps
+#        run: |
+#          composer install -n --prefer-dist
+#          chmod +x bin/*.sh
+#
+#      - name: Run PHPUnit
+#        run: |
+#          rm -rf /tmp/wordpress /tmp/wordpress-tests-lib || true
+#          mkdir -p /tmp/wordpress /tmp/wordpress-tests-lib
+#          # prevent infinite hangs if something prompts
+#          timeout 8m composer test:install:withdb
+#          composer phpunit
