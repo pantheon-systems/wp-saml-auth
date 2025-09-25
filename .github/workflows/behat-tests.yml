@@ -74,6 +74,11 @@ jobs:
           mkdir -p "$HOME/.ssh"
           echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
 
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
+
       - name: Configure Composer GitHub OAuth (optional)
         run: |
           if [ -z "${GITHUB_TOKEN:-}" ]; then
@@ -337,7 +342,7 @@ jobs:
 
           # Sanity: must be able to connect now
           wp --path=/tmp/wordpress db check
-          
+
           # Ensure the WordPress test suite is present (includes/ + data/)
           if [ ! -f /tmp/wordpress-tests-lib/includes/functions.php ]; then
             WPV="$(wp core version --path=/tmp/wordpress 2>/dev/null || echo trunk)"
