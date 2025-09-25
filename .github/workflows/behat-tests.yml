@@ -292,14 +292,14 @@ jobs:
           composer install -n --prefer-dist
           chmod +x bin/*.sh
 
-      - name: Run PHPUnit (idempotent, skip DB if present)
+      - name: Run PHPUnit (idempotent; fix configs; ensure tests)
         run: |
           set -euo pipefail
 
           rm -rf /tmp/wordpress /tmp/wordpress-tests-lib || true
           mkdir -p /tmp/wordpress /tmp/wordpress-tests-lib
-
-          # Decide which composer script to run based on DB presence
+          
+          # Choose installer path based on DB presence
           if mysql -e "USE \`${DB_NAME}\`;" >/dev/null 2>&1; then
             echo "DB ${DB_NAME} exists → using composer test:install (skip DB)"
             INSTALL_CMD="composer test:install"
@@ -308,20 +308,34 @@ jobs:
             INSTALL_CMD="composer test:install:withdb"
           fi
 
-          # Try once; don’t hard-fail here (we’ll self-heal below)
+          # Try once; don't fail the job yet (we'll self-heal below)
           timeout 8m ${INSTALL_CMD} || true
 
-          # Ensure WordPress core is present
+          # Ensure WP core is present
           if [ ! -f /tmp/wordpress/wp-includes/version.php ]; then
             echo "WordPress core not found; downloading…"
             wp core download --path=/tmp/wordpress --version=latest --locale=en_US --force
           fi
 
-          # Resolve the installed WP version reliably
-          WPV="$(wp core version --path=/tmp/wordpress 2>/dev/null || echo trunk)"
+          # FORCE correct DB constants into wp-config.php (the installer may have written empty DB_PASSWORD)
+          if [ -f /tmp/wordpress/wp-config.php ]; then
+            wp --path=/tmp/wordpress config set DB_NAME      "${DB_NAME}"                             --type=constant --raw || true
+            wp --path=/tmp/wordpress config set DB_USER      "${DB_USER}"                             --type=constant --raw || true
+            wp --path=/tmp/wordpress config set DB_PASSWORD  "${DB_PASS:-${DB_PASSWORD:-}}"           --type=constant --raw || true
+            wp --path=/tmp/wordpress config set DB_HOST      "${DB_HOST}"                             --type=constant --raw || true
+          else
+            # create one if it wasn't created
+            wp config create --path=/tmp/wordpress \
+              --dbname="${DB_NAME}" --dbuser="${DB_USER}" --dbpass="${DB_PASS:-${DB_PASSWORD:-}}" --dbhost="${DB_HOST}" \
+              --skip-check --force
+          fi
 
-          # Ensure the WordPress test suite exists
+          # Sanity: must be able to connect now
+          wp --path=/tmp/wordpress db check
+
+          # Ensure the WordPress test suite is present (includes/ + data/)
           if [ ! -f /tmp/wordpress-tests-lib/includes/functions.php ]; then
+            WPV="$(wp core version --path=/tmp/wordpress 2>/dev/null || echo trunk)"
             echo "Fetching WordPress test suite (${WPV}) into /tmp/wordpress-tests-lib…"
             BASE="https://develop.svn.wordpress.org"
             TAG_PATH="${BASE}/tags/${WPV}"
@@ -332,12 +346,32 @@ jobs:
               SRC="${BASE}/trunk"
             fi
             svn co --quiet "${SRC}/tests/phpunit/includes/" "/tmp/wordpress-tests-lib/includes"
-            svn co --quiet "${SRC}/tests/phpunit/data/" "/tmp/wordpress-tests-lib/data"
+            svn co --quiet "${SRC}/tests/phpunit/data/"     "/tmp/wordpress-tests-lib/data"
           fi
 
-          # Sanity (non-fatal)
-          wp --path=/tmp/wordpress db check || true
+          # Ensure wp-tests-config.php exists and points to /tmp/wordpress
+          if [ ! -f /tmp/wordpress-tests-lib/wp-tests-config.php ]; then
+            cat > /tmp/wordpress-tests-lib/wp-tests-config.php <<PHP
+          <?php
+          define( 'DB_NAME', '${DB_NAME}' );
+          define( 'DB_USER', '${DB_USER}' );
+          define( 'DB_PASSWORD', '${DB_PASS:-${DB_PASSWORD:-}}' );
+          define( 'DB_HOST', '${DB_HOST}' );
+          define( 'DB_CHARSET', 'utf8' );
+          define( 'DB_COLLATE', '' );
+          \$table_prefix = 'wptests_';
 
-          # Finally, run the tests
+          define( 'WP_DEBUG', true );
+          define( 'WP_TESTS_DOMAIN', 'example.org' );
+          define( 'WP_TESTS_EMAIL', 'admin@example.org' );
+          define( 'WP_TESTS_TITLE', 'Test Blog' );
+          define( 'WP_PHP_BINARY', 'php' );
+          define( 'WPLANG', '' );
+
+          // Point tests at the downloaded WP core
+          define( 'ABSPATH', '/tmp/wordpress/' );
+          PHP
+          fi
+
+          # Run tests
           composer phpunit
-
