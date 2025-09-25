@@ -246,13 +246,13 @@ jobs:
             echo "Waiting for MariaDB..."; sleep 2
           done
 
-      - name: Create test database
-        env:
-          DB_NAME: wordpress_test
-        run: |
-          mysqladmin ping
-          mysql -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;"
-          mysql -e "SHOW DATABASES LIKE '${DB_NAME}';"
+#      - name: Create test database
+#        env:
+#          DB_NAME: wordpress_test
+#        run: |
+#          mysqladmin ping
+#          mysql -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;"
+#          mysql -e "SHOW DATABASES LIKE '${DB_NAME}';"
 
       - name: Seed wp-cli config (non-interactive + creds)
         run: |
