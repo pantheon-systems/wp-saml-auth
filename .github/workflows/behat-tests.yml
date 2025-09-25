@@ -228,15 +228,33 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y subversion libmagickwand-dev mariadb-client
 
-      - name: Cache Composer dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            vendor
-            ~/.composer/cache
-          key: test-phpunit-dependencies-${{ hashFiles('composer.json') }}
-          restore-keys: |
-            test-phpunit-dependencies-
+      - name: DB precheck & create test DB
+        run: |
+          mysqladmin ping -h 127.0.0.1 -proot
+          mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
+          mysql -h 127.0.0.1 -uroot -proot -e "SHOW DATABASES LIKE '${DB_NAME}';"
+
+      - name: Clean WP test dirs
+        run: |
+          rm -rf /tmp/wordpress /tmp/wordpress-tests-lib || true
+          mkdir -p /tmp/wordpress /tmp/wordpress-tests-lib
+
+      - name: Seed wp-cli config (non-interactive + creds)
+        run: |
+          cat > /tmp/wp-cli.yml <<EOF
+          path: /tmp/wordpress
+          core download:
+            version: latest
+            locale: en_US
+            force: true
+          config create:
+            dbname: ${DB_NAME}
+            dbuser: ${DB_USER}
+            dbpass: ${DB_PASS}
+            dbhost: ${DB_HOST}
+            skip-check: true
+          EOF
+          echo "WP_CLI_CONFIG_PATH=/tmp/wp-cli.yml" >> "$GITHUB_ENV"
 
       - name: Install Composer deps
         run: |
@@ -262,31 +280,6 @@ jobs:
             echo "Waiting for MariaDB..."
             sleep 2
           done
-
-      - name: DB sanity check
-        run: mysql -h 127.0.0.1 -uroot -proot -e "SELECT CURRENT_USER();"
-
-      - name: Clean WP test dirs
-        run: |
-          rm -rf /tmp/wordpress /tmp/wordpress-tests-lib || true
-          mkdir -p /tmp/wordpress /tmp/wordpress-tests-lib
-
-      - name: Seed wp-cli config (non-interactive + creds)
-        run: |
-          cat > /tmp/wp-cli.yml <<EOF
-          path: /tmp/wordpress
-          core download:
-            version: latest
-            locale: en_US
-            force: true
-          config create:
-            dbname: ${DB_NAME}
-            dbuser: ${DB_USER}
-            dbpass: ${DB_PASS}
-            dbhost: ${DB_HOST}
-            skip-check: true
-          EOF
-          echo "WP_CLI_CONFIG_PATH=/tmp/wp-cli.yml" >> "$GITHUB_ENV"
 
       - name: Composer deps
         run: |
