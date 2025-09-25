@@ -80,7 +80,6 @@ jobs:
             echo "GITHUB_TOKEN missing; assuming unauthenticated build"
             exit 0
           fi
-          echo "Setting GitHub OAuth token (output suppressed)"
           { composer config -g github-oauth.github.com "$GITHUB_TOKEN"; } &> /dev/null
 
       - name: Terminus auth (optional)
@@ -228,20 +227,34 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y subversion libmagickwand-dev mariadb-client
 
+      - name: Configure MySQL client defaults
+        run: |
+          cat > "$HOME/.my.cnf" <<'EOF'
+          [client]
+          user=root
+          password=root
+          host=127.0.0.1
+          protocol=tcp
+          EOF
+          chmod 600 "$HOME/.my.cnf"
+
+      # Optional: explicit wait (mysqladmin uses ~/.my.cnf so TCP + creds)
+      - name: Wait for MariaDB
+        run: |
+          for i in {1..30}; do
+            if mysqladmin ping --silent; then echo "MariaDB is up"; break; fi
+            echo "Waiting for MariaDB..."; sleep 2
+          done
+
       - name: Create test database
         env:
           DB_NAME: wordpress_test
         run: |
           mysqladmin ping
-          mysql -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
+          mysql -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;"
           mysql -e "SHOW DATABASES LIKE '${DB_NAME}';"
 
-      - name: Seed wp-cli config
-        env:
-          DB_HOST: 127.0.0.1
-          DB_USER: root
-          DB_PASS: root
-          DB_NAME: wordpress_test              # <-- critical
+      - name: Seed wp-cli config (non-interactive + creds)
         run: |
           cat > /tmp/wp-cli.yml <<EOF
           path: /tmp/wordpress
@@ -258,34 +271,18 @@ jobs:
           EOF
           echo "WP_CLI_CONFIG_PATH=/tmp/wp-cli.yml" >> "$GITHUB_ENV"
 
+      - name: Cache Composer deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            vendor
+            ~/.composer/cache
+          key: test-phpunit-deps-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            test-phpunit-deps-
+
       - name: Install Composer deps
         run: |
-          composer update
-          composer install -n --prefer-dist
-          chmod +x bin/*.sh
-
-      - name: Install WP-CLI (fallback if tool not present)
-        run: |
-          if ! command -v wp >/dev/null 2>&1; then
-            curl -fsSLO https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
-            chmod +x wp-cli.phar
-            sudo mv wp-cli.phar /usr/local/bin/wp
-          fi
-
-      - name: Wait for MariaDB
-        run: |
-          for i in {1..30}; do
-            if mysqladmin ping -h 127.0.0.1 -proot --silent; then
-              echo "MariaDB is up"
-              break
-            fi
-            echo "Waiting for MariaDB..."
-            sleep 2
-          done
-
-      - name: Composer deps
-        run: |
-          composer update
           composer install -n --prefer-dist
           chmod +x bin/*.sh
 
@@ -293,5 +290,6 @@ jobs:
         run: |
           rm -rf /tmp/wordpress /tmp/wordpress-tests-lib || true
           mkdir -p /tmp/wordpress /tmp/wordpress-tests-lib
+          # prevent infinite hangs if something prompts
           timeout 8m composer test:install:withdb
           composer phpunit
