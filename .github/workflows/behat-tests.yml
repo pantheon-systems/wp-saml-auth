@@ -187,18 +187,18 @@ jobs:
       matrix:
         php_version: ["7.4", "8.0", "8.1", "8.2"]
 
-    services:
-      mariadb:
-        image: mariadb:10.4
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: wordpress
-          MARIADB_ROOT_HOST: '%'
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
-          --health-interval=10s --health-timeout=5s --health-retries=10
+#    services:
+#      mariadb:
+#        image: mariadb:10.4
+#        env:
+#          MYSQL_ROOT_PASSWORD: root
+#          MYSQL_DATABASE: wordpress
+#          MARIADB_ROOT_HOST: '%'
+#        ports:
+#          - 3306:3306
+#        options: >-
+#          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+#          --health-interval=10s --health-timeout=5s --health-retries=10
 
     env:
       WP_TESTS_DIR: /tmp/wordpress-tests-lib
@@ -227,16 +227,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y subversion libmagickwand-dev mariadb-client
 
-      - name: Configure MySQL client defaults
+      - name: Start MySQL
         run: |
-          cat > "$HOME/.my.cnf" <<'EOF'
-          [client]
-          user=root
-          password=root
-          host=127.0.0.1
-          protocol=tcp
-          EOF
-          chmod 600 "$HOME/.my.cnf"
+          sudo /etc/init.d/mysql start
+          mysql -e "CREATE DATABASE IF NOT EXISTS $DB_NAME;" -u$DB_USER -p$DB_PASSWORD
 
       # Optional: explicit wait (mysqladmin uses ~/.my.cnf so TCP + creds)
       - name: Wait for MariaDB
