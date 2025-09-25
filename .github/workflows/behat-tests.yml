@@ -194,21 +194,11 @@ jobs:
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: wordpress
-          DB_HOST: 127.0.0.1
-          DB_USER: root
-          DB_PASSWORD: root
-          DB_NAME: wordpress
-          MYSQL_PWD: root
-          WP_DB_HOST: 127.0.0.1
-          WP_DB_USER: root
-          WP_DB_PASSWORD: root
         ports:
           - 3306:3306
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
+          --health-interval=10s --health-timeout=5s --health-retries=10
 
     env:
       WP_TESTS_DIR: /tmp/wordpress-tests-lib
