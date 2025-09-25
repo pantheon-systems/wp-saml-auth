@@ -94,22 +94,22 @@ jobs:
             IdentityFile ~/.ssh/id_pantheon
             IdentitiesOnly yes
             StrictHostKeyChecking accept-new
-        CFG
+          CFG
 
-        # Login and ensure the pubkey is on the same account as the machine token
-        terminus auth:login --machine-token="$TERMINUS_TOKEN"
-        terminus ssh-key:add "$HOME/.ssh/id_pantheon.pub" || true
+          # Login and ensure the pubkey is on the same account as the machine token
+          terminus auth:login --machine-token="$TERMINUS_TOKEN"
+          terminus ssh-key:add "$HOME/.ssh/id_pantheon.pub" || true
 
-        echo "Fingerprint we just added:"
-        ssh-keygen -lf "$HOME/.ssh/id_pantheon.pub" || true
-        echo "Keys on account:"
-        terminus ssh-key:list --fields=fingerprint,comment --format=table || true
-        
-        # Optional: prove raw SSH works before remote:wp
-        HOST=$(terminus connection:info "${TERMINUS_SITE}.dev" --field=sftp_host)
-        USER=$(terminus connection:info "${TERMINUS_SITE}.dev" --field=sftp_username)
-        echo "SSH preflight to ${USER}@${HOST}..."
-        ssh -o BatchMode=yes -o ConnectTimeout=10 "${USER}@${HOST}" -p 2222 "echo OK from $(hostname)"
+          echo "Fingerprint we just added:"
+          ssh-keygen -lf "$HOME/.ssh/id_pantheon.pub" || true
+          echo "Keys on account:"
+          terminus ssh-key:list --fields=fingerprint,comment --format=table || true
+
+          # Optional: prove raw SSH works before remote:wp
+          HOST=$(terminus connection:info "${TERMINUS_SITE}.dev" --field=sftp_host)
+          USER=$(terminus connection:info "${TERMINUS_SITE}.dev" --field=sftp_username)
+          echo "SSH preflight to ${USER}@${HOST}..."
+          ssh -o BatchMode=yes -o ConnectTimeout=10 "${USER}@${HOST}" -p 2222 "echo OK from $(hostname)"
 
       - name: Configure Composer GitHub OAuth (optional)
         run: |
