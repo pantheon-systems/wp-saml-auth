@@ -287,10 +287,10 @@ jobs:
           composer install -n --prefer-dist
           chmod +x bin/*.sh
 
-#      - name: Run PHPUnit
-#        run: |
-#          rm -rf /tmp/wordpress /tmp/wordpress-tests-lib || true
-#          mkdir -p /tmp/wordpress /tmp/wordpress-tests-lib
-#          # prevent infinite hangs if something prompts
-#          timeout 8m composer test:install:withdb
-#          composer phpunit
+      - name: Run PHPUnit
+        run: |
+          rm -rf /tmp/wordpress /tmp/wordpress-tests-lib || true
+          mkdir -p /tmp/wordpress /tmp/wordpress-tests-lib
+          # prevent infinite hangs if something prompts
+          timeout 8m composer test:install:withdb
+          composer phpunit
