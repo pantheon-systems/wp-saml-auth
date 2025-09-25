@@ -74,10 +74,38 @@ jobs:
           mkdir -p "$HOME/.ssh"
           echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
 
-      - name: Install SSH key
-        uses: webfactory/ssh-agent@v0.7.0
-        with:
-          ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
+      - name: Install Pantheon SSH key in container + register with account
+        env:
+          TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
+          PANTHEON_SSH_PRIVATE_KEY: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+
+          # Write key into the container
+          install -m 700 -d "$HOME/.ssh"
+          umask 077
+          printf "%s\n" "$PANTHEON_SSH_PRIVATE_KEY" > "$HOME/.ssh/id_pantheon"
+          ssh-keygen -y -f "$HOME/.ssh/id_pantheon" > "$HOME/.ssh/id_pantheon.pub"
+
+          # Force SSH to use this key for Pantheon appservers
+          cat >> "$HOME/.ssh/config" <<'CFG'
+          Host *.drush.in
+            Port 2222
+            IdentityFile ~/.ssh/id_pantheon
+            IdentitiesOnly yes
+            StrictHostKeyChecking accept-new
+          CFG
+
+          # Make sure Terminus is logged in (same account as the machine token)
+          terminus auth:login --machine-token="$TERMINUS_TOKEN"
+
+          # Ensure the public key is registered to that Pantheon account (idempotent)
+          # If it already exists, ignore the error.
+          terminus ssh-key:add "$HOME/.ssh/id_pantheon.pub" || true
+
+          # Optional: quick sanity
+          terminus whoami
+
 
       - name: Configure Composer GitHub OAuth (optional)
         run: |
