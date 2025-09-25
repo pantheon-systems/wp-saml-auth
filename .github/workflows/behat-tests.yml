@@ -293,5 +293,7 @@ jobs:
           WP_DB_USER: root
           WP_DB_PASSWORD: root
         run: |
+          mysql -h 127.0.0.1 -uroot -proot -e "SELECT CURRENT_USER();"
+          
           composer test:install:withdb
           composer phpunit
