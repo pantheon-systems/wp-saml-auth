@@ -256,13 +256,14 @@ jobs:
             sleep 2
           done
 
-      - name: Normalize DB env vars for scripts
+      - name: Configure MySQL Client
         run: |
-          {
-            echo "DB_PASS=${DB_PASSWORD:-root}"          # wp installer expects this
-            echo "WP_DB_PASS=${DB_PASSWORD:-root}"       # just in case
-            echo "WORDPRESS_DB_PASSWORD=${DB_PASSWORD:-root}"
-          } >> "$GITHUB_ENV"
+          cat <<EOF > ~/.my.cnf
+          [client]
+          user = root
+          password = root
+          host = 127.0.0.1
+          EOF
 
       - name: Run PHPUnit
         env:
