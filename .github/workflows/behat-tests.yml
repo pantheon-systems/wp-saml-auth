@@ -287,7 +287,7 @@ jobs:
           composer install -n --prefer-dist
           chmod +x bin/*.sh
 
-      - name: Force WP-CLI db args (wrap both wp and php)
+      - name: Force WP-CLI db args (wrap both wp and php) — fixed
         run: |
           set -euo pipefail
           mkdir -p "$HOME/.local/bin"
@@ -296,11 +296,25 @@ jobs:
           # --- wp wrapper ---
           cat > "$HOME/.local/bin/wp" <<'BASH'
           #!/usr/bin/env bash
-          set -e
-          SELF="$0"
-          # Find the next real wp in PATH (skip this wrapper)
-          REAL_WP="$( (command -v -a wp 2>/dev/null || type -a wp 2>/dev/null) | grep -v "^${SELF}$" | head -n1 )"
-          [[ -z "$REAL_WP" ]] && for p in /usr/local/bin/wp /usr/bin/wp; do [[ -x "$p" ]] && REAL_WP="$p" && break; done
+          set -euo pipefail
+
+          # Find the next real 'wp' in PATH (skip this wrapper)
+          find_real() {
+            local self="$1"
+            # Prefer command -v -a (prints paths, one per line)
+            local first=true
+            while IFS= read -r p; do
+              if $first; then first=false; continue; fi   # skip wrapper (first hit)
+              [[ -n "$p" && "$p" != "$self" ]] && { echo "$p"; return 0; }
+            done < <(command -v -a wp)
+            # Fallbacks
+            for p in /usr/local/bin/wp /usr/bin/wp; do [[ -x "$p" ]] && { echo "$p"; return 0; }; done
+            return 1
+          }
+
+          REAL_WP="$(find_real "$0")"
+          [[ -x "$REAL_WP" ]] || { echo "Could not locate real wp"; exit 127; }
+
           if [[ "${1:-}" == "config" && "${2:-}" == "create" ]]; then
             exec "$REAL_WP" "$@" \
               --dbname="${DB_NAME:-wordpress_test}" \
@@ -317,9 +331,23 @@ jobs:
           # --- php wrapper (handles 'php wp-cli.phar config create ...') ---
           cat > "$HOME/.local/bin/php" <<'BASH'
           #!/usr/bin/env bash
-          set -e
-          SELF="$0"
-          REAL_PHP="$( (command -v -a php 2>/dev/null || type -a php 2>/dev/null) | grep -v "^${SELF}$" | head -n1 )"
+          set -euo pipefail
+
+          find_real() {
+            local self="$1"
+            local first=true
+            while IFS= read -r p; do
+              if $first; then first=false; continue; fi
+              [[ -n "$p" && "$p" != "$self" ]] && { echo "$p"; return 0; }
+            done < <(command -v -a php)
+            for p in /usr/bin/php /bin/php; do [[ -x "$p" ]] && { echo "$p"; return 0; }; done
+            return 1
+          }
+
+          REAL_PHP="$(find_real "$0")"
+          [[ -x "$REAL_PHP" ]] || { echo "Could not locate real php"; exit 127; }
+
+          # If caller is 'php wp-cli.phar config create ...', enforce DB args
           if [[ "${1:-}" =~ wp-cli(\.phar)?$ ]] && [[ "${2:-}" == "config" && "${3:-}" == "create" ]]; then
             exec "$REAL_PHP" "$1" "${@:2}" \
               --dbname="${DB_NAME:-wordpress_test}" \
@@ -333,9 +361,10 @@ jobs:
           BASH
           chmod +x "$HOME/.local/bin/php"
 
-          # Prove wrappers are ahead of real binaries
-          type -a wp || true
-          type -a php || true
+          # Sanity: show the resolution order (first should be our wrapper)
+          command -v -a wp || true
+          command -v -a php || true
+
 
       - name: Run PHPUnit (retry once if wp-config password empty)
         run: |
@@ -343,18 +372,14 @@ jobs:
           rm -rf /tmp/wordpress /tmp/wordpress-tests-lib || true
           mkdir -p /tmp/wordpress /tmp/wordpress-tests-lib
 
-          # First attempt
           if ! timeout 8m composer test:install:withdb; then
             echo "Initial install failed; checking wp-config.php password…"
             if [[ -f /tmp/wordpress/wp-config.php ]] && grep -q "define( 'DB_PASSWORD', '' );" /tmp/wordpress/wp-config.php; then
               echo "DB_PASSWORD is empty; fixing via wp config set and retrying…"
               wp --path=/tmp/wordpress config set DB_PASSWORD "${DB_PASS:-${DB_PASSWORD:-}}" --type=constant --raw
-              # quick connectivity check
               wp --path=/tmp/wordpress db check || true
-              # Retry once
               timeout 3m composer test:install:withdb || true
             fi
-            # If it still fails, dump useful debug and exit non-zero
             if ! wp --path=/tmp/wordpress db check; then
               echo "---- DEBUG: wp-cli.yml ----"; cat /tmp/wp-cli.yml || true
               echo "---- DEBUG: wp-config.php ----"; sed -n '1,200p' /tmp/wordpress/wp-config.php || true
@@ -364,4 +389,3 @@ jobs:
           fi
 
           composer phpunit
-
