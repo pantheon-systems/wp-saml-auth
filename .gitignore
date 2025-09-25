@@ -1,4 +1,6 @@
 .DS_Store
+.idea
+.codacy
 wp-cli.local.yml
 /node_modules/
 /simplesamlphp/

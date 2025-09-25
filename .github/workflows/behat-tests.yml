@@ -1,0 +1,270 @@
+name: Behat & PHPUnit
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"   # nightly
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # ==============================
+  # Behat (matrix: SimpleSAMLphp)
+  # ==============================
+  behat:
+    # Skip scheduled runs unless branch is master (Circle's nightly behavior)
+    if: ${{ github.event_name != 'schedule' || github.ref_name == 'master' }}
+    name: Test with SimpleSAMLphp ${{ matrix.simplesamlphp_version }}
+    runs-on: ubuntu-latest
+
+    # Run inside the same container you used on CircleCI
+    container:
+      image: quay.io/pantheon-public/build-tools-ci:8.x-php8.2
+      options: --user root
+
+    env:
+      # You can set these in repo/org secrets. These are optional in the logic below.
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
+      # Keep parity with Circle variables / naming
+      TERMINUS_SITE: wp-saml-auth
+      # Emulate Circle's CIRCLE_BUILD_NUM with GH run number
+      CIRCLE_BUILD_NUM: ${{ github.run_number }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        simplesamlphp_version: ["1.18.0", "2.0.0", "2.4.0"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache Composer vendor
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-cache-v1-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            composer-cache-v1-
+
+      - name: Install Composer dependencies
+        run: composer install -n --prefer-dist
+
+      - name: Generate WP admin password
+        run: echo "$(openssl rand -hex 8)" > /tmp/WORDPRESS_ADMIN_PASSWORD
+
+      - name: Set environment variables (Circle parity)
+        run: |
+          {
+            echo "export TERMINUS_ENV=ci-${CIRCLE_BUILD_NUM}"
+            echo "export SITE_ENV=wp-saml-auth.ci-${CIRCLE_BUILD_NUM}"
+            echo "export WORDPRESS_ADMIN_USERNAME=pantheon"
+            echo "export WORDPRESS_ADMIN_EMAIL=no-reply@getpantheon.com"
+            echo "export WORDPRESS_ADMIN_PASSWORD=$(cat /tmp/WORDPRESS_ADMIN_PASSWORD)"
+            echo "export SIMPLESAMLPHP_VERSION='${{ matrix.simplesamlphp_version }}'"
+          } >> $GITHUB_ENV
+
+      - name: Disable StrictHostKeyChecking for SSH
+        run: |
+          mkdir -p "$HOME/.ssh"
+          echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
+
+      - name: Configure Composer GitHub OAuth (optional)
+        run: |
+          if [ -z "${GITHUB_TOKEN:-}" ]; then
+            echo "GITHUB_TOKEN missing; assuming unauthenticated build"
+            exit 0
+          fi
+          echo "Setting GitHub OAuth token (output suppressed)"
+          { composer config -g github-oauth.github.com "$GITHUB_TOKEN"; } &> /dev/null
+
+      - name: Terminus auth (optional)
+        run: |
+          if [ -z "${TERMINUS_TOKEN:-}" ]; then
+            echo "TERMINUS_TOKEN missing; assuming unauthenticated build"
+            exit 0
+          fi
+          terminus auth:login --machine-token="$TERMINUS_TOKEN"
+
+      - name: Save environment name for cleanup
+        run: echo "wp-saml-auth.ci-${CIRCLE_BUILD_NUM}" > "/tmp/site_env_${{ matrix.simplesamlphp_version }}.txt"
+
+      - name: Upload cleanup artifact (per-version)
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-env-${{ matrix.simplesamlphp_version }}
+          path: /tmp/site_env_${{ matrix.simplesamlphp_version }}.txt
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Validate fixture version
+        run: ./bin/validate-fixture-version.sh
+
+      - name: Prepare and run Behat tests
+        run: |
+          set -euo pipefail
+          echo ""
+          echo "=========================================================================="
+          echo "Running Behat on https://${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io/wp-login.php"
+          echo "with SimpleSAMLphp version $SIMPLESAMLPHP_VERSION"
+          echo "=========================================================================="
+          echo ""
+
+          # Prepare fixture environment for tests.
+          if [ "${{ matrix.simplesamlphp_version }}" != "1.18.0" ]; then
+            ./bin/behat-prepare.sh
+          else
+            ./bin/1.18/behat-prepare-simplesaml1.18.0.sh
+          fi
+
+          ./bin/behat-test.sh --strict
+
+  # ==============================
+  # Cleanup after all Behat jobs
+  # ==============================
+  behat-cleanup:
+    if: ${{ github.event_name != 'schedule' || github.ref_name == 'master' }}
+    name: Behat cleanup
+    runs-on: ubuntu-latest
+    needs:
+      - behat
+
+    container:
+      image: quay.io/pantheon-public/build-tools-ci:8.x-php8.2
+      options: --user root
+
+    env:
+      TERMINUS_SITE: wp-saml-auth
+      CIRCLE_BUILD_NUM: ${{ github.run_number }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set environment variables (cleanup)
+        run: |
+          {
+            echo "export TERMINUS_ENV=ci-${CIRCLE_BUILD_NUM}"
+            echo "export SITE_ENV=wp-saml-auth.ci-${CIRCLE_BUILD_NUM}"
+          } >> $GITHUB_ENV
+
+      - name: Download all site-env artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/behat-envs
+          pattern: site-env-*
+          merge-multiple: true
+
+      - name: Terminus auth (optional)
+        run: |
+          if [ -z "${TERMINUS_TOKEN:-}" ]; then
+            echo "TERMINUS_TOKEN missing; assuming unauthenticated build"
+            exit 0
+          fi
+          terminus auth:login --machine-token="$TERMINUS_TOKEN"
+
+      - name: Run Cleanup Script
+        run: ./bin/behat-cleanup.sh
+
+  # ==============================
+  # PHPUnit (matrix: PHP versions)
+  # ==============================
+  phpunit:
+    # Nightly should still run phpunit; remove this `if` if you want *only*
+    # behat on nightly. Keeping parity with "main" workflow behavior.
+    if: ${{ github.event_name != 'schedule' || github.ref_name == 'master' }}
+    name: Test with PHP ${{ matrix.php_version }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php_version: ["7.4", "8.0", "8.1", "8.2"]
+
+    services:
+      mariadb:
+        image: mariadb:10.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      WP_TESTS_DIR: /tmp/wordpress-tests-lib
+      WP_CORE_DIR: /tmp/wordpress/
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php_version }}
+          extensions: imagick, mysqli
+          tools: pecl, wp
+          coverage: none
+
+      - name: System deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y subversion libmagickwand-dev mariadb-client
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            vendor
+            ~/.composer/cache
+          key: test-phpunit-dependencies-${{ hashFiles('composer.json') }}
+          restore-keys: |
+            test-phpunit-dependencies-
+
+      - name: Install Composer deps
+        run: |
+          composer update
+          composer install -n --prefer-dist
+          chmod +x bin/*.sh
+
+      - name: Install WP-CLI (fallback if tool not present)
+        run: |
+          if ! command -v wp >/dev/null 2>&1; then
+            curl -fsSLO https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+            chmod +x wp-cli.phar
+            sudo mv wp-cli.phar /usr/local/bin/wp
+          fi
+
+      - name: Wait for MariaDB
+        run: |
+          for i in {1..30}; do
+            if mysqladmin ping -h 127.0.0.1 -proot --silent; then
+              echo "MariaDB is up"
+              break
+            fi
+            echo "Waiting for MariaDB..."
+            sleep 2
+          done
+
+      - name: Run PHPUnit
+        env:
+          # If your composer scripts expect these DB vars, export them here
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASSWORD: root
+          DB_NAME: wordpress
+        run: |
+          composer test:install:withdb
+          composer phpunit
