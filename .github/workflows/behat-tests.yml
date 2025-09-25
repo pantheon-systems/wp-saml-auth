@@ -73,38 +73,33 @@ jobs:
           mkdir -p "$HOME/.ssh"
           echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
 
-      - name: Pantheon SSH preflight (install key in container + register)
+      - name: Pantheon SSH preflight (generate RSA + register)
         env:
           TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
-          PANTHEON_SSH_PRIVATE_KEY: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }} # the private key you want to use
           TERMINUS_SITE: wp-saml-auth
         run: |
           set -euo pipefail
-          install -m 700 -d "$HOME/.ssh"
-          umask 077
-          # Write key and derive pub
-          printf '%s\n' "$PANTHEON_SSH_PRIVATE_KEY" | sed 's/\r$//' > "$HOME/.ssh/id_pantheon"
-          ssh-keygen -y -f "$HOME/.ssh/id_pantheon" > "$HOME/.ssh/id_pantheon.pub"
 
-          # Force this key for Pantheon hosts
+          install -m 700 -d "$HOME/.ssh"
+
+          # Generate ephemeral RSA key (Pantheon requires RSA; no passphrase)
+          ssh-keygen -t rsa -b 4096 -m PEM -N "" \
+            -f "$HOME/.ssh/pantheon_rsa" -C "gha-${GITHUB_RUN_ID}"
+
+          # Force this identity and auto-accept Pantheon host keys
           cat >> "$HOME/.ssh/config" <<'CFG'
           Host *.drush.in
             Port 2222
-            IdentityFile ~/.ssh/id_pantheon
+            IdentityFile ~/.ssh/pantheon_rsa
             IdentitiesOnly yes
-            StrictHostKeyChecking accept-new
+            StrictHostKeyChecking no
           CFG
 
-          # Login and ensure the pubkey is on the same account as the machine token
+          # Login and register the public key with the account from the machine token
           terminus auth:login --machine-token="$TERMINUS_TOKEN"
-          terminus ssh-key:add "$HOME/.ssh/id_pantheon.pub" || true
+          terminus ssh-key:add "$HOME/.ssh/pantheon_rsa.pub" || true
 
-          echo "Fingerprint we just added:"
-          ssh-keygen -lf "$HOME/.ssh/id_pantheon.pub" || true
-          echo "Keys on account:"
-          terminus ssh-key:list --fields=fingerprint,comment --format=table || true
-
-          # Optional: prove raw SSH works before remote:wp
+          # Optional: prove SSH works before validate script
           HOST=$(terminus connection:info "${TERMINUS_SITE}.dev" --field=sftp_host)
           USER=$(terminus connection:info "${TERMINUS_SITE}.dev" --field=sftp_username)
           echo "SSH preflight to ${USER}@${HOST}..."
