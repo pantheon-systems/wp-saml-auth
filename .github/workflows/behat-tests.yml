@@ -1,7 +1,6 @@
 name: Behat & PHPUnit
 
 on:
-  push:
   pull_request:
   workflow_dispatch:
   schedule:
