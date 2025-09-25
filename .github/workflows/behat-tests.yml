@@ -287,19 +287,81 @@ jobs:
           composer install -n --prefer-dist
           chmod +x bin/*.sh
 
-      - name: Run PHPUnit (with debug-on-fail)
+      - name: Force WP-CLI db args (wrap both wp and php)
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+          # --- wp wrapper ---
+          cat > "$HOME/.local/bin/wp" <<'BASH'
+          #!/usr/bin/env bash
+          set -e
+          SELF="$0"
+          # Find the next real wp in PATH (skip this wrapper)
+          REAL_WP="$( (command -v -a wp 2>/dev/null || type -a wp 2>/dev/null) | grep -v "^${SELF}$" | head -n1 )"
+          [[ -z "$REAL_WP" ]] && for p in /usr/local/bin/wp /usr/bin/wp; do [[ -x "$p" ]] && REAL_WP="$p" && break; done
+          if [[ "${1:-}" == "config" && "${2:-}" == "create" ]]; then
+            exec "$REAL_WP" "$@" \
+              --dbname="${DB_NAME:-wordpress_test}" \
+              --dbuser="${DB_USER:-root}" \
+              --dbpass="${DB_PASS:-${DB_PASSWORD:-}}" \
+              --dbhost="${DB_HOST:-127.0.0.1}" \
+              --skip-check --force
+          else
+            exec "$REAL_WP" "$@"
+          fi
+          BASH
+          chmod +x "$HOME/.local/bin/wp"
+
+          # --- php wrapper (handles 'php wp-cli.phar config create ...') ---
+          cat > "$HOME/.local/bin/php" <<'BASH'
+          #!/usr/bin/env bash
+          set -e
+          SELF="$0"
+          REAL_PHP="$( (command -v -a php 2>/dev/null || type -a php 2>/dev/null) | grep -v "^${SELF}$" | head -n1 )"
+          if [[ "${1:-}" =~ wp-cli(\.phar)?$ ]] && [[ "${2:-}" == "config" && "${3:-}" == "create" ]]; then
+            exec "$REAL_PHP" "$1" "${@:2}" \
+              --dbname="${DB_NAME:-wordpress_test}" \
+              --dbuser="${DB_USER:-root}" \
+              --dbpass="${DB_PASS:-${DB_PASSWORD:-}}" \
+              --dbhost="${DB_HOST:-127.0.0.1}" \
+              --skip-check --force
+          else
+            exec "$REAL_PHP" "$@"
+          fi
+          BASH
+          chmod +x "$HOME/.local/bin/php"
+
+          # Prove wrappers are ahead of real binaries
+          type -a wp || true
+          type -a php || true
+
+      - name: Run PHPUnit (retry once if wp-config password empty)
         run: |
           set -euo pipefail
           rm -rf /tmp/wordpress /tmp/wordpress-tests-lib || true
           mkdir -p /tmp/wordpress /tmp/wordpress-tests-lib
 
+          # First attempt
           if ! timeout 8m composer test:install:withdb; then
-            echo "---- DEBUG: wp-cli.yml ----"; cat /tmp/wp-cli.yml || true
-            echo "---- DEBUG: wp-config.php ----"; sed -n '1,200p' /tmp/wordpress/wp-config.php || true
-            echo "---- DEBUG: PHP mysqli check ----"; php -r 'echo (extension_loaded("mysqli") ? "mysqli loaded\n" : "mysqli MISSING\n");'
-            echo "---- DEBUG: PHP connect test ----"; php -r 'mysqli_report(MYSQLI_REPORT_ERROR|MYSQLI_REPORT_STRICT); $m=new mysqli("127.0.0.1","root","root",null,3306); echo "PHP connected OK\n"; $m->close();' || true
-            echo "---- DEBUG: MySQL grants ----"; mysql -e "SELECT CURRENT_USER(); SHOW GRANTS;"
-            exit 1
+            echo "Initial install failed; checking wp-config.php password…"
+            if [[ -f /tmp/wordpress/wp-config.php ]] && grep -q "define( 'DB_PASSWORD', '' );" /tmp/wordpress/wp-config.php; then
+              echo "DB_PASSWORD is empty; fixing via wp config set and retrying…"
+              wp --path=/tmp/wordpress config set DB_PASSWORD "${DB_PASS:-${DB_PASSWORD:-}}" --type=constant --raw
+              # quick connectivity check
+              wp --path=/tmp/wordpress db check || true
+              # Retry once
+              timeout 3m composer test:install:withdb || true
+            fi
+            # If it still fails, dump useful debug and exit non-zero
+            if ! wp --path=/tmp/wordpress db check; then
+              echo "---- DEBUG: wp-cli.yml ----"; cat /tmp/wp-cli.yml || true
+              echo "---- DEBUG: wp-config.php ----"; sed -n '1,200p' /tmp/wordpress/wp-config.php || true
+              echo "---- DEBUG: MySQL grants ----"; mysql -e "SELECT CURRENT_USER(); SHOW GRANTS;"
+              exit 1
+            fi
           fi
 
           composer phpunit
+
