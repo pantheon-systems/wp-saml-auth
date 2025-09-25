@@ -204,6 +204,12 @@ jobs:
     env:
       WP_TESTS_DIR: /tmp/wordpress-tests-lib
       WP_CORE_DIR: /tmp/wordpress/
+      DB_HOST: 127.0.0.1
+      DB_USER: root
+      DB_PASSWORD: root
+      DB_PASS: root
+      DB_NAME: wordpress
+      MYSQL_PWD: root
 
     steps:
       - name: Checkout
