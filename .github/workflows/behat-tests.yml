@@ -287,10 +287,19 @@ jobs:
           composer install -n --prefer-dist
           chmod +x bin/*.sh
 
-      - name: Run PHPUnit
+      - name: Run PHPUnit (with debug-on-fail)
         run: |
+          set -euo pipefail
           rm -rf /tmp/wordpress /tmp/wordpress-tests-lib || true
           mkdir -p /tmp/wordpress /tmp/wordpress-tests-lib
-          # prevent infinite hangs if something prompts
-          timeout 8m composer test:install:withdb
+
+          if ! timeout 8m composer test:install:withdb; then
+            echo "---- DEBUG: wp-cli.yml ----"; cat /tmp/wp-cli.yml || true
+            echo "---- DEBUG: wp-config.php ----"; sed -n '1,200p' /tmp/wordpress/wp-config.php || true
+            echo "---- DEBUG: PHP mysqli check ----"; php -r 'echo (extension_loaded("mysqli") ? "mysqli loaded\n" : "mysqli MISSING\n");'
+            echo "---- DEBUG: PHP connect test ----"; php -r 'mysqli_report(MYSQLI_REPORT_ERROR|MYSQLI_REPORT_STRICT); $m=new mysqli("127.0.0.1","root","root",null,3306); echo "PHP connected OK\n"; $m->close();' || true
+            echo "---- DEBUG: MySQL grants ----"; mysql -e "SELECT CURRENT_USER(); SHOW GRANTS;"
+            exit 1
+          fi
+
           composer phpunit
