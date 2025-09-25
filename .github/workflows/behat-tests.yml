@@ -283,6 +283,7 @@ jobs:
 
       - name: Install Composer deps
         run: |
+          composer update
           composer install -n --prefer-dist
           chmod +x bin/*.sh
 
