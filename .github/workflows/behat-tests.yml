@@ -298,7 +298,7 @@ jobs:
 
           rm -rf /tmp/wordpress /tmp/wordpress-tests-lib || true
           mkdir -p /tmp/wordpress /tmp/wordpress-tests-lib
-          
+
           # Choose installer path based on DB presence
           if mysql -e "USE \`${DB_NAME}\`;" >/dev/null 2>&1; then
             echo "DB ${DB_NAME} exists → using composer test:install (skip DB)"
@@ -317,22 +317,27 @@ jobs:
             wp core download --path=/tmp/wordpress --version=latest --locale=en_US --force
           fi
 
-          # FORCE correct DB constants into wp-config.php (the installer may have written empty DB_PASSWORD)
+          # FORCE correct DB constants into wp-config.php (installer may have written bad values)
           if [ -f /tmp/wordpress/wp-config.php ]; then
-            wp --path=/tmp/wordpress config set DB_NAME      "${DB_NAME}"                             --type=constant --raw || true
-            wp --path=/tmp/wordpress config set DB_USER      "${DB_USER}"                             --type=constant --raw || true
-            wp --path=/tmp/wordpress config set DB_PASSWORD  "${DB_PASS:-${DB_PASSWORD:-}}"           --type=constant --raw || true
-            wp --path=/tmp/wordpress config set DB_HOST      "${DB_HOST}"                             --type=constant --raw || true
+          # If a previous run wrote DB_HOST as 127.0.0.1 without quotes, fix it quickly:
+          sed -i "s/define( 'DB_HOST', 127\.0\.0\.1 );/define( 'DB_HOST', '127.0.0.1' );/" /tmp/wordpress/wp-config.php || true
+
+          # Re-write all four constants WITHOUT --raw so they're quoted strings
+          wp --path=/tmp/wordpress config set DB_NAME     "${DB_NAME}"                            --type=constant
+          wp --path=/tmp/wordpress config set DB_USER     "${DB_USER}"                            --type=constant
+          wp --path=/tmp/wordpress config set DB_PASSWORD "${DB_PASS:-${DB_PASSWORD:-}}"          --type=constant
+          wp --path=/tmp/wordpress config set DB_HOST     "${DB_HOST}"                            --type=constant
           else
-            # create one if it wasn't created
-            wp config create --path=/tmp/wordpress \
-              --dbname="${DB_NAME}" --dbuser="${DB_USER}" --dbpass="${DB_PASS:-${DB_PASSWORD:-}}" --dbhost="${DB_HOST}" \
-              --skip-check --force
+          # create one if it wasn't created
+          wp config create --path=/tmp/wordpress \
+          --dbname="${DB_NAME}" --dbuser="${DB_USER}" \
+          --dbpass="${DB_PASS:-${DB_PASSWORD:-}}" --dbhost="${DB_HOST}" \
+          --skip-check --force
           fi
 
           # Sanity: must be able to connect now
           wp --path=/tmp/wordpress db check
-
+          
           # Ensure the WordPress test suite is present (includes/ + data/)
           if [ ! -f /tmp/wordpress-tests-lib/includes/functions.php ]; then
             WPV="$(wp core version --path=/tmp/wordpress 2>/dev/null || echo trunk)"
