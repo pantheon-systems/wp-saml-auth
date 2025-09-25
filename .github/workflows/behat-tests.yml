@@ -194,6 +194,7 @@ jobs:
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: wordpress
+          MARIADB_ROOT_HOST: '%'
         ports:
           - 3306:3306
         options: >-
@@ -272,7 +273,7 @@ jobs:
             echo "WP_DB_PASS=${DB_PASSWORD:-root}"       # just in case
             echo "WORDPRESS_DB_PASSWORD=${DB_PASSWORD:-root}"
           } >> "$GITHUB_ENV"
-      
+
       - name: Run PHPUnit
         env:
           # If your composer scripts expect these DB vars, export them here
