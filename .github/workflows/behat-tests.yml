@@ -74,38 +74,42 @@ jobs:
           mkdir -p "$HOME/.ssh"
           echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
 
-      - name: Install Pantheon SSH key in container + register with account
+      - name: Pantheon SSH preflight (install key in container + register)
         env:
           TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
-          PANTHEON_SSH_PRIVATE_KEY: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
+          PANTHEON_SSH_PRIVATE_KEY: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }} # the private key you want to use
+          TERMINUS_SITE: wp-saml-auth
         run: |
           set -euo pipefail
-
-          # Write key into the container
           install -m 700 -d "$HOME/.ssh"
           umask 077
-          printf "%s\n" "$PANTHEON_SSH_PRIVATE_KEY" > "$HOME/.ssh/id_pantheon"
+          # Write key and derive pub
+          printf '%s\n' "$PANTHEON_SSH_PRIVATE_KEY" | sed 's/\r$//' > "$HOME/.ssh/id_pantheon"
           ssh-keygen -y -f "$HOME/.ssh/id_pantheon" > "$HOME/.ssh/id_pantheon.pub"
 
-          # Force SSH to use this key for Pantheon appservers
+          # Force this key for Pantheon hosts
           cat >> "$HOME/.ssh/config" <<'CFG'
           Host *.drush.in
             Port 2222
             IdentityFile ~/.ssh/id_pantheon
             IdentitiesOnly yes
             StrictHostKeyChecking accept-new
-          CFG
+        CFG
 
-          # Make sure Terminus is logged in (same account as the machine token)
-          terminus auth:login --machine-token="$TERMINUS_TOKEN"
+        # Login and ensure the pubkey is on the same account as the machine token
+        terminus auth:login --machine-token="$TERMINUS_TOKEN"
+        terminus ssh-key:add "$HOME/.ssh/id_pantheon.pub" || true
 
-          # Ensure the public key is registered to that Pantheon account (idempotent)
-          # If it already exists, ignore the error.
-          terminus ssh-key:add "$HOME/.ssh/id_pantheon.pub" || true
-
-          # Optional: quick sanity
-          terminus whoami
-
+        echo "Fingerprint we just added:"
+        ssh-keygen -lf "$HOME/.ssh/id_pantheon.pub" || true
+        echo "Keys on account:"
+        terminus ssh-key:list --fields=fingerprint,comment --format=table || true
+        
+        # Optional: prove raw SSH works before remote:wp
+        HOST=$(terminus connection:info "${TERMINUS_SITE}.dev" --field=sftp_host)
+        USER=$(terminus connection:info "${TERMINUS_SITE}.dev" --field=sftp_username)
+        echo "SSH preflight to ${USER}@${HOST}..."
+        ssh -o BatchMode=yes -o ConnectTimeout=10 "${USER}@${HOST}" -p 2222 "echo OK from $(hostname)"
 
       - name: Configure Composer GitHub OAuth (optional)
         run: |
