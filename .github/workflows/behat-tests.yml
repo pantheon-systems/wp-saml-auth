@@ -257,40 +257,46 @@ jobs:
             sleep 2
           done
 
-      - name: Force wp-cli to use DB_PASS
-        env:
-          DB_PASS: ${{ env.DB_PASS }}         # already set to root in your step env
-          DB_PASSWORD: ${{ env.DB_PASSWORD }} # fallback
+      - name: DB sanity check
+        run: mysql -h 127.0.0.1 -uroot -proot -e "SELECT CURRENT_USER();"
+        
+      - name: Clean WP test dirs
         run: |
-          mkdir -p "$HOME/.local/bin"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          rm -rf /tmp/wordpress /tmp/wordpress-tests-lib || true
+          mkdir -p /tmp/wordpress /tmp/wordpress-tests-lib
+          ls -la /tmp/wordpress
 
-          cat > "$HOME/.local/bin/wp" <<'BASH'
-          #!/usr/bin/env bash
-          # Wrapper to ensure wp config create always gets a password.
-          real_wp="$(command -v wp)"
-          if [[ "$1" == "config" && "$2" == "create" ]]; then
-            exec "$real_wp" "$@" --dbpass="${DB_PASS:-${DB_PASSWORD:-}}" --skip-check
-          else
-            exec "$real_wp" "$@"
-          fi
-          BASH
-          chmod +x "$HOME/.local/bin/wp"
+      - name: Seed wp-cli config (non-interactive + creds)
+        env:
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASS: root
+          DB_NAME: wordpress
+        run: |
+          cat > /tmp/wp-cli.yml <<EOF
+          path: /tmp/wordpress
+          core download:
+            version: latest
+            locale: en_US
+            force: true
+          config create:
+            dbname: ${DB_NAME}
+            dbuser: ${DB_USER}
+            dbpass: ${DB_PASS}
+            dbhost: ${DB_HOST}
+            skip-check: true
+          EOF
+          echo "WP_CLI_CONFIG_PATH=/tmp/wp-cli.yml" >> "$GITHUB_ENV"
 
       - name: Run PHPUnit
         env:
-          # If your composer scripts expect these DB vars, export them here
           DB_HOST: 127.0.0.1
           DB_USER: root
           DB_PASSWORD: root
           DB_PASS: root
           DB_NAME: wordpress
           MYSQL_PWD: root
-          WP_DB_HOST: 127.0.0.1
-          WP_DB_USER: root
-          WP_DB_PASSWORD: root
         run: |
-          mysql -h 127.0.0.1 -uroot -proot -e "SELECT CURRENT_USER();"
-
-          composer test:install:withdb
+          # Optional: prevent infinite hangs
+          timeout 8m composer test:install:withdb
           composer phpunit
