@@ -10,6 +10,10 @@ defaults:
   run:
     shell: bash
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   # ==============================
   # Behat (matrix: SimpleSAMLphp)
