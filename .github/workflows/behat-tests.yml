@@ -142,6 +142,9 @@ jobs:
   # Cleanup after all Behat jobs
   # ==============================
   behat-cleanup:
+    concurrency:
+      group: behat-cleanup-lock
+      cancel-in-progress: false
     permissions:
       contents: read  # Required for actions/checkout
       actions: read   # Required for actions/download-artifact
