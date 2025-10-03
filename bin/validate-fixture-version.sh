@@ -36,8 +36,8 @@ main(){
     FIXTURE_VERSION=$(terminus wp "${TERMINUS_SITE}.dev" -- core version)
     echo "Actual Fixture Version: ${FIXTURE_VERSION}"
 
-    # This command will exit with 1 (error) only if FIXTURE_VERSION is less than TESTED_UP_TO.
-    if php -r "exit(version_compare('${FIXTURE_VERSION}', '${TESTED_UP_TO}', '>=') ? 0 : 1);"; then
+    # This command will exit with 0 (triggering the 'if') only if FIXTURE_VERSION is less than TESTED_UP_TO.
+    if php -r "exit(version_compare('${FIXTURE_VERSION}', '${TESTED_UP_TO}', '<') ? 0 : 1);"; then
         echo "Error: The fixture version (${FIXTURE_VERSION}) is older than the required 'Tested up to' version (${TESTED_UP_TO})."
         echo "Please update ${TERMINUS_SITE} to at least WordPress ${TESTED_UP_TO}."
         exit 1

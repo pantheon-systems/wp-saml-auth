@@ -10,15 +10,14 @@ defaults:
   run:
     shell: bash
 
-permissions:
-  contents: read
-  actions: write
-
 jobs:
   # ==============================
   # Behat (matrix: SimpleSAMLphp)
   # ==============================
   behat:
+    permissions:
+      contents: read
+      actions: write
     # Skip scheduled runs unless branch is master (Circle's nightly behavior)
     if: ${{ github.event_name != 'schedule' || github.ref_name == 'master' }}
     name: Test with SimpleSAMLphp ${{ matrix.simplesamlphp_version }}
@@ -130,59 +129,15 @@ jobs:
 
           ./bin/behat-test.sh --strict
 
-  # ==============================
-  # Cleanup after all Behat jobs
-  # ==============================
-  behat-cleanup:
-    if: always() # Ensures this job runs even if 'behat' jobs fail
-    name: Behat cleanup
-    runs-on: ubuntu-latest
-    needs:
-      - behat
 
-    container:
-      image: quay.io/pantheon-public/build-tools-ci:8.x-php8.2
-      options: --user root
-
-    env:
-      TERMINUS_SITE: wp-saml-auth
-      CIRCLE_BUILD_NUM: ${{ github.run_number }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set environment variables (cleanup)
-        run: |
-          {
-            echo "export TERMINUS_ENV=ci-${CIRCLE_BUILD_NUM}"
-            echo "export SITE_ENV=wp-saml-auth.ci-${CIRCLE_BUILD_NUM}"
-          } >> $GITHUB_ENV
-
-      - name: Download all site-env artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: /tmp/behat-envs
-          pattern: site-env-*
-          merge-multiple: true
-
-      - name: Terminus auth (optional)
-        run: |
-          if [ -z "${TERMINUS_TOKEN:-}" ]; then
-            echo "TERMINUS_TOKEN missing; assuming unauthenticated build"
-            exit 0
-          fi
-          terminus auth:login --machine-token="$TERMINUS_TOKEN"
-
-      - name: Run Cleanup Script
-        run: ./bin/behat-cleanup.sh
 
   # ==============================
   # PHPUnit (matrix: PHP versions)
   # ==============================
   phpunit:
+    permissions:
+      contents: read
+      actions: write
     if: ${{ github.event_name != 'schedule' || github.ref_name == 'master' }}
     name: Test with PHP ${{ matrix.php_version }}
     runs-on: ubuntu-latest
