@@ -72,7 +72,7 @@ rsync -av \
 	--exclude='.git' \
 	./* "$PREPARE_DIR"/wp-content/plugins/wp-saml-auth
 
-WORKING_DIR="$( cd -P "$BASH_DIR"/../.. && pwd )"
+WORKING_DIR=$(git rev-parse --show-toplevel)
 # Check that the WORKING _DIRECTORY exists
 if [ ! -d "$WORKING_DIR" ]; then
 	echo "WORKING_DIR ($WORKING_DIR) does not exist"
