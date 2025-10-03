@@ -72,53 +72,14 @@ jobs:
             echo "export SIMPLESAMLPHP_VERSION='${{ matrix.simplesamlphp_version }}'"
           } >> $GITHUB_ENV
 
-      - name: Disable StrictHostKeyChecking for SSH
-        run: |
-          mkdir -p "$HOME/.ssh"
-          echo "StrictHostKeyChecking no" >> "$HOME/.ssh/config"
+      # Configures SSH to automatically accept new host keys.
+      - name: Force SSH to ignore host keys
+        run: echo "GIT_SSH_COMMAND=ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" >> $GITHUB_ENV
 
-      - name: Pantheon SSH (disable host key verification globally for this job)
-        env:
-          TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
-          TERMINUS_SITE: wp-saml-auth
-        run: |
-          set -euo pipefail
-
-          install -m 700 -d "$HOME/.ssh"
-
-          # Ephemeral RSA key (Pantheon supports RSA; no passphrase)
-          ssh-keygen -t rsa -b 4096 -m PEM -N "" \
-            -f "$HOME/.ssh/pantheon_rsa" -C "gha-${GITHUB_RUN_ID}"
-
-          # Minimal ssh config: pick our identity for *.drush.in
-          cat > "$HOME/.ssh/config" <<'CFG'
-          Host *.drush.in
-            Port 2222
-            IdentityFile ~/.ssh/pantheon_rsa
-            IdentitiesOnly yes
-          CFG
-
-          # Log in & add the public key to the Pantheon account behind the machine token
-          terminus auth:login --machine-token="$TERMINUS_TOKEN"
-          terminus ssh-key:add "$HOME/.ssh/pantheon_rsa.pub" || true
-
-          # ---- THE IMPORTANT PART: force-disable host key verification for all ssh calls ----
-          # Create a wrapper ahead of the real ssh in PATH
-          sudo tee /usr/local/bin/ssh >/dev/null <<'SH'
-          #!/usr/bin/env bash
-          # Always disable host key verification in this CI context.
-          exec /usr/bin/ssh \
-            -o StrictHostKeyChecking=no \
-            -o UserKnownHostsFile=/dev/null \
-            -o GlobalKnownHostsFile=/dev/null \
-            "$@"
-          SH
-          sudo chmod +x /usr/local/bin/ssh
-
-          # Preflight (this will also be what Terminus uses under the hood)
-          HOST=$(terminus connection:info "${TERMINUS_SITE}.dev" --field=sftp_host)
-          USER=$(terminus connection:info "${TERMINUS_SITE}.dev" --field=sftp_username)
-          ssh -o BatchMode=yes -o ConnectTimeout=10 "${USER}@${HOST}" -p 2222 "echo OK"
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
 
       - name: Configure Composer GitHub OAuth (optional)
         run: |
