@@ -134,7 +134,7 @@ jobs:
   # Cleanup after all Behat jobs
   # ==============================
   behat-cleanup:
-    if: ${{ github.event_name != 'schedule' || github.ref_name == 'master' }}
+    if: always() # Ensures this job runs even if 'behat' jobs fail
     name: Behat cleanup
     runs-on: ubuntu-latest
     needs:
@@ -292,11 +292,6 @@ jobs:
         if: matrix.php_version != '7.4' && matrix.php_version != '8.0'
         run: |
           composer install -n --prefer-dist --no-progress
-          chmod +x bin/*.sh
-
-      - name: Install Composer deps
-        run: |
-          composer install -n --prefer-dist
           chmod +x bin/*.sh
 
       - name: Run PHPUnit (idempotent; fix configs; ensure tests)

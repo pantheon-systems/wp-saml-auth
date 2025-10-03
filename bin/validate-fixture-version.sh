@@ -5,7 +5,7 @@ IFS=$'\n\t'
 main(){
     export TERMINUS_HIDE_GIT_MODE_WARNING=1
     local DIRNAME
-	DIRNAME=$(dirname "$0")
+    DIRNAME=$(dirname "$0")
 
     if [ -z "${TERMINUS_SITE}" ]; then
         echo "TERMINUS_SITE environment variable must be set"
@@ -30,16 +30,20 @@ main(){
 
     local TESTED_UP_TO
     TESTED_UP_TO=$(grep -i "Tested up to:" "${README_FILE_PATH}" | tr -d '\r\n' | awk -F ': ' '{ print $2 }')
-    echo "Tested Up To: ${TESTED_UP_TO}"
+    echo "Required 'Tested Up To' Version: ${TESTED_UP_TO}"
+
     local FIXTURE_VERSION
     FIXTURE_VERSION=$(terminus wp "${TERMINUS_SITE}.dev" -- core version)
-    echo "Fixture Version: ${FIXTURE_VERSION}"
+    echo "Actual Fixture Version: ${FIXTURE_VERSION}"
 
-    if ! php -r "exit(version_compare('${TESTED_UP_TO}', '${FIXTURE_VERSION}'));"; then
-        echo "${FIXTURE_VERSION} is less than ${TESTED_UP_TO}"
-        echo "Please update ${TERMINUS_SITE} to at least WordPress ${TESTED_UP_TO}"
+    # This command will exit with 1 (error) only if FIXTURE_VERSION is less than TESTED_UP_TO.
+    if php -r "exit(version_compare('${FIXTURE_VERSION}', '${TESTED_UP_TO}', '>=') ? 0 : 1);"; then
+        echo "Error: The fixture version (${FIXTURE_VERSION}) is older than the required 'Tested up to' version (${TESTED_UP_TO})."
+        echo "Please update ${TERMINUS_SITE} to at least WordPress ${TESTED_UP_TO}."
         exit 1
     fi
+
+    echo "✅ Success: Fixture version ${FIXTURE_VERSION} meets the requirement (>= ${TESTED_UP_TO})."
 }
 
 main
