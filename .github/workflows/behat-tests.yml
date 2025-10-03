@@ -22,6 +22,9 @@ jobs:
   # ==============================
   # Behat (matrix: SimpleSAMLphp)
   # ==============================
+  # ==============================
+  # Behat (matrix: SimpleSAMLphp)
+  # ==============================
   behat:
     # This job needs extra permissions to upload artifacts.
     permissions:
@@ -78,7 +81,7 @@ jobs:
             echo "WORDPRESS_ADMIN_USERNAME=pantheon"
             echo "WORDPRESS_ADMIN_EMAIL=no-reply@getpantheon.com"
             echo "WORDPRESS_ADMIN_PASSWORD=$(cat /tmp/WORDPRESS_ADMIN_PASSWORD)"
-            echo "SIMPLESAMLPHP_VERSION='${{ matrix.simplesamlphp_version }}'"
+            echo "SIMPLESAMLPHP_VERSION=${{ matrix.simplesamlphp_version }}"
           } >> $GITHUB_ENV
 
       - name: Force SSH to ignore host keys
@@ -106,7 +109,6 @@ jobs:
           terminus auth:login --machine-token="$TERMINUS_TOKEN"
 
       - name: Save environment name for cleanup
-        # This now correctly uses the SITE_ENV variable instead of a hardcoded value
         run: echo "${SITE_ENV}" > "/tmp/site_env_${{ matrix.simplesamlphp_version }}.txt"
 
       - name: Upload cleanup artifact (per-version)
