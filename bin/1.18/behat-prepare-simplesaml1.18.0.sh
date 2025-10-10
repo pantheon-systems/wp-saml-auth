@@ -21,6 +21,12 @@ if [ -z "$TERMINUS_SITE" ] || [ -z "$TERMINUS_ENV" ]; then
 fi
 
 ###
+# Install Composer dependencies, including Behat. This makes the
+# ./vendor/bin/behat executable available for the test runner.
+###
+composer install --no-progress --prefer-dist
+
+###
 # Create a new environment for this particular test run.
 ###
 terminus env:create "$TERMINUS_SITE".dev "$TERMINUS_ENV"
