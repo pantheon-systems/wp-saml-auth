@@ -170,7 +170,7 @@ git commit -m "Include SimpleSAMLphp and its configuration files"
 git push
 
 # Sometimes Pantheon takes a little time to refresh the filesystem
-terminus build:workflow:wait "$SITE_ENV"
+terminus workflow:wait "$SITE_ENV"
 
 ###
 # Copy the Pantheon.yml to switch PHP to 7.4
