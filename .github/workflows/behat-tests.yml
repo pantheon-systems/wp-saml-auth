@@ -10,33 +10,18 @@ defaults:
   run:
     shell: bash
 
-# Set default permissions to the most restrictive level.
-# Individual jobs will request more permissions as needed.
 permissions:
   contents: read
+  actions: write
 
 jobs:
-  # ==============================
-  # Behat (matrix: SimpleSAMLphp)
-  # ==============================
-  # ==============================
-  # Behat (matrix: SimpleSAMLphp)
-  # ==============================
-  # ==============================
-  # Behat (matrix: SimpleSAMLphp)
-  # ==============================
   behat:
-    # This job needs extra permissions to upload artifacts.
     permissions:
-      contents: read  # Required for actions/checkout
-      actions: write  # Required for actions/upload-artifact
+      contents: read
+      actions: write
     if: ${{ github.event_name != 'schedule' || github.ref_name == 'master' }}
     name: Test with SimpleSAMLphp ${{ matrix.simplesamlphp_version }}
     runs-on: ubuntu-latest
-
-    container:
-      image: quay.io/pantheon-public/build-tools-ci:8.x-php8.2
-      options: --user root
 
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -52,6 +37,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Cache Composer vendor
         uses: actions/cache@v4
@@ -60,9 +47,6 @@ jobs:
           key: composer-cache-v1-${{ hashFiles('composer.lock') }}
           restore-keys: |
             composer-cache-v1-
-
-      - name: Install Composer dependencies
-        run: composer install -n --prefer-dist
 
       - name: Generate WP admin password
         run: echo "$(openssl rand -hex 8)" > /tmp/WORDPRESS_ADMIN_PASSWORD
@@ -100,13 +84,10 @@ jobs:
           fi
           { composer config -g github-oauth.github.com "$GITHUB_TOKEN"; } &> /dev/null
 
-      - name: Terminus auth (optional)
-        run: |
-          if [ -z "${TERMINUS_TOKEN:-}" ]; then
-            echo "TERMINUS_TOKEN missing; assuming unauthenticated build"
-            exit 0
-          fi
-          terminus auth:login --machine-token="$TERMINUS_TOKEN"
+      - name: Install Terminus
+        uses: pantheon-systems/terminus-github-actions@v1
+        with:
+          pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
 
       - name: Save environment name for cleanup
         run: echo "${SITE_ENV}" > "/tmp/site_env_${{ matrix.simplesamlphp_version }}.txt"
@@ -120,7 +101,10 @@ jobs:
           retention-days: 3
 
       - name: Validate fixture version
-        run: ./bin/validate-fixture-version.sh
+        uses: jazzsequence/action-validate-plugin-version@v1
+        with:
+          branch: ${{ github.head_ref }}
+          dry-run: 'true'
 
       - name: Prepare and run Behat tests
         run: |
@@ -140,25 +124,19 @@ jobs:
           fi
 
           ./bin/behat-test.sh --strict
-  # ==============================
-  # Cleanup after all Behat jobs
-  # ==============================
+
   behat-cleanup:
     concurrency:
       group: behat-cleanup-lock
       cancel-in-progress: false
     permissions:
-      contents: read  # Required for actions/checkout
-      actions: read   # Required for actions/download-artifact
+      contents: read
+      actions: read
     if: always()
     name: Behat cleanup
     runs-on: ubuntu-latest
     needs:
       - behat
-
-    container:
-      image: quay.io/pantheon-public/build-tools-ci:8.x-php8.2
-      options: --user root
 
     env:
       TERMINUS_SITE: wp-saml-auth
@@ -168,7 +146,9 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Set environment variables (cleanup)
         run: |
@@ -184,13 +164,10 @@ jobs:
           pattern: site-env-*
           merge-multiple: true
 
-      - name: Terminus auth (optional)
-        run: |
-          if [ -z "${TERMINUS_TOKEN:-}" ]; then
-            echo "TERMINUS_TOKEN missing; assuming unauthenticated build"
-            exit 0
-          fi
-          terminus auth:login --machine-token="$TERMINUS_TOKEN"
+      - name: Install Terminus
+        uses: pantheon-systems/terminus-github-actions@v1
+        with:
+          pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
 
       - name: Run Cleanup Script
         run: ./bin/behat-cleanup.sh
@@ -231,7 +208,10 @@ jobs:
       MYSQL_PWD: root
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - uses: shivammathur/setup-php@v2
         with:
