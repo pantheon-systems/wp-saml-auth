@@ -4,7 +4,7 @@ on:
   pull_request:
   workflow_dispatch:
   schedule:
-    - cron: "0 0 * * *"   # nightly
+    - cron: "0 0 * * *" # nightly
 
 defaults:
   run:
@@ -14,59 +14,63 @@ permissions:
   contents: read
   actions: write
 
+# ======================================================================================
+# Reusable step definitions (YAML anchors)
+# ======================================================================================
+x-steps:
+  - &checkout
+    name: Checkout repository
+    uses: actions/checkout@v4
+    with:
+      fetch-depth: 0
+
+  - &install-terminus
+    name: Install Terminus
+    uses: pantheon-systems/terminus-github-actions@v1
+    with:
+      pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
+
+  - &cache-composer
+    name: Cache Composer vendor directory
+    uses: actions/cache@v4
+    with:
+      path: vendor
+      key: composer-cache-v1-${{ hashFiles('composer.lock') }}
+      restore-keys: |
+        composer-cache-v1-
+
+# ======================================================================================
+# JOBS
+# ======================================================================================
 jobs:
+  ##
+  ## Behat E2E Tests (Matrix: SimpleSAMLphp versions)
+  ##
   behat:
-    permissions:
-      contents: read
-      actions: write
     if: ${{ github.event_name != 'schedule' || github.ref_name == 'master' }}
-    name: Test with SimpleSAMLphp ${{ matrix.simplesamlphp_version }}
+    name: Behat (SimpleSAMLphp ${{ matrix.simplesamlphp_version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        simplesamlphp_version: ["1.18.0", "2.0.0", "2.4.0"]
 
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
       TERMINUS_SITE: wp-saml-auth
-      CIRCLE_BUILD_NUM: ${{ github.run_number }}
-
-    strategy:
-      fail-fast: false
-      matrix:
-        simplesamlphp_version: [ "1.18.0", "2.0.0", "2.4.0" ]
+      CIRCLE_BUILD_NUM: ${{ github.run_number }} # For script compatibility
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
+      - *checkout
 
-      - name: Cache Composer vendor
-        uses: actions/cache@v4
-        with:
-          path: vendor
-          key: composer-cache-v1-${{ hashFiles('composer.lock') }}
-          restore-keys: |
-            composer-cache-v1-
+      - *cache-composer
 
-      - name: Generate WP admin password
-        run: echo "$(openssl rand -hex 8)" > /tmp/WORDPRESS_ADMIN_PASSWORD
+      - name: Make scripts executable
+        run: chmod +x ./bin/ci/*.sh
 
-      - name: Set environment variables (Circle parity)
-        run: |
-          # Sanitize the version string (e.g., "2.4.0" -> "240") for the env name
-          VERSION_SLUG=$(echo "${{ matrix.simplesamlphp_version }}" | tr -d '.')
-
-          # Create the unique environment name
-          UNIQUE_ENV_NAME="ci${CIRCLE_BUILD_NUM}${VERSION_SLUG}"
-
-          {
-            echo "TERMINUS_ENV=${UNIQUE_ENV_NAME}"
-            echo "SITE_ENV=${TERMINUS_SITE}.${UNIQUE_ENV_NAME}"
-            echo "WORDPRESS_ADMIN_USERNAME=pantheon"
-            echo "WORDPRESS_ADMIN_EMAIL=no-reply@getpantheon.com"
-            echo "WORDPRESS_ADMIN_PASSWORD=$(cat /tmp/WORDPRESS_ADMIN_PASSWORD)"
-            echo "SIMPLESAMLPHP_VERSION=${{ matrix.simplesamlphp_version }}"
-          } >> $GITHUB_ENV
+      - name: Set up Behat environment
+        run: ./bin/ci/setup-behat-env.sh ${{ matrix.simplesamlphp_version }}
 
       - name: Force SSH to ignore host keys
         run: echo "GIT_SSH_COMMAND=ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" >> $GITHUB_ENV
@@ -76,109 +80,66 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
 
-      - name: Configure Composer GitHub OAuth (optional)
-        run: |
-          if [ -z "${GITHUB_TOKEN:-}" ]; then
-            echo "GITHUB_TOKEN missing; assuming unauthenticated build"
-            exit 0
-          fi
-          { composer config -g github-oauth.github.com "$GITHUB_TOKEN"; } &> /dev/null
+      - name: Configure Composer for GitHub OAuth
+        if: env.GITHUB_TOKEN
+        run: composer config -g github-oauth.github.com "$GITHUB_TOKEN"
 
-      - name: Install Terminus
-        uses: pantheon-systems/terminus-github-actions@v1
-        with:
-          pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
+      - *install-terminus
 
-      - name: Save environment name for cleanup
-        run: echo "${SITE_ENV}" > "/tmp/site_env_${{ matrix.simplesamlphp_version }}.txt"
-
-      - name: Upload cleanup artifact (per-version)
+      - name: Upload environment name for cleanup
         uses: actions/upload-artifact@v4
         with:
           name: site-env-${{ matrix.simplesamlphp_version }}
-          path: /tmp/site_env_${{ matrix.simplesamlphp_version }}.txt
+          path: /tmp/site_env.txt
           if-no-files-found: error
           retention-days: 3
 
-      - name: Validate fixture version
+      - name: Validate plugin version
         uses: jazzsequence/action-validate-plugin-version@v1
         with:
           branch: ${{ github.head_ref }}
           dry-run: 'true'
 
       - name: Prepare and run Behat tests
-        run: |
-          set -euo pipefail
-          echo ""
-          echo "=========================================================================="
-          echo "Running Behat on https://${SITE_ENV}.pantheonsite.io/wp-login.php"
-          echo "with SimpleSAMLphp version $SIMPLESAMLPHP_VERSION"
-          echo "=========================================================================="
-          echo ""
+        run: ./bin/ci/run-behat-tests.sh ${{ matrix.simplesamlphp_version }}
 
-          # Prepare fixture environment for tests.
-          if [ "${{ matrix.simplesamlphp_version }}" != "1.18.0" ]; then
-            ./bin/behat-prepare.sh
-          else
-            ./bin/1.18/behat-prepare-simplesaml1.18.0.sh
-          fi
-
-          ./bin/behat-test.sh --strict
-
+  ##
+  ## Behat Cleanup (Always runs)
+  ##
   behat-cleanup:
+    if: always()
+    needs: [behat]
+    name: Behat Cleanup
+    runs-on: ubuntu-latest
     concurrency:
       group: behat-cleanup-lock
       cancel-in-progress: false
-    permissions:
-      contents: read
-      actions: read
-    if: always()
-    name: Behat cleanup
-    runs-on: ubuntu-latest
-    needs:
-      - behat
 
     env:
       TERMINUS_SITE: wp-saml-auth
-      CIRCLE_BUILD_NUM: ${{ github.run_number }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
+      - *checkout
 
-      - name: Set environment variables (cleanup)
-        run: |
-          {
-            echo "TERMINUS_ENV=ci-${CIRCLE_BUILD_NUM}"
-            echo "SITE_ENV=wp-saml-auth.ci-${CIRCLE_BUILD_NUM}"
-          } >> $GITHUB_ENV
-
-      - name: Download all site-env artifacts
+      - name: Download all environment artifacts
         uses: actions/download-artifact@v4
         with:
           path: /tmp/behat-envs
           pattern: site-env-*
           merge-multiple: true
 
-      - name: Install Terminus
-        uses: pantheon-systems/terminus-github-actions@v1
-        with:
-          pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
+      - *install-terminus
 
-      - name: Run Cleanup Script
-        run: ./bin/behat-cleanup.sh
+      - name: Run cleanup script
+        run: ./bin/behat-cleanup.sh # This was already a script, which is good practice
 
-  # ==============================
-  # PHPUnit (matrix: PHP versions)
-  # ==============================
+  ##
+  ## PHPUnit Tests (Matrix: PHP versions)
+  ##
   phpunit:
-    # No extra permissions needed; will use the top-level default `contents: read`.
     if: ${{ github.event_name != 'schedule' || github.ref_name == 'master' }}
-    name: Test with PHP ${{ matrix.php_version }}
+    name: PHPUnit (PHP ${{ matrix.php_version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -191,8 +152,7 @@ jobs:
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: wordpress
-          MARIADB_ROOT_HOST: '%'
-        ports: [ "3306:3306" ]
+        ports: ["3306:3306"]
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
           --health-interval=10s --health-timeout=5s --health-retries=10
@@ -203,70 +163,35 @@ jobs:
       DB_HOST: 127.0.0.1
       DB_USER: root
       DB_PASSWORD: root
-      DB_PASS: root
       DB_NAME: wordpress_test
-      MYSQL_PWD: root
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
 
-      - uses: shivammathur/setup-php@v2
+      - *checkout
+
+      - name: Setup PHP ${{ matrix.php_version }}
+        uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php_version }}
           extensions: imagick, mysqli
           tools: pecl, wp
           coverage: none
 
-      - name: System deps
+      - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y subversion libmagickwand-dev mariadb-client
 
-      - name: Configure MySQL client defaults
-        run: |
-          cat > "$HOME/.my.cnf" <<'EOF'
-          [client]
-          user=root
-          password=root
-          host=127.0.0.1
-          protocol=tcp
-          EOF
-          chmod 600 "$HOME/.my.cnf"
+      - name: Make scripts executable
+        run: chmod +x ./bin/ci/*.sh
 
-      - name: Wait for MariaDB
-        run: |
-          for i in {1..30}; do
-            if mysqladmin ping --silent; then echo "MariaDB is up"; break; fi
-            echo "Waiting for MariaDB..."; sleep 2
-          done
+      - name: Wait for MariaDB to be ready
+        run: ./bin/ci/wait-for-db.sh
 
       - name: Create test database
-        run: |
-          mysqladmin ping
-          mysql -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;"
-          mysql -e "SHOW DATABASES LIKE '${DB_NAME}';"
+        run: mysql -h 127.0.0.1 -u root -proot -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;"
 
-      - name: Seed wp-cli config (non-interactive + creds)
-        run: |
-          cat > /tmp/wp-cli.yml <<EOF
-          path: /tmp/wordpress
-          core download:
-            version: latest
-            locale: en_US
-            force: true
-          config create:
-            dbname: ${DB_NAME}
-            dbuser: ${DB_USER}
-            dbpass: ${DB_PASS}
-            dbhost: ${DB_HOST}
-            skip-check: true
-          EOF
-          echo "WP_CLI_CONFIG_PATH=/tmp/wp-cli.yml" >> "$GITHUB_ENV"
-
-      - name: Cache Composer deps
+      - name: Cache Composer dependencies
         uses: actions/cache@v4
         with:
           path: |
@@ -276,103 +201,14 @@ jobs:
           restore-keys: |
             php-${{ matrix.php_version }}-composer-
 
-      - name: Resolve Composer deps (update for this PHP)
-        if: matrix.php_version == '7.4' || matrix.php_version == '8.0'
+      - name: Install Composer dependencies
         run: |
-          composer update -n --prefer-dist --no-progress --with-all-dependencies
-          chmod +x bin/*.sh
-
-      - name: Install Composer deps (use lock)
-        if: matrix.php_version != '7.4' && matrix.php_version != '8.0'
-        run: |
-          composer install -n --prefer-dist --no-progress
-          chmod +x bin/*.sh
-
-      - name: Run PHPUnit (idempotent; fix configs; ensure tests)
-        run: |
-          set -euo pipefail
-
-          rm -rf /tmp/wordpress /tmp/wordpress-tests-lib || true
-          mkdir -p /tmp/wordpress /tmp/wordpress-tests-lib
-
-          # Choose installer path based on DB presence
-          if mysql -e "USE \`${DB_NAME}\`;" >/dev/null 2>&1; then
-            echo "DB ${DB_NAME} exists → using composer test:install (skip DB)"
-            INSTALL_CMD="composer test:install"
+          # Older PHP versions require an update to resolve compatible dependency versions.
+          if [[ "${{ matrix.php_version }}" == "7.4" || "${{ matrix.php_version }}" == "8.0" ]]; then
+            composer update --prefer-dist --no-progress --with-all-dependencies
           else
-            echo "DB ${DB_NAME} missing → using composer test:install:withdb"
-            INSTALL_CMD="composer test:install:withdb"
+            composer install --prefer-dist --no-progress
           fi
 
-          # Try once; don't fail the job yet (we'll self-heal below)
-          timeout 8m ${INSTALL_CMD} || true
-
-          # Ensure WP core is present
-          if [ ! -f /tmp/wordpress/wp-includes/version.php ]; then
-            echo "WordPress core not found; downloading…"
-            wp core download --path=/tmp/wordpress --version=latest --locale=en_US --force
-          fi
-
-          # FORCE correct DB constants into wp-config.php (installer may have written bad values)
-          if [ -f /tmp/wordpress/wp-config.php ]; then
-          # If a previous run wrote DB_HOST as 127.0.0.1 without quotes, fix it quickly:
-          sed -i "s/define( 'DB_HOST', 127\.0\.0\.1 );/define( 'DB_HOST', '127.0.0.1' );/" /tmp/wordpress/wp-config.php || true
-
-          # Re-write all four constants WITHOUT --raw so they're quoted strings
-          wp --path=/tmp/wordpress config set DB_NAME     "${DB_NAME}"                            --type=constant
-          wp --path=/tmp/wordpress config set DB_USER     "${DB_USER}"                            --type=constant
-          wp --path=/tmp/wordpress config set DB_PASSWORD "${DB_PASS:-${DB_PASSWORD:-}}"          --type=constant
-          wp --path=/tmp/wordpress config set DB_HOST     "${DB_HOST}"                            --type=constant
-          else
-          # create one if it wasn't created
-          wp config create --path=/tmp/wordpress \
-          --dbname="${DB_NAME}" --dbuser="${DB_USER}" \
-          --dbpass="${DB_PASS:-${DB_PASSWORD:-}}" --dbhost="${DB_HOST}" \
-          --skip-check --force
-          fi
-
-          # Sanity: must be able to connect now
-          wp --path=/tmp/wordpress db check
-
-          # Ensure the WordPress test suite is present (includes/ + data/)
-          if [ ! -f /tmp/wordpress-tests-lib/includes/functions.php ]; then
-            WPV="$(wp core version --path=/tmp/wordpress 2>/dev/null || echo trunk)"
-            echo "Fetching WordPress test suite (${WPV}) into /tmp/wordpress-tests-lib…"
-            BASE="https://develop.svn.wordpress.org"
-            TAG_PATH="${BASE}/tags/${WPV}"
-            if svn ls "${TAG_PATH}/" >/dev/null 2>&1; then
-              SRC="${TAG_PATH}"
-            else
-              echo "Tag ${WPV} not found; using trunk tests"
-              SRC="${BASE}/trunk"
-            fi
-            svn co --quiet "${SRC}/tests/phpunit/includes/" "/tmp/wordpress-tests-lib/includes"
-            svn co --quiet "${SRC}/tests/phpunit/data/"     "/tmp/wordpress-tests-lib/data"
-          fi
-
-          # Ensure wp-tests-config.php exists and points to /tmp/wordpress
-          if [ ! -f /tmp/wordpress-tests-lib/wp-tests-config.php ]; then
-            cat > /tmp/wordpress-tests-lib/wp-tests-config.php <<PHP
-          <?php
-          define( 'DB_NAME', '${DB_NAME}' );
-          define( 'DB_USER', '${DB_USER}' );
-          define( 'DB_PASSWORD', '${DB_PASS:-${DB_PASSWORD:-}}' );
-          define( 'DB_HOST', '${DB_HOST}' );
-          define( 'DB_CHARSET', 'utf8' );
-          define( 'DB_COLLATE', '' );
-          \$table_prefix = 'wptests_';
-
-          define( 'WP_DEBUG', true );
-          define( 'WP_TESTS_DOMAIN', 'example.org' );
-          define( 'WP_TESTS_EMAIL', 'admin@example.org' );
-          define( 'WP_TESTS_TITLE', 'Test Blog' );
-          define( 'WP_PHP_BINARY', 'php' );
-          define( 'WPLANG', '' );
-
-          // Point tests at the downloaded WP core
-          define( 'ABSPATH', '/tmp/wordpress/' );
-          PHP
-          fi
-
-          # Run tests
-          composer phpunit
+      - name: Prepare environment and run PHPUnit tests
+        run: ./bin/ci/run-phpunit-tests.sh
