@@ -15,31 +15,6 @@ permissions:
   actions: write
 
 # ======================================================================================
-# Reusable step definitions (YAML anchors)
-# ======================================================================================
-x-steps:
-  - &checkout
-    name: Checkout repository
-    uses: actions/checkout@v4
-    with:
-      fetch-depth: 0
-
-  - &install-terminus
-    name: Install Terminus
-    uses: pantheon-systems/terminus-github-actions@v1
-    with:
-      pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
-
-  - &cache-composer
-    name: Cache Composer vendor directory
-    uses: actions/cache@v4
-    with:
-      path: vendor
-      key: composer-cache-v1-${{ hashFiles('composer.lock') }}
-      restore-keys: |
-        composer-cache-v1-
-
-# ======================================================================================
 # JOBS
 # ======================================================================================
 jobs:
@@ -62,9 +37,20 @@ jobs:
       CIRCLE_BUILD_NUM: ${{ github.run_number }} # For script compatibility
 
     steps:
-      - *checkout
+      - &checkout # Anchor defined here
+        name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - *cache-composer
+      - &cache-composer # Anchor defined here
+        name: Cache Composer vendor directory
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-cache-v1-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            composer-cache-v1-
 
       - name: Make scripts executable
         run: chmod +x ./bin/ci/*.sh
@@ -84,7 +70,11 @@ jobs:
         if: env.GITHUB_TOKEN
         run: composer config -g github-oauth.github.com "$GITHUB_TOKEN"
 
-      - *install-terminus
+      - &install-terminus # Anchor defined here
+        name: Install Terminus
+        uses: pantheon-systems/terminus-github-actions@v1
+        with:
+          pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
 
       - name: Upload environment name for cleanup
         uses: actions/upload-artifact@v4
@@ -120,7 +110,7 @@ jobs:
       TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
 
     steps:
-      - *checkout
+      - *checkout # Alias used here
 
       - name: Download all environment artifacts
         uses: actions/download-artifact@v4
@@ -129,7 +119,7 @@ jobs:
           pattern: site-env-*
           merge-multiple: true
 
-      - *install-terminus
+      - *install-terminus # Alias used here
 
       - name: Run cleanup script
         run: ./bin/behat-cleanup.sh # This was already a script, which is good practice
@@ -166,8 +156,7 @@ jobs:
       DB_NAME: wordpress_test
 
     steps:
-
-      - *checkout
+      - *checkout # Alias used here
 
       - name: Setup PHP ${{ matrix.php_version }}
         uses: shivammathur/setup-php@v2
