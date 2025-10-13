@@ -9,15 +9,15 @@
 
 TERMINUS_USER_ID=$(terminus auth:whoami --field=id 2>&1)
 if [[ ! $TERMINUS_USER_ID =~ ^[A-Za-z0-9-]{36}$ ]]; then
-	echo "Terminus unauthenticated; assuming unauthenticated build"
-	exit 0
+    echo "Terminus unauthenticated; assuming unauthenticated build"
+    exit 0
 fi
 
 set -ex
 
 if [ -z "$TERMINUS_SITE" ] || [ -z "$TERMINUS_ENV" ]; then
-	echo "TERMINUS_SITE and TERMINUS_ENV environment variables must be set"
-	exit 1
+    echo "TERMINUS_SITE and TERMINUS_ENV environment variables must be set"
+    exit 1
 fi
 
 ###
@@ -72,41 +72,41 @@ rm "$PREPARE_DIR"/wp-native-php-sessions.zip
 echo "Copying WP SAML Auth into WordPress"
 cd "$BASH_DIR"/../..
 rsync -av \
-	--exclude='node_modules/' \
-	--exclude='simplesamlphp/' \
-	--exclude='tests/' \
-	--exclude='.git' \
-	./* "$PREPARE_DIR"/wp-content/plugins/wp-saml-auth
+    --exclude='node_modules/' \
+    --exclude='simplesamlphp/' \
+    --exclude='tests/' \
+    --exclude='.git' \
+    ./* "$PREPARE_DIR"/wp-content/plugins/wp-saml-auth
 
 WORKING_DIR="${GITHUB_WORKSPACE}"
 # Check that the WORKING _DIRECTORY exists
 if [ ! -d "$WORKING_DIR" ]; then
-	echo "WORKING_DIR ($WORKING_DIR) does not exist"
-	exit 1
+    echo "WORKING_DIR ($WORKING_DIR) does not exist"
+    exit 1
 fi
 
 # Check that "$BASH_DIR"/1-adminnotice.feature exists.
 if [ ! -f "$BASH_DIR"/1-adminnotice.feature ]; then
-	echo "\"$BASH_DIR/1-adminnotice.feature\" does not exist"
-	exit 1
+    echo "\"$BASH_DIR/1-adminnotice.feature\" does not exist"
+    exit 1
 fi
 
 # Check that $WORKING_DIR/tests exists
 if [ ! -d "$WORKING_DIR/tests" ]; then
-	echo "$WORKING_DIR/tests does not exist"
-	exit 1
+    echo "$WORKING_DIR/tests does not exist"
+    exit 1
 fi
 
 # Check that $WORKING_DIR/tests contains a behat directory
 if [ ! -d "$WORKING_DIR/tests/behat" ]; then
-	echo "$WORKING_DIR/tests/behat does not exist"
-	exit 1
+    echo "$WORKING_DIR/tests/behat does not exist"
+    exit 1
 fi
 
 # Check that $WORKING_DIR/tests/behat contains 0-login.feature
 if [ ! -f "$WORKING_DIR/tests/behat/0-login.feature" ]; then
-	echo "$WORKING_DIR/tests/behat/0-login.feature does not exist"
-	exit 1
+    echo "$WORKING_DIR/tests/behat/0-login.feature does not exist"
+    exit 1
 fi
 
 # If we got through all that stuff, we should be good to copy the file now.
@@ -157,22 +157,30 @@ touch "$PREPARE_DIR"/private/simplesamlphp/modules/exampleauth/enable
 openssl req -newkey rsa:2048 -new -x509 -days 3652 -nodes -out "$PREPARE_DIR"/private/simplesamlphp/cert/saml.crt -keyout "$PREPARE_DIR"/private/simplesamlphp/cert/saml.pem -batch
 
 # Modify the login template so Behat can submit the form
-# Add these two lines to fix the input fields
-sed -i -- 's/name="username"/id="username" name="username"/g' "$PREPARE_DIR"/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php
-sed -i -- 's/name="password"/id="password" name="password"/g' "$PREPARE_DIR"/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php
-sed -i  -- "s/<button/<button id='submit'/g" "$PREPARE_DIR"/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php
-sed -i  -- "s/this.disabled=true; this.form.submit(); return true;//g" "$PREPARE_DIR"/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php
-# Second button instance shouldn't have an id
-sed -i  -- "s/<button id='submit' class=\"btn\" tabindex=\"6\"/<button class=\"btn\" tabindex=\"6\"/g" "$PREPARE_DIR"/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php
+LOGIN_TEMPLATE="$PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php"
+# Add id="username" to the username input field
+sed -i -e 's/name="username"/id="username" &/' "$LOGIN_TEMPLATE"
+# Add id="password" to the password input field
+sed -i -e 's/name="password"/id="password" &/' "$LOGIN_TEMPLATE"
+# Add id="submit" to the login button for easier targeting
+sed -i -e 's/<button type="submit"/<button type="submit" id="submit"/' "$LOGIN_TEMPLATE"
+# Remove the JavaScript that interferes with Behat's form submission
+sed -i -e 's/this.disabled=true; this.form.submit(); return true; //g' "$LOGIN_TEMPLATE"
 
 cd "$PREPARE_DIR"
+
 # Make the SimpleSAMLphp installation publicly accessible
 ln -s ./private/simplesamlphp/www ./simplesaml
 
 ###
+# Create a .user.ini file to increase the PHP memory limit
+###
+echo "memory_limit = 256M" > .user.ini
+
+###
 # Push files to the environment
 ###
-git add private wp-content simplesaml
+git add .user.ini private wp-content simplesaml
 git config user.email "wp-saml-auth@getpantheon.com"
 git config user.name "Pantheon"
 git commit -m "Include SimpleSAMLphp and its configuration files"
