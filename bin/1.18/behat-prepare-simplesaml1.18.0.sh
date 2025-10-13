@@ -157,6 +157,9 @@ touch "$PREPARE_DIR"/private/simplesamlphp/modules/exampleauth/enable
 openssl req -newkey rsa:2048 -new -x509 -days 3652 -nodes -out "$PREPARE_DIR"/private/simplesamlphp/cert/saml.crt -keyout "$PREPARE_DIR"/private/simplesamlphp/cert/saml.pem -batch
 
 # Modify the login template so Behat can submit the form
+# Add these two lines to fix the input fields
+sed -i -- 's/name="username"/id="username" name="username"/g' "$PREPARE_DIR"/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php
+sed -i -- 's/name="password"/id="password" name="password"/g' "$PREPARE_DIR"/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php
 sed -i  -- "s/<button/<button id='submit'/g" "$PREPARE_DIR"/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php
 sed -i  -- "s/this.disabled=true; this.form.submit(); return true;//g" "$PREPARE_DIR"/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php
 # Second button instance shouldn't have an id
