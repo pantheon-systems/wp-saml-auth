@@ -108,6 +108,7 @@ jobs:
     env:
       TERMINUS_SITE: wp-saml-auth
       TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
+      TERMINUS_ENV: cleanup-${{ github.run_number }}
 
     steps:
       - *checkout # Alias used here
