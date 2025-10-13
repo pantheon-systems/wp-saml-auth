@@ -167,6 +167,13 @@ sed -i -e 's/<button type="submit"/<button type="submit" id="submit"/' "$LOGIN_T
 # Remove the JavaScript that interferes with Behat's form submission
 sed -i -e 's/this.disabled=true; this.form.submit(); return true; //g' "$LOGIN_TEMPLATE"
 
+# Add id="submit" to the FIRST <button> tag in the template. This is more robust.
+# The `0,/pattern/` syntax ensures this only runs on the first match in the file.
+sed -i -e '0,/<button/{s/<button/<button id="submit"/}' "$LOGIN_TEMPLATE"
+
+# Remove the JavaScript that can interfere with Behat's form submission.
+sed -i -e 's/this.disabled=true; this.form.submit(); return true;//g' "$LOGIN_TEMPLATE"
+
 cd "$PREPARE_DIR"
 
 # Make the SimpleSAMLphp installation publicly accessible
