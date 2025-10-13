@@ -15,5 +15,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - uses: jazzsequence/action-validate-plugin-version@v1
-        branch: 'develop'
+        with:
+          branch: 'develop'
