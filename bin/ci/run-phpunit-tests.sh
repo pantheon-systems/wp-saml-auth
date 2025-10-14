@@ -42,32 +42,28 @@ define( 'WP_DEBUG', true );
 define( 'WP_PHP_BINARY', 'php' );
 PHP
 
-# 5. FIX: Create SimpleSAMLphp configuration for the test environment
+# 5. Create SimpleSAMLphp configuration for the test environment
 echo "Creating SimpleSAMLphp test configuration..."
 SSP_CONFIG_DIR="vendor/simplesamlphp/simplesamlphp/config"
+SSP_METADATA_DIR="vendor/simplesamlphp/simplesamlphp/metadata"
 mkdir -p "$SSP_CONFIG_DIR"
+mkdir -p "$SSP_METADATA_DIR"
 
-# Create config.php - NOTE the change from <<'PHP' to <<PHP
+# Create config.php
 cat > "$SSP_CONFIG_DIR/config.php" <<PHP
 <?php
 \$config = [
-    'baseurlpath' => 'http://localhost/simplesaml/',
-    'certdir' => 'cert/',
-    'loggingdir' => 'log/',
-    'datadir' => 'data/',
-    'tempdir' => '/tmp/simplesaml',
-    'technicalcontact_name' => 'Administrator',
-    'technicalcontact_email' => 'na@example.org',
-    'timezone' => 'UTC',
-    'secretsalt' => 'defaultsecretsalt',
-    'auth.adminpassword' => 'admin',
-    'admin.protectindexpage' => false,
-    'admin.protectmetadata' => false,
+    'baseurlpath' => 'http://localhost/simplesaml/', 'certdir' => 'cert/',
+    'loggingdir' => 'log/', 'datadir' => 'data/',
+    'tempdir' => '/tmp/simplesaml', 'technicalcontact_name' => 'Administrator',
+    'technicalcontact_email' => 'na@example.org', 'timezone' => 'UTC',
+    'secretsalt' => 'defaultsecretsalt', 'auth.adminpassword' => 'admin',
+    'admin.protectindexpage' => false, 'admin.protectmetadata' => false,
     'store.type' => 'phpsession',
 ];
 PHP
 
-# Create authsources.php - NOTE the change from <<'PHP' to <<PHP
+# Create authsources.php
 cat > "$SSP_CONFIG_DIR/authsources.php" <<PHP
 <?php
 \$config = [
@@ -75,7 +71,26 @@ cat > "$SSP_CONFIG_DIR/authsources.php" <<PHP
         'saml:SP',
         'entityID' => 'wp-saml',
         'idp' => 'http://localhost/simplesaml/saml2/idp/metadata.php',
+        'discoURL' => null,
     ],
+];
+PHP
+
+# FIX: Create remote IdP metadata so the library can initialize
+cat > "$SSP_METADATA_DIR/saml20-idp-remote.php" <<'PHP'
+<?php
+/**
+ * SAML 2.0 IdP remote metadata for the tests.
+ */
+$metadata['http://localhost/simplesaml/saml2/idp/metadata.php'] = [
+    'entityid' => 'http://localhost/simplesaml/saml2/idp/metadata.php',
+    'SingleSignOnService' => [
+        [
+            'Binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
+            'Location' => 'http://localhost/simplesaml/saml2/idp/SSOService.php',
+        ],
+    ],
+    'certFingerprint' => 'c99b251e63d86f2b7f00f860551a362b5b32f915',
 ];
 PHP
 
@@ -87,7 +102,6 @@ if [ -d "tests/phpunit" ]; then
 /**
  * PHPUnit bootstrap file.
  */
-
 // 1. Load the Composer autoloader.
 require_once dirname( __DIR__, 2 ) . '/vendor/autoload.php';
 
