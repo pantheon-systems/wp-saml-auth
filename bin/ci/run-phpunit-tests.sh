@@ -42,7 +42,44 @@ define( 'WP_DEBUG', true );
 define( 'WP_PHP_BINARY', 'php' );
 PHP
 
-# 5. Create a bootstrap file to load ALL autoloaders and the plugin itself.
+# 5. FIX: Create SimpleSAMLphp configuration for the test environment
+echo "Creating SimpleSAMLphp test configuration..."
+SSP_CONFIG_DIR="vendor/simplesamlphp/simplesamlphp/config"
+mkdir -p "$SSP_CONFIG_DIR"
+
+# Create config.php
+cat > "$SSP_CONFIG_DIR/config.php" <<'PHP'
+<?php
+\$config = [
+    'baseurlpath' => 'http://localhost/simplesaml/',
+    'certdir' => 'cert/',
+    'loggingdir' => 'log/',
+    'datadir' => 'data/',
+    'tempdir' => '/tmp/simplesaml',
+    'technicalcontact_name' => 'Administrator',
+    'technicalcontact_email' => 'na@example.org',
+    'timezone' => 'UTC',
+    'secretsalt' => 'defaultsecretsalt',
+    'auth.adminpassword' => 'admin',
+    'admin.protectindexpage' => false,
+    'admin.protectmetadata' => false,
+    'store.type' => 'phpsession',
+];
+PHP
+
+# Create authsources.php
+cat > "$SSP_CONFIG_DIR/authsources.php" <<'PHP'
+<?php
+\$config = [
+    'default-sp' => [
+        'saml:SP',
+        'entityID' => 'wp-saml',
+        'idp' => 'http://localhost/simplesaml/saml2/idp/metadata.php',
+    ],
+];
+PHP
+
+# 6. Create a bootstrap file to load ALL autoloaders and the plugin itself.
 if [ -d "tests/phpunit" ]; then
     echo "Creating PHPUnit bootstrap file..."
     cat > tests/phpunit/bootstrap.php <<'PHP'
@@ -78,8 +115,7 @@ else
     echo "Skipping bootstrap file creation: tests/phpunit directory not found."
 fi
 
-
-# 6. Ensure Composer dependencies are installed
+# 7. Ensure Composer dependencies are installed
 echo "Installing Composer dependencies..."
 composer install --prefer-dist --no-progress
 
@@ -89,5 +125,5 @@ echo "==========================================================================
 echo "Running PHPUnit Tests..."
 echo "=========================================================================="
 
-# 7. Run the tests
+# 8. Run the tests
 composer phpunit
