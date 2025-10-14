@@ -1,18 +1,27 @@
 #!/bin/bash
 set -euo pipefail
 
-echo " Preparing WordPress test environment..."
+echo "🚀 Preparing WordPress test environment (Manual Setup)..."
 
-# Ensure target directories exist and are clean
+# 1. Ensure target directories exist and are clean
 rm -rf "${WP_CORE_DIR}" "${WP_TESTS_DIR}" || true
 mkdir -p "${WP_CORE_DIR}" "${WP_TESTS_DIR}"
 
-# --- FIX IS HERE ---
-# Create the config file FIRST. The install script will find and use it.
+# 2. Download WordPress core files
+echo "Downloading WordPress core with wp-cli..."
+wp core download --path="${WP_CORE_DIR}" --version=latest --locale=en_US --force
+
+# 3. Download the WordPress PHPUnit test suite
+echo "Downloading WordPress test suite with Subversion..."
+WP_VERSION=$(wp core version --path="${WP_CORE_DIR}")
+svn co --quiet "https://develop.svn.wordpress.org/tags/${WP_VERSION}/tests/phpunit/includes/" "${WP_TESTS_DIR}/includes"
+svn co --quiet "https://develop.svn.wordpress.org/tags/${WP_VERSION}/tests/phpunit/data/" "${WP_TESTS_DIR}/data"
+
+# 4. Create wp-tests-config.php with correct credentials
 echo "Creating ${WP_TESTS_DIR}/wp-tests-config.php..."
 cat > "${WP_TESTS_DIR}/wp-tests-config.php" <<PHP
 <?php
-// Database settings
+// Database settings are sourced from env vars
 define( 'DB_NAME',     '${DB_NAME}' );
 define( 'DB_USER',     '${DB_USER}' );
 define( 'DB_PASSWORD', '${DB_PASSWORD}' );
@@ -33,38 +42,36 @@ define( 'WP_DEBUG', true );
 define( 'WP_PHP_BINARY', 'php' );
 PHP
 
-# 1. Install WordPress Core & Test Suite via composer script
-# This should now succeed because the config file provides the DB credentials.
-echo "Attempting to install WP test suite via 'composer test:install'..."
-if ! timeout 8m composer test:install; then
-  echo "Composer install script failed or timed out. Proceeding with manual setup..."
+# 5. Create a bootstrap file to load the Composer autoloader
+#    This is the critical step to make PHPUnit aware of your project's classes.
+if [ -d "tests/phpunit" ]; then
+    echo "Creating PHPUnit bootstrap file..."
+    cat > tests/phpunit/bootstrap.php <<PHP
+<?php
+/**
+ * PHPUnit bootstrap file.
+ */
 
-  # 2. Fallback: Ensure WordPress core files are present
-  if [ ! -f "${WP_CORE_DIR}/wp-includes/version.php" ]; then
-    echo "WordPress core not found; downloading with wp-cli..."
-    wp core download --path="${WP_CORE_DIR}" --version=latest --locale=en_US --force
-  fi
+// 1. Load the Composer autoloader.
+require_once dirname( __DIR__, 2 ) . '/vendor/autoload.php';
 
-  # 3. Fallback: Ensure the WordPress PHPUnit test suite is present
-  if [ ! -f "${WP_TESTS_DIR}/includes/functions.php" ]; then
-    echo "WordPress test suite not found; downloading with Subversion..."
-    WP_VERSION=$(wp core version --path="${WP_CORE_DIR}" 2>/dev/null || echo "trunk")
-    SVN_BASE="https://develop.svn.wordpress.org"
-    SVN_PATH="${SVN_BASE}/tags/${WP_VERSION}"
-
-    if ! svn ls "${SVN_PATH}/" >/dev/null 2>&1; then
-      echo "Tag ${WP_VERSION} not found on SVN; using trunk for tests."
-      SVN_PATH="${SVN_BASE}/trunk"
-    fi
-    echo "Fetching test suite from ${SVN_PATH}..."
-    svn co --quiet "${SVN_PATH}/tests/phpunit/includes/" "${WP_TESTS_DIR}/includes"
-    svn co --quiet "${SVN_PATH}/tests/phpunit/data/" "${WP_TESTS_DIR}/data"
-  fi
+// 2. Load the WordPress test environment's bootstrap file.
+require_once getenv( 'WP_TESTS_DIR' ) . '/includes/bootstrap.php';
+PHP
+else
+    echo "Skipping bootstrap file creation: tests/phpunit directory not found."
 fi
 
-echo " Environment ready."
+
+# 6. Ensure Composer dependencies are installed
+echo "Installing Composer dependencies..."
+composer install --prefer-dist --no-progress
+
+echo "✅ Environment ready."
 echo ""
 echo "=========================================================================="
 echo "Running PHPUnit Tests..."
 echo "=========================================================================="
+
+# 7. Run the tests
 composer phpunit
