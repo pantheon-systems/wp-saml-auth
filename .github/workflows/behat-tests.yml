@@ -25,6 +25,8 @@ jobs:
     if: ${{ github.event_name != 'schedule' || github.ref_name == 'master' }}
     name: Behat (SimpleSAMLphp ${{ matrix.simplesamlphp_version }})
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -173,7 +175,9 @@ jobs:
           sudo apt-get install -y subversion libmagickwand-dev mariadb-client
 
       - name: Make scripts executable
-        run: chmod +x ./bin/ci/*.sh
+        run: |
+          chmod +x ./bin/*.sh
+          chmod +x ./bin/ci/*.sh
 
       - name: Wait for MariaDB to be ready
         run: ./bin/ci/wait-for-db.sh
