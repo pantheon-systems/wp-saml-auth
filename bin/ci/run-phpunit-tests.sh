@@ -102,6 +102,12 @@ if [ -d "tests/phpunit" ]; then
 /**
  * PHPUnit bootstrap file.
  */
+
+// FIX: Set up a fake server environment for SimpleSAMLphp before it's loaded.
+$_SERVER['SERVER_NAME'] = 'localhost';
+$_SERVER['SERVER_PORT'] = 80;
+$_SERVER['REQUEST_URI'] = '/';
+
 // 1. Load the Composer autoloader.
 require_once dirname( __DIR__, 2 ) . '/vendor/autoload.php';
 
@@ -140,6 +146,4 @@ echo "Running PHPUnit Tests..."
 echo "=========================================================================="
 
 # 8. Run the tests
-# FIX: Set the config directory environment variable to prevent URL parsing errors.
-export SIMPLESAMLPHP_CONFIG_DIR="$(pwd)/vendor/simplesamlphp/simplesamlphp/config"
 composer phpunit
