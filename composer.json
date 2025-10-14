@@ -10,7 +10,7 @@
         },
         {
             "name": "Daniel Bachhuber",
-            "email": "daniel@handbuilt.co"
+            "email": "handbuilt.co"
         }
     ],
     "minimum-stability": "dev",
@@ -21,12 +21,12 @@
     },
     "require-dev": {
         "behat/behat": "^3.14",
-        "behat/gherkin": "4.9.0",
+        "behat/gherkin": "^4.9",
         "pantheon-systems/pantheon-wordpress-upstream-tests": "dev-master",
         "pantheon-systems/pantheon-wp-coding-standards": "^2.0",
         "phpunit/phpunit": "^9",
-        "simplesamlphp/simplesamlphp": "^2.0",
-        "symfony/filesystem": "^5",
+        "simplesamlphp/simplesamlphp": "^1.19 || ^2.0",
+        "symfony/filesystem": "^4.4 || ^5.0",
         "symfony/service-contracts": "^2",
         "symfony/translation-contracts": "^2",
         "yoast/phpunit-polyfills": "^3.0",
@@ -43,7 +43,7 @@
     },
     "autoload": {
         "classmap": [
-            "includes/"
+            "wp-saml-auth.php"
         ],
         "psr-4": {
             "PantheonSystems\\WPSamlAuth\\Behat\\": "tests/behat/bootstrap/"
