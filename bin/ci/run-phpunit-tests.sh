@@ -19,7 +19,7 @@ svn co --quiet "https://develop.svn.wordpress.org/tags/${WP_VERSION}/tests/phpun
 
 # 4. Create wp-tests-config.php with correct credentials
 echo "Creating ${WP_TESTS_DIR}/wp-tests-config.php..."
-cat > "${WP_TESTS_DIR}/wp-tests-config.php" <<PHP
+cat > "${WP_TESTS_DIR}/wp-tests-config.php" <<'PHP'
 <?php
 // Database settings are sourced from env vars
 define( 'DB_NAME',     '${DB_NAME}' );
@@ -28,7 +28,7 @@ define( 'DB_PASSWORD', '${DB_PASSWORD}' );
 define( 'DB_HOST',     '${DB_HOST}' );
 define( 'DB_CHARSET',  'utf8' );
 define( 'DB_COLLATE',  '' );
-\$table_prefix = 'wptests_';
+$table_prefix = 'wptests_';
 
 // Test environment settings
 define( 'WP_TESTS_DOMAIN', 'example.org' );
@@ -42,11 +42,10 @@ define( 'WP_DEBUG', true );
 define( 'WP_PHP_BINARY', 'php' );
 PHP
 
-# 5. Create a bootstrap file to load the Composer autoloader
-#    This is the critical step to make PHPUnit aware of your project's classes.
+# 5. Create a bootstrap file to load Composer AND the plugin itself.
 if [ -d "tests/phpunit" ]; then
     echo "Creating PHPUnit bootstrap file..."
-    cat > tests/phpunit/bootstrap.php <<PHP
+    cat > tests/phpunit/bootstrap.php <<'PHP'
 <?php
 /**
  * PHPUnit bootstrap file.
@@ -55,8 +54,20 @@ if [ -d "tests/phpunit" ]; then
 // 1. Load the Composer autoloader.
 require_once dirname( __DIR__, 2 ) . '/vendor/autoload.php';
 
-// 2. Load the WordPress test environment's bootstrap file.
-require_once getenv( 'WP_TESTS_DIR' ) . '/includes/bootstrap.php';
+// 2. Load the WordPress test functions.
+require_once getenv( 'WP_TESTS_DIR' ) . '/includes/functions.php';
+
+/**
+ * Manually load the plugin being tested.
+ */
+function _manually_load_plugin() {
+    require dirname( __DIR__, 2 ) . '/wp-saml-auth.php';
+}
+// Add a filter to load the plugin before the tests run.
+tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
+
+// 4. Load the WordPress test environment.
+require getenv( 'WP_TESTS_DIR' ) . '/includes/bootstrap.php';
 PHP
 else
     echo "Skipping bootstrap file creation: tests/phpunit directory not found."
