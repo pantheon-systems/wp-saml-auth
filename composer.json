@@ -25,6 +25,7 @@
         "pantheon-systems/pantheon-wordpress-upstream-tests": "dev-master",
         "pantheon-systems/pantheon-wp-coding-standards": "^2.0",
         "phpunit/phpunit": "^9",
+        "simplesamlphp/simplesamlphp": "^2.0",
         "symfony/filesystem": "^5",
         "symfony/service-contracts": "^2",
         "symfony/translation-contracts": "^2",
@@ -41,7 +42,12 @@
         "test:install:withdb": "bin/install-local-tests.sh"
     },
     "autoload": {
-        "psr-4": { "PantheonSystems\\WPSamlAuth\\Behat\\": "tests/behat/bootstrap/" }
+        "classmap": [
+            "includes/"
+        ],
+        "psr-4": {
+            "PantheonSystems\\WPSamlAuth\\Behat\\": "tests/behat/bootstrap/"
+        }
     },
     "autoload-dev": {
         "classmap": [
