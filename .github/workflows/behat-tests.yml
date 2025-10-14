@@ -174,9 +174,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y subversion libmagickwand-dev mariadb-client
 
-      - name: Make all bin scripts executable
-        run: find ./bin -type f -iname "*.sh" -exec chmod +x {} +
-
       - name: Wait for MariaDB to be ready
         run: ./bin/ci/wait-for-db.sh
 
@@ -201,6 +198,9 @@ jobs:
           else
             composer install --prefer-dist --no-progress
           fi
+
+      - name: Make all bin scripts executable
+        run: find ./bin -type f -iname "*.sh" -exec chmod +x {} +
 
       - name: Prepare environment and run PHPUnit tests
         run: ./bin/ci/run-phpunit-tests.sh
