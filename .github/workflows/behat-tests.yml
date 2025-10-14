@@ -186,19 +186,15 @@ jobs:
           path: |
             vendor
             ~/.composer/cache
-          key: php-${{ matrix.php_version }}-composer-${{ hashFiles('composer.json') }}
+          key: php-${{ matrix.php_version }}-composer-${{ hashFiles('composer.lock') }}
           restore-keys: |
             php-${{ matrix.php_version }}-composer-
 
+      # This is the ONLY step that should install dependencies.
       - name: Install Composer dependencies
-        run: |
-          # Older PHP versions require an update to resolve compatible dependency versions.
-          if [[ "${{ matrix.php_version }}" == "7.4" || "${{ matrix.php_version }}" == "8.0" ]]; then
-            composer update --prefer-dist --no-progress --with-all-dependencies
-          else
-            composer install --prefer-dist --no-progress
-          fi
+        run: composer install --prefer-dist --no-progress
 
+      # This step must come AFTER composer install.
       - name: Make all bin scripts executable
         run: find ./bin -type f -iname "*.sh" -exec chmod +x {} +
 
