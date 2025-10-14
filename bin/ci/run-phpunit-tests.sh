@@ -6,6 +6,12 @@ echo "Preparing WordPress test environment..."
 rm -rf "${WP_CORE_DIR}" "${WP_TESTS_DIR}" || true
 mkdir -p "${WP_CORE_DIR}" "${WP_TESTS_DIR}"
 
+# Export the environment variables the WP test script expects
+export WP_TESTS_DB_NAME=$DB_NAME
+export WP_TESTS_DB_USER=$DB_USER
+export WP_TESTS_DB_PASSWORD=$DB_PASSWORD
+export WP_TESTS_DB_HOST=$DB_HOST
+
 # 1. Install WordPress Core & Test Suite via composer script
 # We run this first but allow it to fail, as we will self-heal below.
 echo "Attempting to install WP test suite via 'composer test:install'..."
