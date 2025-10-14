@@ -203,4 +203,9 @@ jobs:
         run: find ./bin -type f -iname "*.sh" -exec chmod +x {} +
 
       - name: Prepare environment and run PHPUnit tests
+        env:
+          WP_TESTS_DB_NAME: ${{ env.DB_NAME }}
+          WP_TESTS_DB_USER: ${{ env.DB_USER }}
+          WP_TESTS_DB_PASSWORD: ${{ env.DB_PASSWORD }}
+          WP_TESTS_DB_HOST: ${{ env.DB_HOST }}
         run: ./bin/ci/run-phpunit-tests.sh
