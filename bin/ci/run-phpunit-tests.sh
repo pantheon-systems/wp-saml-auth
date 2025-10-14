@@ -76,7 +76,7 @@ cat > "$SSP_CONFIG_DIR/authsources.php" <<PHP
 ];
 PHP
 
-# FIX: Create remote IdP metadata so the library can initialize
+# Create remote IdP metadata so the library can initialize
 cat > "$SSP_METADATA_DIR/saml20-idp-remote.php" <<'PHP'
 <?php
 /**
@@ -140,4 +140,6 @@ echo "Running PHPUnit Tests..."
 echo "=========================================================================="
 
 # 8. Run the tests
+# FIX: Set the config directory environment variable to prevent URL parsing errors.
+export SIMPLESAMLPHP_CONFIG_DIR="$(pwd)/vendor/simplesamlphp/simplesamlphp/config"
 composer phpunit
