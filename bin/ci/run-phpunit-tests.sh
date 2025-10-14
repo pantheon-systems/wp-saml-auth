@@ -1,7 +1,6 @@
-#!/bin/bash
 set -euo pipefail
 
-echo "🚀 Preparing WordPress test environment..."
+echo "Preparing WordPress test environment..."
 
 # Ensure target directories exist and are clean
 rm -rf "${WP_CORE_DIR}" "${WP_TESTS_DIR}" || true
@@ -72,9 +71,14 @@ define( 'WP_DEBUG', true );
 define( 'WP_PHP_BINARY', 'php' );
 PHP
 
-echo "✅ Environment ready."
+echo "Environment is ready."
 echo ""
 echo "=========================================================================="
 echo "Running PHPUnit Tests..."
 echo "=========================================================================="
+
+# ---- FIX IS HERE ----
+# Ensure Composer dependencies are installed, even if the 'test:install' script failed.
+composer install --prefer-dist --no-progress
+
 composer phpunit
