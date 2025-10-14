@@ -43,6 +43,11 @@
     "autoload": {
         "psr-4": { "PantheonSystems\\WPSamlAuth\\Behat\\": "tests/behat/bootstrap/" }
     },
+    "autoload-dev": {
+        "classmap": [
+            "tests/phpunit/"
+        ]
+    },
     "config": {
         "allow-plugins": {
             "dealerdirect/phpcodesniffer-composer-installer": true,

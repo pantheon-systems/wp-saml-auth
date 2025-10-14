@@ -19,7 +19,6 @@ svn co --quiet "https://develop.svn.wordpress.org/tags/${WP_VERSION}/tests/phpun
 
 # 4. Create wp-tests-config.php with correct credentials
 echo "Creating ${WP_TESTS_DIR}/wp-tests-config.php..."
-# FIX: Removed single quotes from <<'PHP' to allow variable expansion
 cat > "${WP_TESTS_DIR}/wp-tests-config.php" <<PHP
 <?php
 // Database settings are sourced from env vars
@@ -43,7 +42,7 @@ define( 'WP_DEBUG', true );
 define( 'WP_PHP_BINARY', 'php' );
 PHP
 
-# 5. Create a bootstrap file to load Composer AND the plugin itself.
+# 5. Create a bootstrap file to load ALL autoloaders and the plugin itself.
 if [ -d "tests/phpunit" ]; then
     echo "Creating PHPUnit bootstrap file..."
     cat > tests/phpunit/bootstrap.php <<'PHP'
@@ -55,7 +54,12 @@ if [ -d "tests/phpunit" ]; then
 // 1. Load the Composer autoloader.
 require_once dirname( __DIR__, 2 ) . '/vendor/autoload.php';
 
-// 2. Load the WordPress test functions.
+// 2. Load the SimpleSAMLphp autoloader.
+if ( file_exists( dirname( __DIR__, 2 ) . '/vendor/simplesamlphp/simplesamlphp/lib/_autoload.php' ) ) {
+    require_once dirname( __DIR__, 2 ) . '/vendor/simplesamlphp/simplesamlphp/lib/_autoload.php';
+}
+
+// 3. Load the WordPress test functions.
 require_once getenv( 'WP_TESTS_DIR' ) . '/includes/functions.php';
 
 /**
@@ -67,7 +71,7 @@ function _manually_load_plugin() {
 // Add a filter to load the plugin before the tests run.
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 
-// 4. Load the WordPress test environment.
+// 5. Load the WordPress test environment.
 require getenv( 'WP_TESTS_DIR' ) . '/includes/bootstrap.php';
 PHP
 else
