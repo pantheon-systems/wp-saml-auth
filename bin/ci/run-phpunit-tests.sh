@@ -47,8 +47,8 @@ echo "Creating SimpleSAMLphp test configuration..."
 SSP_CONFIG_DIR="vendor/simplesamlphp/simplesamlphp/config"
 mkdir -p "$SSP_CONFIG_DIR"
 
-# Create config.php
-cat > "$SSP_CONFIG_DIR/config.php" <<'PHP'
+# Create config.php - NOTE the change from <<'PHP' to <<PHP
+cat > "$SSP_CONFIG_DIR/config.php" <<PHP
 <?php
 \$config = [
     'baseurlpath' => 'http://localhost/simplesaml/',
@@ -67,8 +67,8 @@ cat > "$SSP_CONFIG_DIR/config.php" <<'PHP'
 ];
 PHP
 
-# Create authsources.php
-cat > "$SSP_CONFIG_DIR/authsources.php" <<'PHP'
+# Create authsources.php - NOTE the change from <<'PHP' to <<PHP
+cat > "$SSP_CONFIG_DIR/authsources.php" <<PHP
 <?php
 \$config = [
     'default-sp' => [

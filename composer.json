@@ -43,6 +43,7 @@
     },
     "autoload": {
         "classmap": [
+            "inc/",
             "wp-saml-auth.php"
         ],
         "psr-4": {
