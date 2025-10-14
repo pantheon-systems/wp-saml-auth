@@ -54,8 +54,8 @@ jobs:
           restore-keys: |
             composer-cache-v1-
 
-      - name: Make scripts executable
-        run: chmod +x ./bin/ci/*.sh
+      - name: Make all bin scripts executable
+        run: find ./bin -type f -iname "*.sh" -exec chmod +x {} +
 
       - name: Set up Behat environment
         run: ./bin/ci/setup-behat-env.sh ${{ matrix.simplesamlphp_version }}
