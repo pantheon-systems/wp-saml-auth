@@ -194,10 +194,6 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-progress
 
-      - name: DEBUG
-        run: |
-          ls -la 
-
       # This step must come AFTER composer install.
       - name: Make all bin scripts executable
         run: find ./bin -type f -iname "*.sh" -exec chmod +x {} +

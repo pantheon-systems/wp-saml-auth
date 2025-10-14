@@ -57,7 +57,8 @@
     "config": {
         "allow-plugins": {
             "dealerdirect/phpcodesniffer-composer-installer": true,
-            "pantheon-systems/wpunit-helpers": true
+            "pantheon-systems/wpunit-helpers": true,
+            "simplesamlphp/composer-module-installer": true
         }
     }
 }
