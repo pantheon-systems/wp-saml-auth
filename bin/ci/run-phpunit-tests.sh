@@ -19,7 +19,8 @@ svn co --quiet "https://develop.svn.wordpress.org/tags/${WP_VERSION}/tests/phpun
 
 # 4. Create wp-tests-config.php with correct credentials
 echo "Creating ${WP_TESTS_DIR}/wp-tests-config.php..."
-cat > "${WP_TESTS_DIR}/wp-tests-config.php" <<'PHP'
+# FIX: Removed single quotes from <<'PHP' to allow variable expansion
+cat > "${WP_TESTS_DIR}/wp-tests-config.php" <<PHP
 <?php
 // Database settings are sourced from env vars
 define( 'DB_NAME',     '${DB_NAME}' );
@@ -28,7 +29,7 @@ define( 'DB_PASSWORD', '${DB_PASSWORD}' );
 define( 'DB_HOST',     '${DB_HOST}' );
 define( 'DB_CHARSET',  'utf8' );
 define( 'DB_COLLATE',  '' );
-$table_prefix = 'wptests_';
+\$table_prefix = 'wptests_';
 
 // Test environment settings
 define( 'WP_TESTS_DOMAIN', 'example.org' );
