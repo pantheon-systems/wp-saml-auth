@@ -69,22 +69,12 @@ jobs:
           sudo apt-get install -y subversion mariadb-client
           composer install --prefer-dist --no-progress
 
-      # This step now includes debugging commands
-      - name: Configure WP-CLI for Database Access
+      - name: Patch WP-CLI Command in Test Script
         run: |
-          mkdir -p ~/.wp-cli/
-          cat > ~/.wp-cli/config.yml <<-EOF
-          path: /tmp/wordpress
-          db user: ${{ env.DB_USER }}
-          db pass: ${{ env.DB_PASSWORD }}
-          db host: ${{ env.DB_HOST }}
-          EOF
-          
-          echo "--- Verifying WP-CLI config file ---"
-          ls -la ~/.wp-cli/
-          echo "--- Contents of config.yml: ---"
-          cat ~/.wp-cli/config.yml
-          echo "------------------------------------"
+          sed -i "s/wp core config/wp core config --dbuser='${{ env.DB_USER }}' --dbpass='${{ env.DB_PASSWORD }}' --dbhost='${{ env.DB_HOST }}'/" bin/install-local-tests.sh
+          echo "--- Patched install-local-tests.sh ---"
+          grep "wp core config" bin/install-local-tests.sh
+          echo "--------------------------------------"
 
       - name: Make all bin scripts executable
         run: find ./bin -type f -iname "*.sh" -exec chmod +x {} +
@@ -99,6 +89,7 @@ jobs:
         run: |
           composer test:install:withdb
           composer phpunit
+
   # This job corresponds to the 'test-behat' job in CircleCI.
   # It uses a matrix strategy for SimpleSAMLphp versions.
   # It runs on push/PR, and also on the nightly schedule for the master branch.
