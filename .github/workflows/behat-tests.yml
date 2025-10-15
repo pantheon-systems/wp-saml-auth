@@ -1,11 +1,14 @@
-name: CI Pipeline
+name: Behat & PHPUnit
 
 on:
-
   pull_request:
   schedule:
     # This matches the nightly cron from the CircleCI config.
     - cron: '0 0 * * *'
+
+permissions:
+  contents: read
+  actions: read
 
 jobs:
   # This job corresponds to the 'test-phpunit' job in CircleCI.
@@ -26,23 +29,19 @@ jobs:
         image: mariadb:10.4
         env:
           MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: wordpress_tests
-        ports:
-          - 3306:3306
+          MYSQL_DATABASE: wordpress
+        ports: [ "3306:3306" ]
         options: >-
-          --health-cmd "mysqladmin ping -h 127.0.0.1 -u root -proot"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s --health-timeout=5s --health-retries=10
 
     env:
-      WP_TESTS_DIR: "/tmp/wordpress-tests-lib"
-      WP_CORE_DIR: "/tmp/wordpress/"
-      # Environment variables for the tests to connect to the database service.
+      WP_TESTS_DIR: /tmp/wordpress-tests-lib
+      WP_CORE_DIR: /tmp/wordpress/
       DB_HOST: 127.0.0.1
       DB_USER: root
       DB_PASSWORD: root
-      DB_NAME: wordpress_tests
+      DB_NAME: wordpress_test
 
     steps:
       - name: Checkout code
