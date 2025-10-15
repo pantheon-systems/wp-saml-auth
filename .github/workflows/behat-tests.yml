@@ -50,7 +50,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: vendor
-          key: composer-cache-v1-${{ hashFiles('composer.lock') }}
+          key: composer-cache-v1-${{ hashFiles('composer.json') }}
           restore-keys: |
             composer-cache-v1-
 

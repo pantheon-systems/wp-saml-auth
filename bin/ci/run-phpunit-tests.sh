@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "🚀 Preparing WordPress test environment (Manual Setup)..."
+echo "Preparing WordPress test environment (Manual Setup)..."
 
 # 1. Ensure target directories exist and are clean
 rm -rf "${WP_CORE_DIR}" "${WP_TESTS_DIR}" || true
@@ -103,7 +103,7 @@ if [ -d "tests/phpunit" ]; then
  * PHPUnit bootstrap file.
  */
 
-// FIX: Set up a fake server environment for SimpleSAMLphp before it's loaded.
+// FIX: Set up a fake server environment FIRST, before any other code is loaded.
 $_SERVER['SERVER_NAME'] = 'localhost';
 $_SERVER['SERVER_PORT'] = 80;
 $_SERVER['REQUEST_URI'] = '/';
@@ -139,8 +139,7 @@ fi
 echo "Installing Composer dependencies..."
 composer install --prefer-dist --no-progress
 
-echo "✅ Environment ready."
-echo ""
+echo "Environment ready."
 echo "=========================================================================="
 echo "Running PHPUnit Tests..."
 echo "=========================================================================="
