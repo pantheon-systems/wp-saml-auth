@@ -97,22 +97,21 @@ jobs:
           touch "${INSTALL_DIR}/config/config.php"
 
       - name: Install WordPress Test Suite
-        env:
-          WP_TESTS_DB_NAME: ${{ env.DB_NAME }}
-          WP_TESTS_DB_USER: ${{ env.DB_USER }}
-          WP_TESTS_DB_PASS: ${{ env.DB_PASSWORD }} # Use correct env var name
-          WP_TESTS_DB_HOST: ${{ env.DB_HOST }}
         run: |
           set -euxo pipefail
-          # Temporarily replace the project's LOCAL phpunit executable
+          # 1. Temporarily replace the project's LOCAL phpunit executable
           mv vendor/bin/phpunit vendor/bin/phpunit.real
           echo -e '#!/bin/bash\necho "Skipping phpunit execution during installation."\nexit 0' > vendor/bin/phpunit
           chmod +x vendor/bin/phpunit
           
-          # Run the installer script without arguments; it will use the env vars
-          bash bin/install-local-tests.sh
+          # 2. Run the installer script WITH arguments for the database
+          bash bin/install-local-tests.sh \
+            --dbname="${DB_NAME}" \
+            --dbuser="${DB_USER}" \
+            --dbpass="${DB_PASSWORD}" \
+            --dbhost="${DB_HOST}"
           
-          # Restore the original phpunit executable
+          # 3. Restore the original phpunit executable
           rm vendor/bin/phpunit
           mv vendor/bin/phpunit.real vendor/bin/phpunit
 
@@ -176,15 +175,6 @@ jobs:
           mkdir -p "${INSTALL_DIR}/config"
           touch "${INSTALL_DIR}/config/config.php"
 
-      - name: Set environment variables
-        run: |
-          echo "TERMINUS_SITE=wp-saml-auth" >> $GITHUB_ENV
-          echo "TERMINUS_ENV=ci-${{ github.run_id }}" >> $GITHUB_ENV
-          echo "WORDPRESS_ADMIN_USERNAME=pantheon" >> $GITHUB_ENV
-          echo "WORDPRESS_ADMIN_EMAIL=no-reply@getpantheon.com" >> $GITHUB_ENV
-          echo "WORDPRESS_ADMIN_PASSWORD=$(openssl rand -hex 8)" >> $GITHUB_ENV
-          echo "SIMPLESAMLPHP_VERSION=${{ matrix.simplesamlphp_version }}" >> $GITHUB_ENV
-
       - name: Configure SSH
         run: |
           mkdir -p ~/.ssh
@@ -202,8 +192,46 @@ jobs:
           TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
         run: terminus auth:login --machine-token=$TERMINUS_TOKEN
 
-      - name: Save environment name for cleanup
-        run: echo "wp-saml-auth.ci-${{ github.run_id }}" > site_env.txt
+      - name: Compute unique Multidev env name (≤11 chars)
+        run: |
+          # Map each matrix version to a 1-char suffix so we stay ≤11 chars total:
+          case "${{ matrix.simplesamlphp_version }}" in
+            1.18.0) SUF="a" ;;
+            2.0.0)  SUF="b" ;;
+            2.4.0)  SUF="c" ;;
+            *)      SUF="x" ;;
+          esac
+
+          # 2 ("ci") + up to 8 (run_number) + 1 (suffix) == 11
+          NAME="ci${GITHUB_RUN_NUMBER}${SUF}"
+
+          # Safety: lowercase, strip invalid chars, hard truncate to 11 anyway
+          NAME="$(printf '%s' "$NAME" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9-')"
+          NAME="${NAME:0:11}"
+
+          echo "TERMINUS_SITE=wp-saml-auth" >> $GITHUB_ENV
+          echo "TERMINUS_ENV=$NAME" >> $GITHUB_ENV
+          echo "WORDPRESS_ADMIN_USERNAME=pantheon" >> $GITHUB_ENV
+          echo "WORDPRESS_ADMIN_EMAIL=no-reply@getpantheon.com" >> $GITHUB_ENV
+          echo "WORDPRESS_ADMIN_PASSWORD=$(openssl rand -hex 8)" >> $GITHUB_ENV
+          echo "SIMPLESAMLPHP_VERSION=${{ matrix.simplesamlphp_version }}" >> $GITHUB_ENV
+
+          # Save for cleanup
+          echo "wp-saml-auth.${NAME}" > site_env.txt
+
+      - name: Create or reuse Multidev
+        env:
+          TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
+        run: |
+          set -euo pipefail
+          terminus auth:login --machine-token="$TERMINUS_TOKEN"
+
+          # If env exists, continue; otherwise create it
+          if terminus env:info "${TERMINUS_SITE}.${TERMINUS_ENV}" >/dev/null 2>&1; then
+            echo "Reusing existing ${TERMINUS_ENV}"
+          else
+            terminus env:create "${TERMINUS_SITE}.dev" "${TERMINUS_ENV}"
+          fi
 
       - name: Upload environment name artifact
         uses: actions/upload-artifact@v4
