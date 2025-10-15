@@ -37,39 +37,74 @@ PHP
 # 4. Create an ISOLATED SimpleSAMLphp configuration
 echo "Creating isolated SimpleSAMLphp test configuration..."
 SSP_TEMP_CONFIG_DIR="/tmp/simplesamlphp-config"
-rm -rf "$SSP_TEMP_CONFIG_DIR" # Ensure it's clean on every run
+rm -rf "$SSP_TEMP_CONFIG_DIR"
 SSP_METADATA_DIR="$SSP_TEMP_CONFIG_DIR/metadata"
 mkdir -p "$SSP_TEMP_CONFIG_DIR" "$SSP_METADATA_DIR"
 
-cat > "$SSP_TEMP_CONFIG_DIR/config.php" <<PHP
+# -- config.php: explicitly point to the flatfile directory
+cat > "$SSP_TEMP_CONFIG_DIR/config.php" <<'PHP'
 <?php
-\$config = [
-    'baseurlpath' => 'https://localhost/simplesaml/', 'certdir' => 'cert/',
-    'loggingdir' => 'log/', 'datadir' => 'data/', 'tempdir' => '/tmp/simplesaml',
-    'technicalcontact_name' => 'Admin', 'technicalcontact_email' => 'na@example.org',
-    'timezone' => 'UTC', 'secretsalt' => 'defaultsecretsalt',
-    'auth.adminpassword' => 'admin', 'admin.protectindexpage' => false,
-    'admin.protectmetadata' => false, 'store.type' => 'phpsession',
-    // FIX: Explicitly tell SimpleSAMLphp where to find the metadata files.
-    'metadata.sources' => [['type' => 'flatfile', 'directory' => '${SSP_METADATA_DIR}']],
+$config = [
+    'baseurlpath' => 'http://localhost/simplesaml/',
+    'certdir' => 'cert/',
+    'loggingdir' => 'log/',
+    'datadir' => 'data/',
+    'tempdir' => '/tmp/simplesaml',
+    'technicalcontact_name' => 'Admin',
+    'technicalcontact_email' => 'na@example.org',
+    'timezone' => 'UTC',
+    'secretsalt' => 'defaultsecretsalt',
+    'auth.adminpassword' => 'admin',
+    'admin.protectindexpage' => false,
+    'admin.protectmetadata' => false,
+    'store.type' => 'phpsession',
+    // Make the metadata source explicit and deterministic for CI:
+    'metadata.sources' => [
+        [
+            'type' => 'flatfile',
+            'directory' => '/tmp/simplesamlphp-config/metadata',
+        ],
+    ],
 ];
 PHP
 
-cat > "$SSP_TEMP_CONFIG_DIR/authsources.php" <<PHP
+# -- authsources.php: use the HTTP entityID, because tests request http://...
+cat > "$SSP_TEMP_CONFIG_DIR/authsources.php" <<'PHP'
 <?php
-\$config = [ 'default-sp' => [
-    'saml:SP', 'entityID' => 'wp-saml',
-    'idp' => 'https://localhost/simplesaml/saml2/idp/metadata.php', 'discoURL' => null,
-]];
+$config = [
+    'default-sp' => [
+        'saml:SP',
+        'entityID' => 'wp-saml',
+        'idp' => 'http://localhost/simplesaml/saml2/idp/metadata.php',
+        'discoURL' => null,
+    ],
+];
 PHP
 
+# -- saml20-idp-remote.php: register BOTH http and https entityIDs.
 cat > "$SSP_METADATA_DIR/saml20-idp-remote.php" <<'PHP'
 <?php
-$metadata['https://localhost/simplesaml/saml2/idp/metadata.php'] = [
-    'entityid' => 'https://localhost/simplesaml/saml2/idp/metadata.php',
+$httpEntity  = 'http://localhost/simplesaml/saml2/idp/metadata.php';
+$httpsEntity = 'https://localhost/simplesaml/saml2/idp/metadata.php';
+
+$metadata[$httpEntity] = [
+    'entityid' => $httpEntity,
     'SingleSignOnService' => [
-        ['Binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
-         'Location' => 'https://localhost/simplesaml/saml2/idp/SSOService.php'],
+        [
+            'Binding'  => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
+            'Location' => 'http://localhost/simplesaml/saml2/idp/SSOService.php',
+        ],
+    ],
+    'certFingerprint' => 'c99b251e63d86f2b7f00f860551a362b5b32f915',
+];
+
+$metadata[$httpsEntity] = [
+    'entityid' => $httpsEntity,
+    'SingleSignOnService' => [
+        [
+            'Binding'  => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
+            'Location' => 'https://localhost/simplesaml/saml2/idp/SSOService.php',
+        ],
     ],
     'certFingerprint' => 'c99b251e63d86f2b7f00f860551a362b5b32f915',
 ];
