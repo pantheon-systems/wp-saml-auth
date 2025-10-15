@@ -78,7 +78,11 @@ jobs:
           composer install --prefer-dist --no-progress
 
       - name: Patch the Test Installer Script
-        run: sed -i '/phpunit/d' bin/install-local-tests.sh
+        run: |
+          # This command finds the line that starts with 'phpunit' and deletes it.
+          # It's much safer and won't break the script's internal logic.
+          sed -i '/^phpunit/d' bin/install-local-tests.sh
+          echo "Installer script has been patched."
 
       - name: Install SimpleSAMLphp
         env:
