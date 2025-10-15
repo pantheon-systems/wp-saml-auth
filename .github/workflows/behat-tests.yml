@@ -10,6 +10,7 @@ permissions:
   actions: read
 
 jobs:
+  # PHPUnit job (skips on scheduled runs)
   test-phpunit:
     if: github.event_name != 'schedule'
     name: "PHPUnit - PHP ${{ matrix.php_version }}"
@@ -90,7 +91,27 @@ jobs:
           sudo apt-get install -y subversion mariadb-client
           composer install --prefer-dist --no-progress
 
-      # ⬇️ Bypass composer script & call the installer directly with bash
+      # Prime SimpleSAML autoloader paths so plugin's set_provider() passes its existence checks
+      - name: Prime SimpleSAML autoloader paths
+        run: |
+          # Core dir (used by installer)
+          mkdir -p /tmp/wordpress/simplesamlphp/lib
+          mkdir -p /tmp/wordpress/simplesamlphp/vendor
+          printf "%s\n" "<?php /* dummy SimpleSAML v1 autoloader for tests */" > /tmp/wordpress/simplesamlphp/lib/_autoload.php
+          printf "%s\n" "<?php /* dummy SimpleSAML v2 composer autoloader for tests */" > /tmp/wordpress/simplesamlphp/vendor/autoload.php
+
+          # Mirror under wp-content as well (some paths resolve here)
+          mkdir -p /tmp/wordpress/wp-content/simplesamlphp/lib
+          mkdir -p /tmp/wordpress/wp-content/simplesamlphp/vendor
+          cp /tmp/wordpress/simplesamlphp/lib/_autoload.php /tmp/wordpress/wp-content/simplesamlphp/lib/_autoload.php
+          cp /tmp/wordpress/simplesamlphp/vendor/autoload.php /tmp/wordpress/wp-content/simplesamlphp/vendor/autoload.php
+
+          echo "==== Dumping SimpleSAML paths (core) ===="
+          ls -R /tmp/wordpress/simplesamlphp || true
+          echo "==== Dumping SimpleSAML paths (wp-content) ===="
+          ls -R /tmp/wordpress/wp-content/simplesamlphp || true
+
+      # Bypass composer script & call the installer directly with bash
       - name: Install WordPress Test Suite (direct)
         env:
           WP_TESTS_DB_NAME: ${{ env.DB_NAME }}
@@ -115,10 +136,13 @@ jobs:
         run: |
           vendor/bin/phpunit -c phpunit.xml.dist --bootstrap=tests/phpunit/class-simplesaml-auth-simple.php
 
+  # Behat integration tests against Pantheon (runs on PRs and nightly on master)
   test-behat:
     name: "Behat - SimpleSAMLphp ${{ matrix.simplesamlphp_version }}"
     runs-on: ubuntu-latest
+    # Only run scheduled jobs on the master branch.
     if: github.event_name != 'schedule' || (github.event_name == 'schedule' && github.ref == 'refs/heads/master')
+
     strategy:
       fail-fast: false
       matrix:
@@ -204,6 +228,7 @@ jobs:
           echo ""
           bash ./bin/behat-test.sh --strict
 
+  # Cleanup job — always runs after Behat matrix completes
   behat-cleanup:
     name: "Behat Cleanup"
     runs-on: ubuntu-latest
