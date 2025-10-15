@@ -39,7 +39,6 @@ jobs:
       DB_USER: root
       DB_PASSWORD: root
       DB_NAME: wordpress_test
-      # keep Composer non-interactive & faster
       COMPOSER_PROCESS_TIMEOUT: 0
       COMPOSER_NO_INTERACTION: 1
       COMPOSER_NO_AUDIT: 1
@@ -50,12 +49,23 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Create the mock file BEFORE PHP is configured so we can point auto_prepend_file at it.
+      - name: Create Mock SimpleSAMLphp Class for Tests
+        run: ./bin/create-phpunit-mocks.sh
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php_version }}
           extensions: imagick, mysqli
           tools: wp-cli
+          # Force-load the mock for every PHP process (Composer + PHPUnit inside scripts)
+          ini-values: auto_prepend_file=${{ github.workspace }}/tests/phpunit/class-simplesaml-auth-simple.php
+
+      - name: "DEBUG: Confirm auto_prepend_file is active"
+        run: |
+          php -r 'echo "auto_prepend_file=".ini_get("auto_prepend_file")."\n";'
+          php -r "echo class_exists('SimpleSAML_Auth_Simple') ? 'Mock class present\n' : 'Mock class NOT present\n';"
 
       - name: Cache Composer dependencies
         uses: actions/cache@v4
@@ -76,9 +86,6 @@ jobs:
       - name: Make all bin scripts executable
         run: find ./bin -type f -iname "*.sh" -exec chmod +x {} +
 
-      - name: Create Mock SimpleSAMLphp Class for Tests
-        run: ./bin/create-phpunit-mocks.sh
-
       - name: Install WordPress Test Suite
         env:
           WP_TESTS_DB_NAME: ${{ env.DB_NAME }}
@@ -92,17 +99,13 @@ jobs:
             --dbpass=${WP_TESTS_DB_PASSWORD} \
             --dbhost=${WP_TESTS_DB_HOST}
 
-      - name: "DEBUG: Verify Mock File Exists Before PHPUnit"
+      - name: "DEBUG: Verify mock still present before PHPUnit"
         run: |
-          echo "--- Checking for mock file at tests/phpunit/class-simplesaml-auth-simple.php ---"
-          ls -la tests/phpunit/
           test -f tests/phpunit/class-simplesaml-auth-simple.php
+          php -r "echo class_exists('SimpleSAML_Auth_Simple') ? 'Mock class present\n' : 'Mock class NOT present\n';"
 
-      - name: "DEBUG: Confirm mock is loadable by PHP"
-        run: |
-          php -r "require 'tests/phpunit/class-simplesaml-auth-simple.php'; echo class_exists('SimpleSAML_Auth_Simple') ? 'Mock loaded\n' : 'Mock missing\n';"
-
-      - name: Run PHPUnit (preload mock via --bootstrap)
+      # We can keep --bootstrap as a belt-and-suspenders, but auto_prepend_file already covers the composer-invoked phpunit.
+      - name: Run PHPUnit
         run: |
           vendor/bin/phpunit -c phpunit.xml.dist --bootstrap=tests/phpunit/class-simplesaml-auth-simple.php
 
