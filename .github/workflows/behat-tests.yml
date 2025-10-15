@@ -20,10 +20,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # PHP versions from the original matrix.
-        php_version: ['7.4', '8.1', '8.2', '8.3', '8.4']
+        php_version: [ '7.4', '8.1', '8.2', '8.3', '8.4' ]
 
-    # Service container for the database, equivalent to the second docker image in CircleCI.
     services:
       mariadb:
         image: mariadb:10.4
@@ -64,13 +62,14 @@ jobs:
           key: php-${{ matrix.php_version }}-composer-${{ hashFiles('composer.json') }}
           restore-keys: |
             php-${{ matrix.php_version }}-composer-
-            
+
       - name: Install Composer dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y subversion mariadb-client
           composer install --prefer-dist --no-progress
 
+      # This step now includes debugging commands
       - name: Configure WP-CLI for Database Access
         run: |
           mkdir -p ~/.wp-cli/
@@ -80,6 +79,12 @@ jobs:
           db pass: ${{ env.DB_PASSWORD }}
           db host: ${{ env.DB_HOST }}
           EOF
+          
+          echo "--- Verifying WP-CLI config file ---"
+          ls -la ~/.wp-cli/
+          echo "--- Contents of config.yml: ---"
+          cat ~/.wp-cli/config.yml
+          echo "------------------------------------"
 
       - name: Make all bin scripts executable
         run: find ./bin -type f -iname "*.sh" -exec chmod +x {} +
@@ -94,7 +99,6 @@ jobs:
         run: |
           composer test:install:withdb
           composer phpunit
-
   # This job corresponds to the 'test-behat' job in CircleCI.
   # It uses a matrix strategy for SimpleSAMLphp versions.
   # It runs on push/PR, and also on the nightly schedule for the master branch.
