@@ -115,8 +115,15 @@ jobs:
           rm vendor/bin/phpunit
           mv vendor/bin/phpunit.real vendor/bin/phpunit
 
-      - name: Run PHPUnit
-        run: vendor/bin/phpunit -c phpunit.xml.dist
+      - name: Install Test Suite and Run Tests
+        env:
+          WP_TESTS_DB_NAME: ${{ env.DB_NAME }}
+          WP_TESTS_DB_USER: ${{ env.DB_USER }}
+          WP_TESTS_DB_PASS: ${{ env.DB_PASSWORD }}
+          WP_TESTS_DB_HOST: ${{ env.DB_HOST }}
+        run: |
+          composer test:install:withdb
+          composer phpunit
 
   # Behat integration tests against Pantheon (runs on PRs and nightly on master)
   test-behat:
