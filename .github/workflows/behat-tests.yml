@@ -100,16 +100,24 @@ jobs:
           printf "%s\n" "<?php /* dummy SimpleSAML v1 autoloader for tests */" > /tmp/wordpress/simplesamlphp/lib/_autoload.php
           printf "%s\n" "<?php /* dummy SimpleSAML v2 composer autoloader for tests */" > /tmp/wordpress/simplesamlphp/vendor/autoload.php
 
-          # Mirror under wp-content as well (some paths resolve here)
+          # Mirror under wp-content
           mkdir -p /tmp/wordpress/wp-content/simplesamlphp/lib
           mkdir -p /tmp/wordpress/wp-content/simplesamlphp/vendor
           cp /tmp/wordpress/simplesamlphp/lib/_autoload.php /tmp/wordpress/wp-content/simplesamlphp/lib/_autoload.php
           cp /tmp/wordpress/simplesamlphp/vendor/autoload.php /tmp/wordpress/wp-content/simplesamlphp/vendor/autoload.php
 
+          # ⬅️ NEW: Mirror under wp-content/plugins (common lookup path)
+          mkdir -p /tmp/wordpress/wp-content/plugins/simplesamlphp/lib
+          mkdir -p /tmp/wordpress/wp-content/plugins/simplesamlphp/vendor
+          cp /tmp/wordpress/simplesamlphp/lib/_autoload.php /tmp/wordpress/wp-content/plugins/simplesamlphp/lib/_autoload.php
+          cp /tmp/wordpress/simplesamlphp/vendor/autoload.php /tmp/wordpress/wp-content/plugins/simplesamlphp/vendor/autoload.php
+
           echo "==== Dumping SimpleSAML paths (core) ===="
           ls -R /tmp/wordpress/simplesamlphp || true
           echo "==== Dumping SimpleSAML paths (wp-content) ===="
           ls -R /tmp/wordpress/wp-content/simplesamlphp || true
+          echo "==== Dumping SimpleSAML paths (wp-content/plugins) ===="
+          ls -R /tmp/wordpress/wp-content/plugins/simplesamlphp || true
 
       # Bypass composer script & call the installer directly with bash
       - name: Install WordPress Test Suite (direct)
