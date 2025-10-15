@@ -4,7 +4,7 @@ set -euo pipefail
 echo "🚀 Preparing WordPress test environment (Manual Setup)..."
 
 # 1. Create directories
-rm -rf "${WP_CORE_DIR}" "${WP_TESTS_DIR}" || true
+rm -rf "${WP_CORE_DIR}" "${WP_TESTS_DIR}" /tmp/simplesaml* || true
 mkdir -p "${WP_CORE_DIR}" "${WP_TESTS_DIR}"
 
 # 2. Download WordPress and the test suite
@@ -37,74 +37,37 @@ PHP
 # 4. Create an ISOLATED SimpleSAMLphp configuration
 echo "Creating isolated SimpleSAMLphp test configuration..."
 SSP_TEMP_CONFIG_DIR="/tmp/simplesamlphp-config"
-rm -rf "$SSP_TEMP_CONFIG_DIR"
 SSP_METADATA_DIR="$SSP_TEMP_CONFIG_DIR/metadata"
 mkdir -p "$SSP_TEMP_CONFIG_DIR" "$SSP_METADATA_DIR"
 
-# -- config.php: explicitly point to the flatfile directory
-cat > "$SSP_TEMP_CONFIG_DIR/config.php" <<'PHP'
+cat > "$SSP_TEMP_CONFIG_DIR/config.php" <<PHP
 <?php
-$config = [
-    'baseurlpath' => 'http://localhost/simplesaml/',
-    'certdir' => 'cert/',
-    'loggingdir' => 'log/',
-    'datadir' => 'data/',
-    'tempdir' => '/tmp/simplesaml',
-    'technicalcontact_name' => 'Admin',
-    'technicalcontact_email' => 'na@example.org',
-    'timezone' => 'UTC',
-    'secretsalt' => 'defaultsecretsalt',
-    'auth.adminpassword' => 'admin',
-    'admin.protectindexpage' => false,
-    'admin.protectmetadata' => false,
-    'store.type' => 'phpsession',
-    // Make the metadata source explicit and deterministic for CI:
-    'metadata.sources' => [
-        [
-            'type' => 'flatfile',
-            'directory' => '/tmp/simplesamlphp-config/metadata',
-        ],
-    ],
+\$config = [
+    'baseurlpath' => 'https://localhost/simplesaml/', 'certdir' => 'cert/',
+    'loggingdir' => 'log/', 'datadir' => 'data/', 'tempdir' => '/tmp/simplesaml',
+    'technicalcontact_name' => 'Admin', 'technicalcontact_email' => 'na@example.org',
+    'timezone' => 'UTC', 'secretsalt' => 'defaultsecretsalt',
+    'auth.adminpassword' => 'admin', 'admin.protectindexpage' => false,
+    'admin.protectmetadata' => false, 'store.type' => 'phpsession',
+    'metadata.sources' => [['type' => 'flatfile', 'directory' => 'metadata']],
 ];
 PHP
 
-# -- authsources.php: use the HTTP entityID, because tests request http://...
-cat > "$SSP_TEMP_CONFIG_DIR/authsources.php" <<'PHP'
+cat > "$SSP_TEMP_CONFIG_DIR/authsources.php" <<PHP
 <?php
-$config = [
-    'default-sp' => [
-        'saml:SP',
-        'entityID' => 'wp-saml',
-        'idp' => 'http://localhost/simplesaml/saml2/idp/metadata.php',
-        'discoURL' => null,
-    ],
-];
+\$config = [ 'default-sp' => [
+    'saml:SP', 'entityID' => 'wp-saml',
+    'idp' => 'https://localhost/simplesaml/saml2/idp/metadata.php', 'discoURL' => null,
+]];
 PHP
 
-# -- saml20-idp-remote.php: register BOTH http and https entityIDs.
 cat > "$SSP_METADATA_DIR/saml20-idp-remote.php" <<'PHP'
 <?php
-$httpEntity  = 'http://localhost/simplesaml/saml2/idp/metadata.php';
-$httpsEntity = 'https://localhost/simplesaml/saml2/idp/metadata.php';
-
-$metadata[$httpEntity] = [
-    'entityid' => $httpEntity,
+$metadata['https://localhost/simplesaml/saml2/idp/metadata.php'] = [
+    'entityid' => 'https://localhost/simplesaml/saml2/idp/metadata.php',
     'SingleSignOnService' => [
-        [
-            'Binding'  => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
-            'Location' => 'http://localhost/simplesaml/saml2/idp/SSOService.php',
-        ],
-    ],
-    'certFingerprint' => 'c99b251e63d86f2b7f00f860551a362b5b32f915',
-];
-
-$metadata[$httpsEntity] = [
-    'entityid' => $httpsEntity,
-    'SingleSignOnService' => [
-        [
-            'Binding'  => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
-            'Location' => 'https://localhost/simplesaml/saml2/idp/SSOService.php',
-        ],
+        ['Binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
+         'Location' => 'https://localhost/simplesaml/saml2/idp/SSOService.php'],
     ],
     'certFingerprint' => 'c99b251e63d86f2b7f00f860551a362b5b32f915',
 ];
@@ -121,9 +84,6 @@ $_SERVER['HTTP_HOST']        = 'localhost';
 $_SERVER['SERVER_PORT']      = 443;
 $_SERVER['REQUEST_URI']      = '/';
 $_SERVER['HTTPS']            = 'on';
-$_SERVER['SCRIPT_NAME']      = '/index.php';
-$_SERVER['PHP_SELF']         = '/index.php';
-$_SERVER['SCRIPT_FILENAME']  = '/var/www/html/index.php';
 
 // 1. Load Composer and SimpleSAMLphp autoloaders.
 require_once dirname( __DIR__, 2 ) . '/vendor/autoload.php';
@@ -143,7 +103,7 @@ else
     echo "Skipping bootstrap file creation: tests/phpunit directory not found."
 fi
 
-# 6. Install dependencies
+# 6. Install dependencies LAST, after all config files are created.
 echo "Installing Composer dependencies..."
 composer install --prefer-dist --no-progress
 
