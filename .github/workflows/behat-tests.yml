@@ -79,23 +79,34 @@ jobs:
 
       - name: Install SimpleSAMLphp
         env:
+          # This can be changed to test different versions
           SIMPLESAMLPHP_VERSION: '2.4.0'
         run: |
           set -euxo pipefail
           INSTALL_DIR="${WP_TESTS_DIR}/simplesamlphp"
-          DOWNLOAD_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}-full.tar.gz"
+
+          # Handle different URL formats for different versions
+          if [ "${SIMPLESAMLPHP_VERSION}" == '2.0.0' ]; then
+            DOWNLOAD_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}.tar.gz"
+          else
+            DOWNLOAD_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}-full.tar.gz"
+          fi
+
           # Download and extract
           wget -q -O simplesamlphp.tar.gz "${DOWNLOAD_URL}"
           mkdir -p "${INSTALL_DIR}"
           tar -zxf simplesamlphp.tar.gz --strip-components=1 -C "${INSTALL_DIR}"
-          
-          # Install its dependencies
+
+          # Delete the lock file to force resolving dependencies for the current PHP version
+          rm -f "${INSTALL_DIR}/composer.lock"
+
+          # Install dependencies compatible with the runner's PHP version
           composer install --no-dev --working-dir="${INSTALL_DIR}"
-          
+
           # Create a basic, empty config file so the autoloader doesn't fail
           mkdir -p "${INSTALL_DIR}/config"
           touch "${INSTALL_DIR}/config/config.php"
-          
+
           echo "SimpleSAMLphp v${SIMPLESAMLPHP_VERSION} installed in ${INSTALL_DIR}"
 
       - name: Install WordPress Test Suite (direct)
