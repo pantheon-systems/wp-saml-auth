@@ -186,7 +186,7 @@ jobs:
           path: |
             vendor
             ~/.composer/cache
-          key: php-${{ matrix.php_version }}-composer-${{ hashFiles('composer.lock') }}
+          key: php-${{ matrix.php_version }}-composer-${{ hashFiles('composer.json') }}
           restore-keys: |
             php-${{ matrix.php_version }}-composer-
 
