@@ -3,18 +3,25 @@ set -euo pipefail
 
 echo "🚀 Preparing WordPress test environment (Manual Setup)..."
 
-# 1. Create directories
-rm -rf "${WP_CORE_DIR}" "${WP_TESTS_DIR}" /tmp/simplesaml* || true
+# --------------------------------------------------------------------------------------
+# 1) Create directories from env (WP_CORE_DIR, WP_TESTS_DIR must be set by the workflow)
+# --------------------------------------------------------------------------------------
+rm -rf "${WP_CORE_DIR}" "${WP_TESTS_DIR}" || true
 mkdir -p "${WP_CORE_DIR}" "${WP_TESTS_DIR}"
 
-# 2. Download WordPress and the test suite
+# --------------------------------------------------------------------------------------
+# 2) Download WordPress core & the PHPUnit test suite for this WP version
+# --------------------------------------------------------------------------------------
 echo "Downloading WordPress core & test suite..."
 wp core download --path="${WP_CORE_DIR}" --version=latest --locale=en_US --force
-WP_VERSION=$(wp core version --path="${WP_CORE_DIR}")
-svn co --quiet "https://develop.svn.wordpress.org/tags/${WP_VERSION}/tests/phpunit/includes/" "${WP_TESTS_DIR}/includes"
-svn co --quiet "https://develop.svn.wordpress.org/tags/${WP_VERSION}/tests/phpunit/data/" "${WP_TESTS_DIR}/data"
+WP_VERSION="$(wp core version --path="${WP_CORE_DIR}")"
 
-# 3. Create wp-tests-config.php
+svn co --quiet "https://develop.svn.wordpress.org/tags/${WP_VERSION}/tests/phpunit/includes/" "${WP_TESTS_DIR}/includes"
+svn co --quiet "https://develop.svn.wordpress.org/tags/${WP_VERSION}/tests/phpunit/data/"     "${WP_TESTS_DIR}/data"
+
+# --------------------------------------------------------------------------------------
+# 3) Generate wp-tests-config.php (uses DB_* env vars from the job)
+# --------------------------------------------------------------------------------------
 echo "Creating ${WP_TESTS_DIR}/wp-tests-config.php..."
 cat > "${WP_TESTS_DIR}/wp-tests-config.php" <<PHP
 <?php
@@ -25,6 +32,7 @@ define( 'DB_HOST',     '${DB_HOST}' );
 define( 'DB_CHARSET',  'utf8' );
 define( 'DB_COLLATE',  '' );
 \$table_prefix = 'wptests_';
+
 define( 'WP_TESTS_DOMAIN', 'example.org' );
 define( 'WP_TESTS_EMAIL',  'admin@example.org' );
 define( 'WP_TESTS_TITLE',  'Test Blog' );
@@ -34,86 +42,145 @@ define( 'WP_DEBUG', true );
 define( 'WP_PHP_BINARY', 'php' );
 PHP
 
-# 4. Create an ISOLATED SimpleSAMLphp configuration
+# --------------------------------------------------------------------------------------
+# 4) Create an isolated SimpleSAMLphp configuration under /tmp
+#    Align everything to example.org and give SAML a baseurlpath with a path.
+# --------------------------------------------------------------------------------------
 echo "Creating isolated SimpleSAMLphp test configuration..."
 SSP_TEMP_CONFIG_DIR="/tmp/simplesamlphp-config"
+rm -rf "$SSP_TEMP_CONFIG_DIR"
 SSP_METADATA_DIR="$SSP_TEMP_CONFIG_DIR/metadata"
 mkdir -p "$SSP_TEMP_CONFIG_DIR" "$SSP_METADATA_DIR"
 
-cat > "$SSP_TEMP_CONFIG_DIR/config.php" <<PHP
+# -- config.php: explicit flatfile metadata directory + baseurlpath with path
+cat > "$SSP_TEMP_CONFIG_DIR/config.php" <<'PHP'
 <?php
-\$config = [
-    'baseurlpath' => 'https://localhost/simplesaml/', 'certdir' => 'cert/',
-    'loggingdir' => 'log/', 'datadir' => 'data/', 'tempdir' => '/tmp/simplesaml',
-    'technicalcontact_name' => 'Admin', 'technicalcontact_email' => 'na@example.org',
-    'timezone' => 'UTC', 'secretsalt' => 'defaultsecretsalt',
-    'auth.adminpassword' => 'admin', 'admin.protectindexpage' => false,
-    'admin.protectmetadata' => false, 'store.type' => 'phpsession',
-    'metadata.sources' => [['type' => 'flatfile', 'directory' => 'metadata']],
+$config = [
+    // IMPORTANT: must include a path; WP tests default to example.org.
+    'baseurlpath' => 'http://example.org/simplesaml/',
+    'certdir' => 'cert/',
+    'loggingdir' => 'log/',
+    'datadir' => 'data/',
+    'tempdir' => '/tmp/simplesaml',
+    'technicalcontact_name' => 'Admin',
+    'technicalcontact_email' => 'na@example.org',
+    'timezone' => 'UTC',
+    'secretsalt' => 'defaultsecretsalt',
+    'auth.adminpassword' => 'admin',
+    'admin.protectindexpage' => false,
+    'admin.protectmetadata' => false,
+    'store.type' => 'phpsession',
+    'metadata.sources' => [
+        [
+            'type' => 'flatfile',
+            'directory' => '/tmp/simplesamlphp-config/metadata',
+        ],
+    ],
 ];
 PHP
 
-cat > "$SSP_TEMP_CONFIG_DIR/authsources.php" <<PHP
+# -- authsources.php: point SP to the example.org IdP (http)
+cat > "$SSP_TEMP_CONFIG_DIR/authsources.php" <<'PHP'
 <?php
-\$config = [ 'default-sp' => [
-    'saml:SP', 'entityID' => 'wp-saml',
-    'idp' => 'https://localhost/simplesaml/saml2/idp/metadata.php', 'discoURL' => null,
-]];
+$config = [
+    'default-sp' => [
+        'saml:SP',
+        'entityID' => 'wp-saml',
+        'idp' => 'http://example.org/simplesaml/saml2/idp/metadata.php',
+        'discoURL' => null,
+    ],
+];
 PHP
 
+# -- saml20-idp-remote.php: register http/https for example.org and localhost as fallbacks
 cat > "$SSP_METADATA_DIR/saml20-idp-remote.php" <<'PHP'
 <?php
-$metadata['https://localhost/simplesaml/saml2/idp/metadata.php'] = [
-    'entityid' => 'https://localhost/simplesaml/saml2/idp/metadata.php',
-    'SingleSignOnService' => [
-        ['Binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
-         'Location' => 'https://localhost/simplesaml/saml2/idp/SSOService.php'],
-    ],
-    'certFingerprint' => 'c99b251e63d86f2b7f00f860551a362b5b32f915',
+$entities = [
+    'http://example.org/simplesaml/saml2/idp/metadata.php',
+    'https://example.org/simplesaml/saml2/idp/metadata.php',
+    'http://localhost/simplesaml/saml2/idp/metadata.php',
+    'https://localhost/simplesaml/saml2/idp/metadata.php',
 ];
+
+foreach ($entities as $entity) {
+    $parts = parse_url($entity);
+    $scheme = $parts['scheme'] ?? 'http';
+    $host   = $parts['host'] ?? 'example.org';
+    $loc    = sprintf('%s://%s/simplesaml/saml2/idp/SSOService.php', $scheme, $host);
+
+    $metadata[$entity] = [
+        'entityid' => $entity,
+        'SingleSignOnService' => [[
+            'Binding'  => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
+            'Location' => $loc,
+        ]],
+        // Dummy fingerprint for CI; replace if you swap to real certs.
+        'certFingerprint' => 'c99b251e63d86f2b7f00f860551a362b5b32f915',
+    ];
+}
 PHP
 
-# 5. Create the PHPUnit bootstrap file
+# --------------------------------------------------------------------------------------
+# 5) PHPUnit bootstrap: align fake server env with example.org; load WP tests + plugin
+# --------------------------------------------------------------------------------------
 if [ -d "tests/phpunit" ]; then
-    echo "Creating PHPUnit bootstrap file..."
-    cat > tests/phpunit/bootstrap.php <<'PHP'
+  echo "Creating PHPUnit bootstrap file..."
+  cat > tests/phpunit/bootstrap.php <<'PHP'
 <?php
-// Set up a fake server environment FIRST.
-$_SERVER['SERVER_NAME']      = 'localhost';
-$_SERVER['HTTP_HOST']        = 'localhost';
-$_SERVER['SERVER_PORT']      = 443;
-$_SERVER['REQUEST_URI']      = '/';
-$_SERVER['HTTPS']            = 'on';
+// Fake server environment to match WP test domain (example.org).
+$_SERVER['SERVER_NAME']     = 'example.org';
+$_SERVER['HTTP_HOST']       = 'example.org';
+$_SERVER['SERVER_PORT']     = 80;
+$_SERVER['REQUEST_URI']     = '/';
+unset($_SERVER['HTTPS']); // force http
 
-// 1. Load Composer and SimpleSAMLphp autoloaders.
-require_once dirname( __DIR__, 2 ) . '/vendor/autoload.php';
-if ( file_exists( dirname( __DIR__, 2 ) . '/vendor/simplesamlphp/simplesamlphp/lib/_autoload.php' ) ) {
-    require_once dirname( __DIR__, 2 ) . '/vendor/simplesamlphp/simplesamlphp/lib/_autoload.php';
+// Composer + SimpleSAMLphp autoloaders.
+require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
+if ( file_exists(dirname(__DIR__, 2) . '/vendor/simplesamlphp/simplesamlphp/lib/_autoload.php') ) {
+    require_once dirname(__DIR__, 2) . '/vendor/simplesamlphp/simplesamlphp/lib/_autoload.php';
 }
 
-// 2. Load WordPress test environment.
-require_once getenv( 'WP_TESTS_DIR' ) . '/includes/functions.php';
+// WordPress test environment.
+require_once getenv('WP_TESTS_DIR') . '/includes/functions.php';
 function _manually_load_plugin() {
-    require dirname( __DIR__, 2 ) . '/wp-saml-auth.php';
+    require dirname(__DIR__, 2) . '/wp-saml-auth.php';
 }
-tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
-require getenv( 'WP_TESTS_DIR' ) . '/includes/bootstrap.php';
+tests_add_filter('muplugins_loaded', '_manually_load_plugin');
+require getenv('WP_TESTS_DIR') . '/includes/bootstrap.php';
+
+// Make sure WP options align with the fake host.
+update_option('siteurl', 'http://example.org');
+update_option('home',    'http://example.org');
 PHP
 else
-    echo "Skipping bootstrap file creation: tests/phpunit directory not found."
+  echo "Skipping bootstrap file creation: tests/phpunit directory not found."
 fi
 
-# 6. Install dependencies LAST, after all config files are created.
+# --------------------------------------------------------------------------------------
+# 6) Composer install (single installation step)
+# --------------------------------------------------------------------------------------
 echo "Installing Composer dependencies..."
 composer install --prefer-dist --no-progress
+echo "/bin files are up to date"
 
+# --------------------------------------------------------------------------------------
+# 7) (Optional) quick sanity: print SAML baseurlpath & metadata keys
+# --------------------------------------------------------------------------------------
+php -r 'require getenv("SIMPLESAMLPHP_CONFIG_DIR")."/config.php"; echo "SimpleSAML baseurlpath=", $config["baseurlpath"], PHP_EOL;' || true
+echo "SimpleSAML metadata preview:"
+grep -E "entityid|Location" -n "$SSP_METADATA_DIR/saml20-idp-remote.php" || true
+
+# --------------------------------------------------------------------------------------
+# 8) Run PHPUnit
+# --------------------------------------------------------------------------------------
 echo "✅ Environment ready."
 echo ""
 echo "=========================================================================="
 echo "Running PHPUnit Tests..."
 echo "=========================================================================="
 
-# 7. Run the tests
-# Point SimpleSAMLphp to the isolated, non-cached config directory.
+# Ensure SimpleSAML uses our isolated config directory.
 export SIMPLESAMLPHP_CONFIG_DIR="$SSP_TEMP_CONFIG_DIR"
+
+# Kick the tests (composer script should call vendor/bin/phpunit)
 composer phpunit
