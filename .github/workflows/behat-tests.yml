@@ -91,33 +91,36 @@ jobs:
           sudo apt-get install -y subversion mariadb-client
           composer install --prefer-dist --no-progress
 
-      # Prime SimpleSAML autoloader paths so plugin's set_provider() passes its existence checks
+      # Prime SimpleSAML autoloader paths for BOTH the core and test-suite directories
       - name: Prime SimpleSAML autoloader paths
         run: |
-          # Core dir (used by installer)
-          mkdir -p /tmp/wordpress/simplesamlphp/lib
-          mkdir -p /tmp/wordpress/simplesamlphp/vendor
-          printf "%s\n" "<?php /* dummy SimpleSAML v1 autoloader for tests */" > /tmp/wordpress/simplesamlphp/lib/_autoload.php
-          printf "%s\n" "<?php /* dummy SimpleSAML v2 composer autoloader for tests */" > /tmp/wordpress/simplesamlphp/vendor/autoload.php
-
+          # --- Paths for the core WordPress installation ---
+          CORE_DIR="/tmp/wordpress"
+          mkdir -p "${CORE_DIR}/simplesamlphp/lib"
+          mkdir -p "${CORE_DIR}/simplesamlphp/vendor"
+          printf "<?php /* dummy */" > "${CORE_DIR}/simplesamlphp/lib/_autoload.php"
+          printf "<?php /* dummy */" > "${CORE_DIR}/simplesamlphp/vendor/autoload.php"
           # Mirror under wp-content
-          mkdir -p /tmp/wordpress/wp-content/simplesamlphp/lib
-          mkdir -p /tmp/wordpress/wp-content/simplesamlphp/vendor
-          cp /tmp/wordpress/simplesamlphp/lib/_autoload.php /tmp/wordpress/wp-content/simplesamlphp/lib/_autoload.php
-          cp /tmp/wordpress/simplesamlphp/vendor/autoload.php /tmp/wordpress/wp-content/simplesamlphp/vendor/autoload.php
-
-          # ⬅️ NEW: Mirror under wp-content/plugins (common lookup path)
-          mkdir -p /tmp/wordpress/wp-content/plugins/simplesamlphp/lib
-          mkdir -p /tmp/wordpress/wp-content/plugins/simplesamlphp/vendor
-          cp /tmp/wordpress/simplesamlphp/lib/_autoload.php /tmp/wordpress/wp-content/plugins/simplesamlphp/lib/_autoload.php
-          cp /tmp/wordpress/simplesamlphp/vendor/autoload.php /tmp/wordpress/wp-content/plugins/simplesamlphp/vendor/autoload.php
-
-          echo "==== Dumping SimpleSAML paths (core) ===="
-          ls -R /tmp/wordpress/simplesamlphp || true
-          echo "==== Dumping SimpleSAML paths (wp-content) ===="
-          ls -R /tmp/wordpress/wp-content/simplesamlphp || true
-          echo "==== Dumping SimpleSAML paths (wp-content/plugins) ===="
-          ls -R /tmp/wordpress/wp-content/plugins/simplesamlphp || true
+          mkdir -p "${CORE_DIR}/wp-content/simplesamlphp"
+          cp -r "${CORE_DIR}/simplesamlphp/." "${CORE_DIR}/wp-content/simplesamlphp"
+          # Mirror under wp-content/plugins
+          mkdir -p "${CORE_DIR}/wp-content/plugins/simplesamlphp"
+          cp -r "${CORE_DIR}/simplesamlphp/." "${CORE_DIR}/wp-content/plugins/simplesamlphp"
+          
+          # --- Paths for the PHPUnit test suite installation ---
+          TESTS_DIR="/tmp/wordpress-tests-lib"
+          mkdir -p "${TESTS_DIR}/simplesamlphp/lib"
+          mkdir -p "${TESTS_DIR}/simplesamlphp/vendor"
+          printf "<?php /* dummy */" > "${TESTS_DIR}/simplesamlphp/lib/_autoload.php"
+          printf "<?php /* dummy */" > "${TESTS_DIR}/simplesamlphp/vendor/autoload.php"
+          # Mirror under plugins (most likely lookup path for tests)
+          mkdir -p "${TESTS_DIR}/plugins/simplesamlphp"
+          cp -r "${TESTS_DIR}/simplesamlphp/." "${TESTS_DIR}/plugins/simplesamlphp"
+          
+          echo "==== Paths created in ${CORE_DIR} ===="
+          ls -R "${CORE_DIR}/wp-content/plugins/simplesamlphp" || true
+          echo "==== Paths created in ${TESTS_DIR} ===="
+          ls -R "${TESTS_DIR}/plugins/simplesamlphp" || true
 
       # Bypass composer script & call the installer directly with bash
       - name: Install WordPress Test Suite (direct)
