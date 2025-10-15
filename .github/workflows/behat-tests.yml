@@ -45,7 +45,9 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -72,6 +74,12 @@ jobs:
         run: chmod +x bin/*.sh
 
       - name: Run PHPUnit tests
+        env:
+          MYSQL_PWD: ${{ env.DB_PASSWORD }}
+          WP_TESTS_DB_NAME: ${{ env.DB_NAME }}
+          WP_TESTS_DB_USER: ${{ env.DB_USER }}
+          WP_TESTS_DB_PASSWORD: ${{ env.DB_PASSWORD }}
+          WP_TESTS_DB_HOST: ${{ env.DB_HOST }}
         run: |
           composer test:install:withdb
           composer phpunit
