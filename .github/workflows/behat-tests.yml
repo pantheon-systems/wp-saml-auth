@@ -1,7 +1,7 @@
 name: CI Pipeline
 
 on:
-  
+
   pull_request:
   schedule:
     # This matches the nightly cron from the CircleCI config.
@@ -92,6 +92,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
+          fetch-depth: 0
 
       - name: Install Terminus
         uses: pantheon-systems/terminus-github-actions@v1
@@ -179,18 +180,19 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Download all environment name artifacts
         uses: actions/download-artifact@v4
         with:
           path: /tmp/behat-envs
 
-      - name: Authenticate with Terminus
-        if: env.TERMINUS_TOKEN != ''
-        env:
-          TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
-        run: terminus auth:login --machine-token=$TERMINUS_TOKEN
+      - name: Install Terminus
+        uses: pantheon-systems/terminus-github-actions@v1
+        with:
+          pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
 
       - name: Run Cleanup Script
         run: |
