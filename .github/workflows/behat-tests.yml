@@ -90,7 +90,7 @@ jobs:
             --dbpass="${DB_PASSWORD}" \
             --dbhost="${DB_HOST}"
           
-          # 3. Restore the original phpunit executable
+          # 3. Restore the original phpunit executable for the next step
           rm vendor/bin/phpunit
           mv vendor/bin/phpunit.real vendor/bin/phpunit
 
@@ -99,7 +99,8 @@ jobs:
           SIMPLESAMLPHP_VERSION: '2.4.0'
         run: |
           set -euxo pipefail
-          INSTALL_DIR="${WP_TESTS_DIR}/simplesamlphp"
+          # CORRECTED: Install into the 'plugins' subdirectory of the test suite
+          INSTALL_DIR="${WP_TESTS_DIR}/plugins/simplesamlphp"
           if [ "${SIMPLESAMLPHP_VERSION}" == '2.0.0' ]; then
             DOWNLOAD_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}.tar.gz"
           else
