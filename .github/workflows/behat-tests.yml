@@ -75,11 +75,31 @@ jobs:
             find ./bin -type f -name "*.sh" -exec dos2unix {} \; -exec chmod +x {} \;
           fi
 
-      - name: Install SimpleSAMLphp
+      - name: Install WordPress Test Suite
+        run: |
+          set -euxo pipefail
+          # 1. Temporarily replace the project's local phpunit executable to prevent auto-run
+          mv vendor/bin/phpunit vendor/bin/phpunit.real
+          echo -e '#!/bin/bash\necho "Skipping phpunit execution during installation."\nexit 0' > vendor/bin/phpunit
+          chmod +x vendor/bin/phpunit
+          
+          # 2. Run the installer script. It will now create /tmp/wordpress-tests-lib successfully.
+          bash bin/install-local-tests.sh \
+            --dbname="${DB_NAME}" \
+            --dbuser="${DB_USER}" \
+            --dbpass="${DB_PASSWORD}" \
+            --dbhost="${DB_HOST}"
+          
+          # 3. Restore the original phpunit executable for the next step
+          rm vendor/bin/phpunit
+          mv vendor/bin/phpunit.real vendor/bin/phpunit
+
+      - name: Install SimpleSAMLphp for Tests
         env:
           SIMPLESAMLPHP_VERSION: '2.4.0'
         run: |
           set -euxo pipefail
+          # Install SimpleSAMLphp into the directory CREATED by the step above
           INSTALL_DIR="${WP_TESTS_DIR}/simplesamlphp"
           if [ "${SIMPLESAMLPHP_VERSION}" == '2.0.0' ]; then
             DOWNLOAD_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}.tar.gz"
@@ -93,25 +113,6 @@ jobs:
           composer install --no-dev --working-dir="${INSTALL_DIR}"
           mkdir -p "${INSTALL_DIR}/config"
           touch "${INSTALL_DIR}/config/config.php"
-
-      - name: Install WordPress Test Suite
-        run: |
-          set -euxo pipefail
-          # 1. Temporarily replace the project's local phpunit executable to prevent auto-run
-          mv vendor/bin/phpunit vendor/bin/phpunit.real
-          echo -e '#!/bin/bash\necho "Skipping phpunit execution during installation."\nexit 0' > vendor/bin/phpunit
-          chmod +x vendor/bin/phpunit
-          
-          # 2. Run the installer script directly with the required database arguments
-          bash bin/install-local-tests.sh \
-            --dbname="${DB_NAME}" \
-            --dbuser="${DB_USER}" \
-            --dbpass="${DB_PASSWORD}" \
-            --dbhost="${DB_HOST}"
-          
-          # 3. Restore the original phpunit executable for the next step
-          rm vendor/bin/phpunit
-          mv vendor/bin/phpunit.real vendor/bin/phpunit
 
       - name: Run PHPUnit
         run: vendor/bin/phpunit -c phpunit.xml.dist
