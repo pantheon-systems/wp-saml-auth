@@ -3,7 +3,6 @@ name: Behat & PHPUnit
 on:
   pull_request:
   schedule:
-    # This matches the nightly cron from the CircleCI config.
     - cron: '0 0 * * *'
 
 permissions:
@@ -11,8 +10,6 @@ permissions:
   actions: read
 
 jobs:
-  # This job corresponds to the 'test-phpunit' job in CircleCI.
-  # It runs for pushes and pull requests, but is skipped for scheduled runs.
   test-phpunit:
     if: github.event_name != 'schedule'
     name: "PHPUnit - PHP ${{ matrix.php_version }}"
@@ -49,9 +46,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Ensure all bin scripts are executable before we run any of them
+      - name: Make all bin scripts executable
+        run: |
+          if [ -d ./bin ]; then
+            find ./bin -type f -iname "*.sh" -exec chmod +x {} +
+          fi
+
       # Create the mock file BEFORE PHP is configured so we can point auto_prepend_file at it.
       - name: Create Mock SimpleSAMLphp Class for Tests
-        run: ./bin/create-phpunit-mocks.sh
+        run: bash ./bin/create-phpunit-mocks.sh
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -59,7 +63,6 @@ jobs:
           php-version: ${{ matrix.php_version }}
           extensions: imagick, mysqli
           tools: wp-cli
-          # Force-load the mock for every PHP process (Composer + PHPUnit inside scripts)
           ini-values: auto_prepend_file=${{ github.workspace }}/tests/phpunit/class-simplesaml-auth-simple.php
 
       - name: "DEBUG: Confirm auto_prepend_file is active"
@@ -83,9 +86,6 @@ jobs:
           sudo apt-get install -y subversion mariadb-client
           composer install --prefer-dist --no-progress
 
-      - name: Make all bin scripts executable
-        run: find ./bin -type f -iname "*.sh" -exec chmod +x {} +
-
       - name: Install WordPress Test Suite
         env:
           WP_TESTS_DB_NAME: ${{ env.DB_NAME }}
@@ -104,20 +104,14 @@ jobs:
           test -f tests/phpunit/class-simplesaml-auth-simple.php
           php -r "echo class_exists('SimpleSAML_Auth_Simple') ? 'Mock class present\n' : 'Mock class NOT present\n';"
 
-      # We can keep --bootstrap as a belt-and-suspenders, but auto_prepend_file already covers the composer-invoked phpunit.
       - name: Run PHPUnit
         run: |
           vendor/bin/phpunit -c phpunit.xml.dist --bootstrap=tests/phpunit/class-simplesaml-auth-simple.php
 
-  # This job corresponds to the 'test-behat' job in CircleCI.
-  # It uses a matrix strategy for SimpleSAMLphp versions.
-  # It runs on push/PR, and also on the nightly schedule for the master branch.
   test-behat:
     name: "Behat - SimpleSAMLphp ${{ matrix.simplesamlphp_version }}"
     runs-on: ubuntu-latest
-    # Only run scheduled jobs on the master branch.
     if: github.event_name != 'schedule' || (github.event_name == 'schedule' && github.ref == 'refs/heads/master')
-
     strategy:
       fail-fast: false
       matrix:
@@ -148,7 +142,6 @@ jobs:
       - name: Set environment variables
         run: |
           echo "TERMINUS_SITE=wp-saml-auth" >> $GITHUB_ENV
-          # GITHUB_RUN_ID is the equivalent of CIRCLE_BUILD_NUM
           echo "TERMINUS_ENV=ci-${{ github.run_id }}" >> $GITHUB_ENV
           echo "WORDPRESS_ADMIN_USERNAME=pantheon" >> $GITHUB_ENV
           echo "WORDPRESS_ADMIN_EMAIL=no-reply@getpantheon.com" >> $GITHUB_ENV
@@ -190,11 +183,10 @@ jobs:
       - name: Prepare and run Behat tests
         run: |
           set -e
-          # Prepare fixture environment for tests.
           if [ "${{ matrix.simplesamlphp_version }}" != '1.18.0' ]; then
-            ./bin/behat-prepare.sh
+            bash ./bin/behat-prepare.sh
           else
-            ./bin/1.18/behat-prepare-simplesaml1.18.0.sh
+            bash ./bin/1.18/behat-prepare-simplesaml1.18.0.sh
           fi
 
           echo ""
@@ -203,10 +195,8 @@ jobs:
           echo "with SimpleSAMLphp version $SIMPLESAMLPHP_VERSION"
           echo "=========================================================================="
           echo ""
-          ./bin/behat-test.sh --strict
+          bash ./bin/behat-test.sh --strict
 
-  # This job corresponds to the 'behat-cleanup' job in CircleCI.
-  # It always runs after all 'test-behat' matrix jobs complete, regardless of their outcome.
   behat-cleanup:
     name: "Behat Cleanup"
     runs-on: ubuntu-latest
@@ -233,6 +223,5 @@ jobs:
         run: |
           echo "The following environments will be cleaned up:"
           find /tmp/behat-envs -type f -name "*.txt" -exec cat {} +
-          # Pass the discovered environment names to the cleanup script
           export TERMINUS_ENVS=$(find /tmp/behat-envs -type f -name "*.txt" -exec cat {} + | tr '\n' ' ')
-          ./bin/behat-cleanup.sh
+          bash ./bin/behat-cleanup.sh
