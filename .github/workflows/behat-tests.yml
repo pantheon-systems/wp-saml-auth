@@ -1,6 +1,7 @@
 name: CI Pipeline
 
 on:
+  
   pull_request:
   schedule:
     # This matches the nightly cron from the CircleCI config.
