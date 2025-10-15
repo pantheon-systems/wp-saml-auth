@@ -50,6 +50,8 @@ cat > "$SSP_TEMP_CONFIG_DIR/config.php" <<PHP
     'timezone' => 'UTC', 'secretsalt' => 'defaultsecretsalt',
     'auth.adminpassword' => 'admin', 'admin.protectindexpage' => false,
     'admin.protectmetadata' => false, 'store.type' => 'phpsession',
+    // FIX: Explicitly tell SimpleSAMLphp to load metadata from the flatfile directory.
+    'metadata.sources' => [['type' => 'flatfile']],
 ];
 PHP
 
@@ -73,16 +75,12 @@ $metadata['https://localhost/simplesaml/saml2/idp/metadata.php'] = [
 ];
 PHP
 
-# 5. Create the PHPUnit bootstrap file with a more complete server mock
+# 5. Create the PHPUnit bootstrap file
 if [ -d "tests/phpunit" ]; then
     echo "Creating PHPUnit bootstrap file..."
     cat > tests/phpunit/bootstrap.php <<'PHP'
 <?php
-/**
- * PHPUnit bootstrap file.
- */
-
-// FIX: Create a more complete fake server environment before any other code loads.
+// Set up a fake server environment FIRST.
 $_SERVER['SERVER_NAME']      = 'localhost';
 $_SERVER['HTTP_HOST']        = 'localhost';
 $_SERVER['SERVER_PORT']      = 443;
