@@ -75,7 +75,7 @@ jobs:
       - name: Create Mock SimpleSAMLphp Class for Tests
         run: ./bin/create-phpunit-mocks.sh
 
-      - name: Run PHPUnit tests
+      - name: Install WordPress Test Suite
         env:
           WP_TESTS_DB_NAME: ${{ env.DB_NAME }}
           WP_TESTS_DB_USER: ${{ env.DB_USER }}
@@ -87,8 +87,14 @@ jobs:
             --dbuser=${WP_TESTS_DB_USER} \
             --dbpass=${WP_TESTS_DB_PASSWORD} \
             --dbhost=${WP_TESTS_DB_HOST}
-          
-          composer phpunit
+
+      - name: "DEBUG: Verify Mock File Exists Before PHPUnit"
+        run: |
+          echo "--- Checking for mock file at tests/phpunit/class-simplesaml-auth-simple.php ---"
+          ls -la tests/phpunit/
+
+      - name: Run PHPUnit
+        run: composer phpunit
   # This job corresponds to the 'test-behat' job in CircleCI.
   # It uses a matrix strategy for SimpleSAMLphp versions.
   # It runs on push/PR, and also on the nightly schedule for the master branch.
