@@ -104,20 +104,21 @@ jobs:
           WP_TESTS_DB_HOST: ${{ env.DB_HOST }}
         run: |
           set -euxo pipefail
-          # 1. Create a dummy phpunit script that does nothing and exits successfully.
-          # This intercepts the call from the installer script.
-          echo -e '#!/bin/bash\necho "Skipping phpunit execution during installation."\nexit 0' | sudo tee /usr/local/bin/phpunit
-          sudo chmod +x /usr/local/bin/phpunit
+          # 1. Temporarily replace the project's LOCAL phpunit executable
+          mv vendor/bin/phpunit vendor/bin/phpunit.real
+          echo -e '#!/bin/bash\necho "Skipping phpunit execution during installation."\nexit 0' > vendor/bin/phpunit
+          chmod +x vendor/bin/phpunit
           
-          # 2. Run the installer. It will now complete successfully without running tests.
+          # 2. Run the installer script. It will now use our dummy phpunit.
           bash bin/install-local-tests.sh \
             --dbname="${WP_TESTS_DB_NAME}" \
             --dbuser="${WP_TESTS_DB_USER}" \
             --dbpass="${WP_TESTS_DB_PASSWORD}" \
             --dbhost="${WP_TESTS_DB_HOST}"
           
-          # 3. Remove the dummy script so the real one can be used in the next step.
-          sudo rm /usr/local/bin/phpunit
+          # 3. Restore the original phpunit executable for the next step.
+          rm vendor/bin/phpunit
+          mv vendor/bin/phpunit.real vendor/bin/phpunit
 
       - name: Run PHPUnit
         run: vendor/bin/phpunit -c phpunit.xml.dist
