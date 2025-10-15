@@ -34,13 +34,14 @@ define( 'WP_DEBUG', true );
 define( 'WP_PHP_BINARY', 'php' );
 PHP
 
-# 4. Create SimpleSAMLphp configuration
-echo "Creating SimpleSAMLphp test configuration..."
-SSP_CONFIG_DIR="vendor/simplesamlphp/simplesamlphp/config"
-SSP_METADATA_DIR="vendor/simplesamlphp/simplesamlphp/metadata"
-mkdir -p "$SSP_CONFIG_DIR" "$SSP_METADATA_DIR"
+# 4. Create an ISOLATED SimpleSAMLphp configuration
+echo "Creating isolated SimpleSAMLphp test configuration..."
+SSP_TEMP_CONFIG_DIR="/tmp/simplesamlphp-config"
+rm -rf "$SSP_TEMP_CONFIG_DIR" # Ensure it's clean on every run
+SSP_METADATA_DIR="$SSP_TEMP_CONFIG_DIR/metadata"
+mkdir -p "$SSP_TEMP_CONFIG_DIR" "$SSP_METADATA_DIR"
 
-cat > "$SSP_CONFIG_DIR/config.php" <<PHP
+cat > "$SSP_TEMP_CONFIG_DIR/config.php" <<PHP
 <?php
 \$config = [
     'baseurlpath' => 'http://localhost/simplesaml/', 'certdir' => 'cert/',
@@ -52,7 +53,7 @@ cat > "$SSP_CONFIG_DIR/config.php" <<PHP
 ];
 PHP
 
-cat > "$SSP_CONFIG_DIR/authsources.php" <<PHP
+cat > "$SSP_TEMP_CONFIG_DIR/authsources.php" <<PHP
 <?php
 \$config = [ 'default-sp' => [
     'saml:SP', 'entityID' => 'wp-saml',
@@ -72,40 +73,28 @@ $metadata['http://localhost/simplesaml/saml2/idp/metadata.php'] = [
 ];
 PHP
 
-# 5. Create the PHPUnit bootstrap file with the correct order of operations
+# 5. Create the PHPUnit bootstrap file
 if [ -d "tests/phpunit" ]; then
     echo "Creating PHPUnit bootstrap file..."
     cat > tests/phpunit/bootstrap.php <<'PHP'
 <?php
-/**
- * PHPUnit bootstrap file.
- */
-
-// Set up a fake server environment FIRST, before any other code is loaded.
+// Set up a fake server environment FIRST.
 $_SERVER['SERVER_NAME'] = 'localhost';
 $_SERVER['SERVER_PORT'] = 80;
 $_SERVER['REQUEST_URI'] = '/';
 
-// 1. Load the Composer autoloader.
+// 1. Load Composer and SimpleSAMLphp autoloaders.
 require_once dirname( __DIR__, 2 ) . '/vendor/autoload.php';
-
-// 2. Load the SimpleSAMLphp autoloader.
 if ( file_exists( dirname( __DIR__, 2 ) . '/vendor/simplesamlphp/simplesamlphp/lib/_autoload.php' ) ) {
     require_once dirname( __DIR__, 2 ) . '/vendor/simplesamlphp/simplesamlphp/lib/_autoload.php';
 }
 
-// 3. Load the WordPress test functions.
+// 2. Load WordPress test environment.
 require_once getenv( 'WP_TESTS_DIR' ) . '/includes/functions.php';
-
-/**
- * Manually load the plugin being tested.
- */
 function _manually_load_plugin() {
     require dirname( __DIR__, 2 ) . '/wp-saml-auth.php';
 }
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
-
-// 4. Load the WordPress test environment.
 require getenv( 'WP_TESTS_DIR' ) . '/includes/bootstrap.php';
 PHP
 else
@@ -117,11 +106,11 @@ echo "Installing Composer dependencies..."
 composer install --prefer-dist --no-progress
 
 echo "✅ Environment ready."
-echo ""
 echo "=========================================================================="
 echo "Running PHPUnit Tests..."
 echo "=========================================================================="
 
 # 7. Run the tests
-export SIMPLESAMLPHP_CONFIG_DIR="$(pwd)/vendor/simplesamlphp/simplesamlphp/config"
+# Point SimpleSAMLphp to the isolated, non-cached config directory.
+export SIMPLESAMLPHP_CONFIG_DIR="$SSP_TEMP_CONFIG_DIR"
 composer phpunit
