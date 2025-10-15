@@ -141,16 +141,16 @@ class WP_SAML_Auth {
 	/**
 	 * Deprecated camelCase wrapper for {@see self::maybe_log_error()}.
 	 *
-	 * @deprecated 3.x Use maybe_log_error() instead.
-	 * @phpcsSuppress WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid
+	 * Kept for backward compatibility with subclasses.
 	 *
 	 * @param string $path Path to autoloader.
 	 * @return void
 	 */
-	// phpcs:ignore WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid
+	// phpcs:disable Squiz.Commenting.FunctionComment.Missing, WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid
 	protected function maybeLogError( $path = '' ) {
 		$this->maybe_log_error( $path );
 	}
+	// phpcs:enable Squiz.Commenting.FunctionComment.Missing, WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid
 
 	/**
 	 * Initialize the controller logic on the 'init' hook

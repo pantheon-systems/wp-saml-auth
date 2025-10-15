@@ -75,6 +75,7 @@ jobs:
         run: |
           mkdir -p ~/.wp-cli/
           cat > ~/.wp-cli/config.yml <<-EOF
+          path: /tmp/wordpress
           db user: ${{ env.DB_USER }}
           db pass: ${{ env.DB_PASSWORD }}
           db host: ${{ env.DB_HOST }}
