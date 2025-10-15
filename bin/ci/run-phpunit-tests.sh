@@ -81,7 +81,7 @@ if [ -d "tests/phpunit" ]; then
  * PHPUnit bootstrap file.
  */
 
-// FIX: Set up a fake server environment FIRST, before any other code is loaded.
+// Set up a fake server environment FIRST, before any other code is loaded.
 $_SERVER['SERVER_NAME'] = 'localhost';
 $_SERVER['SERVER_PORT'] = 80;
 $_SERVER['REQUEST_URI'] = '/';
@@ -123,4 +123,5 @@ echo "Running PHPUnit Tests..."
 echo "=========================================================================="
 
 # 7. Run the tests
+export SIMPLESAMLPHP_CONFIG_DIR="$(pwd)/vendor/simplesamlphp/simplesamlphp/config"
 composer phpunit
