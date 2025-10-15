@@ -83,8 +83,7 @@ jobs:
         run: |
           set -euxo pipefail
           INSTALL_DIR="${WP_TESTS_DIR}/simplesamlphp"
-          DOWNLOAD_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}.tar.gz"
-          
+          DOWNLOAD_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}-full.tar.gz"
           # Download and extract
           wget -q -O simplesamlphp.tar.gz "${DOWNLOAD_URL}"
           mkdir -p "${INSTALL_DIR}"
