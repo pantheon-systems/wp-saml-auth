@@ -47,14 +47,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Prepare bin scripts (permissions + line endings)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y dos2unix
-          if [ -d ./bin ]; then
-            find ./bin -type f -name "*.sh" -print -exec dos2unix {} \; -exec chmod +x {} \;
-          fi
-
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -74,8 +66,15 @@ jobs:
 
       - name: Install Composer dependencies
         run: |
-          sudo apt-get install -y subversion mariadb-client
+          sudo apt-get install -y subversion mariadb-client dos2unix
           composer install --prefer-dist --no-progress
+
+      # This step now runs AFTER composer install, so the scripts exist.
+      - name: Set Script Permissions
+        run: |
+          if [ -d ./bin ]; then
+            find ./bin -type f -name "*.sh" -exec dos2unix {} \; -exec chmod +x {} \;
+          fi
 
       - name: Install SimpleSAMLphp
         env:
@@ -95,25 +94,6 @@ jobs:
           composer install --no-dev --working-dir="${INSTALL_DIR}"
           mkdir -p "${INSTALL_DIR}/config"
           touch "${INSTALL_DIR}/config/config.php"
-
-      - name: Install WordPress Test Suite
-        run: |
-          set -euxo pipefail
-          # 1. Temporarily replace the project's local phpunit executable
-          mv vendor/bin/phpunit vendor/bin/phpunit.real
-          echo -e '#!/bin/bash\necho "Skipping phpunit execution during installation."\nexit 0' > vendor/bin/phpunit
-          chmod +x vendor/bin/phpunit
-          
-          # 2. Run the installer script with the CORRECT long-form arguments
-          bash bin/install-local-tests.sh \
-            --dbname="${DB_NAME}" \
-            --dbuser="${DB_USER}" \
-            --dbpass="${DB_PASSWORD}" \
-            --dbhost="${DB_HOST}"
-          
-          # 3. Restore the original phpunit executable
-          rm vendor/bin/phpunit
-          mv vendor/bin/phpunit.real vendor/bin/phpunit
 
       - name: Install Test Suite and Run Tests
         env:
