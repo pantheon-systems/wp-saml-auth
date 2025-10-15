@@ -87,8 +87,14 @@ jobs:
           WP_TESTS_DB_PASSWORD: ${{ env.DB_PASSWORD }}
           WP_TESTS_DB_HOST: ${{ env.DB_HOST }}
         run: |
-          composer test:install:withdb
+          composer test:install:withdb -- \
+            --dbname=${WP_TESTS_DB_NAME} \
+            --dbuser=${WP_TESTS_DB_USER} \
+            --dbpass=${WP_TESTS_DB_PASSWORD} \
+            --dbhost=${WP_TESTS_DB_HOST}
+          
           composer phpunit
+
   # This job corresponds to the 'test-behat' job in CircleCI.
   # It uses a matrix strategy for SimpleSAMLphp versions.
   # It runs on push/PR, and also on the nightly schedule for the master branch.
