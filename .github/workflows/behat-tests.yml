@@ -1,0 +1,200 @@
+name: CI Pipeline
+
+on:
+  pull_request:
+  schedule:
+    # This matches the nightly cron from the CircleCI config.
+    - cron: '0 0 * * *'
+
+jobs:
+  # This job corresponds to the 'test-phpunit' job in CircleCI.
+  # It runs for pushes and pull requests, but is skipped for scheduled runs.
+  test-phpunit:
+    if: github.event_name != 'schedule'
+    name: "PHPUnit - PHP ${{ matrix.php_version }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # PHP versions from the original matrix.
+        php_version: ['7.4', '8.1', '8.2', '8.3', '8.4']
+
+    # Service container for the database, equivalent to the second docker image in CircleCI.
+    services:
+      mariadb:
+        image: mariadb:10.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress_tests
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -u root -proot"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      WP_TESTS_DIR: "/tmp/wordpress-tests-lib"
+      WP_CORE_DIR: "/tmp/wordpress/"
+      # Environment variables for the tests to connect to the database service.
+      DB_HOST: 127.0.0.1
+      DB_USER: root
+      DB_PASSWORD: root
+      DB_NAME: wordpress_tests
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php_version }}
+          extensions: imagick, mysqli
+          tools: wp-cli
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ matrix.php_version }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-${{ matrix.php_version }}-composer-
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y subversion mariadb-client
+          composer install -n --prefer-dist
+
+      - name: Run PHPUnit tests
+        run: |
+          composer test:install:withdb
+          composer phpunit
+
+  # This job corresponds to the 'test-behat' job in CircleCI.
+  # It uses a matrix strategy for SimpleSAMLphp versions.
+  # It runs on push/PR, and also on the nightly schedule for the master branch.
+  test-behat:
+    name: "Behat - SimpleSAMLphp ${{ matrix.simplesamlphp_version }}"
+    runs-on: ubuntu-latest
+    # Only run scheduled jobs on the master branch.
+    if: github.event_name != 'schedule' || (github.event_name == 'schedule' && github.ref == 'refs/heads/master')
+
+    strategy:
+      fail-fast: false
+      matrix:
+        simplesamlphp_version: ["1.18.0", "2.0.0", "2.4.0"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+
+      - name: Install Terminus
+        uses: pantheon-systems/terminus-github-actions@v1
+        with:
+          pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-behat-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-behat-composer-
+
+      - name: Install Composer dependencies
+        run: composer install -n --prefer-dist
+
+      - name: Set environment variables
+        run: |
+          echo "TERMINUS_SITE=wp-saml-auth" >> $GITHUB_ENV
+          # GITHUB_RUN_ID is the equivalent of CIRCLE_BUILD_NUM
+          echo "TERMINUS_ENV=ci-${{ github.run_id }}" >> $GITHUB_ENV
+          echo "WORDPRESS_ADMIN_USERNAME=pantheon" >> $GITHUB_ENV
+          echo "WORDPRESS_ADMIN_EMAIL=no-reply@getpantheon.com" >> $GITHUB_ENV
+          echo "WORDPRESS_ADMIN_PASSWORD=$(openssl rand -hex 8)" >> $GITHUB_ENV
+          echo "SIMPLESAMLPHP_VERSION=${{ matrix.simplesamlphp_version }}" >> $GITHUB_ENV
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "StrictHostKeyChecking no" >> ~/.ssh/config
+
+      - name: Configure Composer for GitHub Token
+        if: env.GITHUB_TOKEN != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: composer config -g github-oauth.github.com $GITHUB_TOKEN
+
+      - name: Authenticate with Terminus
+        if: env.TERMINUS_TOKEN != ''
+        env:
+          TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
+        run: terminus auth:login --machine-token=$TERMINUS_TOKEN
+
+      - name: Save environment name for cleanup
+        run: echo "wp-saml-auth.ci-${{ github.run_id }}" > site_env.txt
+
+      - name: Upload environment name artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: behat-env-${{ matrix.simplesamlphp_version }}
+          path: site_env.txt
+
+      - name: Validate fixture version
+        uses: jazzsequence/action-validate-plugin-version@v1
+        with:
+          branch: ${{ github.head_ref }}
+          dry-run: 'true'
+
+      - name: Prepare and run Behat tests
+        run: |
+          set -e
+          # Prepare fixture environment for tests.
+          if [ "${{ matrix.simplesamlphp_version }}" != '1.18.0' ]; then
+            ./bin/behat-prepare.sh
+          else
+            ./bin/1.18/behat-prepare-simplesaml1.18.0.sh
+          fi
+
+          echo ""
+          echo "=========================================================================="
+          echo "Running Behat on https://${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io/wp-login.php"
+          echo "with SimpleSAMLphp version $SIMPLESAMLPHP_VERSION"
+          echo "=========================================================================="
+          echo ""
+          ./bin/behat-test.sh --strict
+
+  # This job corresponds to the 'behat-cleanup' job in CircleCI.
+  # It always runs after all 'test-behat' matrix jobs complete, regardless of their outcome.
+  behat-cleanup:
+    name: "Behat Cleanup"
+    runs-on: ubuntu-latest
+    needs: test-behat
+    if: always() && (github.event_name != 'schedule' || (github.event_name == 'schedule' && github.ref == 'refs/heads/master'))
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all environment name artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/behat-envs
+
+      - name: Authenticate with Terminus
+        if: env.TERMINUS_TOKEN != ''
+        env:
+          TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
+        run: terminus auth:login --machine-token=$TERMINUS_TOKEN
+
+      - name: Run Cleanup Script
+        run: |
+          echo "The following environments will be cleaned up:"
+          find /tmp/behat-envs -type f -name "*.txt" -exec cat {} +
+          # Pass the discovered environment names to the cleanup script
+          export TERMINUS_ENVS=$(find /tmp/behat-envs -type f -name "*.txt" -exec cat {} + | tr '\n' ' ')
+          ./bin/behat-cleanup.sh
