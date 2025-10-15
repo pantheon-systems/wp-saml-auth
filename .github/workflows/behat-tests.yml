@@ -39,6 +39,10 @@ jobs:
       DB_USER: root
       DB_PASSWORD: root
       DB_NAME: wordpress_test
+      # keep Composer non-interactive & faster
+      COMPOSER_PROCESS_TIMEOUT: 0
+      COMPOSER_NO_INTERACTION: 1
+      COMPOSER_NO_AUDIT: 1
 
     steps:
       - name: Checkout code
@@ -92,9 +96,16 @@ jobs:
         run: |
           echo "--- Checking for mock file at tests/phpunit/class-simplesaml-auth-simple.php ---"
           ls -la tests/phpunit/
+          test -f tests/phpunit/class-simplesaml-auth-simple.php
 
-      - name: Run PHPUnit
-        run: composer phpunit
+      - name: "DEBUG: Confirm mock is loadable by PHP"
+        run: |
+          php -r "require 'tests/phpunit/class-simplesaml-auth-simple.php'; echo class_exists('SimpleSAML_Auth_Simple') ? 'Mock loaded\n' : 'Mock missing\n';"
+
+      - name: Run PHPUnit (preload mock via --bootstrap)
+        run: |
+          vendor/bin/phpunit -c phpunit.xml.dist --bootstrap=tests/phpunit/class-simplesaml-auth-simple.php
+
   # This job corresponds to the 'test-behat' job in CircleCI.
   # It uses a matrix strategy for SimpleSAMLphp versions.
   # It runs on push/PR, and also on the nightly schedule for the master branch.
