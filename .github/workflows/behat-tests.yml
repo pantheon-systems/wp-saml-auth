@@ -114,7 +114,7 @@ jobs:
           touch "${INSTALL_DIR}/config/config.php"
 
       - name: Run PHPUnit
-        run: vendor/bin/phpunit -c phpunit.xml.dist
+        run: composer phpunit
   # Behat integration tests against Pantheon (runs on PRs and nightly on master)
   test-behat:
     name: "Behat - SimpleSAMLphp ${{ matrix.simplesamlphp_version }}"
