@@ -46,14 +46,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Ensure all bin scripts are executable before we run any of them
-      - name: Make all bin scripts executable
+      # Normalize line endings (in case of CRLF) and ensure bin/*.sh are executable
+      - name: Prepare bin scripts (permissions + line endings)
         run: |
+          sudo apt-get update
+          sudo apt-get install -y dos2unix
           if [ -d ./bin ]; then
-            find ./bin -type f -iname "*.sh" -exec chmod +x {} +
+            find ./bin -type f -name "*.sh" -print -exec dos2unix {} \; -exec chmod +x {} \;
           fi
+          echo "---- ls -l bin ----"
+          ls -l bin || true
 
-      # Create the mock file BEFORE PHP is configured so we can point auto_prepend_file at it.
+      # Create the mock BEFORE PHP config so we can auto-prepend it for all PHP invocations
       - name: Create Mock SimpleSAMLphp Class for Tests
         run: bash ./bin/create-phpunit-mocks.sh
 
@@ -63,6 +67,7 @@ jobs:
           php-version: ${{ matrix.php_version }}
           extensions: imagick, mysqli
           tools: wp-cli
+          # Force-load the mock for every PHP process (Composer + PHPUnit inside scripts)
           ini-values: auto_prepend_file=${{ github.workspace }}/tests/phpunit/class-simplesaml-auth-simple.php
 
       - name: "DEBUG: Confirm auto_prepend_file is active"
@@ -82,28 +87,30 @@ jobs:
 
       - name: Install Composer dependencies
         run: |
-          sudo apt-get update
           sudo apt-get install -y subversion mariadb-client
           composer install --prefer-dist --no-progress
 
-      - name: Install WordPress Test Suite
+      # ⬇️ Bypass composer script & call the installer directly with bash
+      - name: Install WordPress Test Suite (direct)
         env:
           WP_TESTS_DB_NAME: ${{ env.DB_NAME }}
           WP_TESTS_DB_USER: ${{ env.DB_USER }}
           WP_TESTS_DB_PASSWORD: ${{ env.DB_PASSWORD }}
           WP_TESTS_DB_HOST: ${{ env.DB_HOST }}
         run: |
-          composer test:install:withdb -- \
-            --dbname=${WP_TESTS_DB_NAME} \
-            --dbuser=${WP_TESTS_DB_USER} \
-            --dbpass=${WP_TESTS_DB_PASSWORD} \
-            --dbhost=${WP_TESTS_DB_HOST}
+          set -euxo pipefail
+          bash bin/install-local-tests.sh \
+            --dbname="${WP_TESTS_DB_NAME}" \
+            --dbuser="${WP_TESTS_DB_USER}" \
+            --dbpass="${WP_TESTS_DB_PASSWORD}" \
+            --dbhost="${WP_TESTS_DB_HOST}"
 
       - name: "DEBUG: Verify mock still present before PHPUnit"
         run: |
           test -f tests/phpunit/class-simplesaml-auth-simple.php
           php -r "echo class_exists('SimpleSAML_Auth_Simple') ? 'Mock class present\n' : 'Mock class NOT present\n';"
 
+      # Belt-and-suspenders: keep --bootstrap even though auto_prepend_file covers it
       - name: Run PHPUnit
         run: |
           vendor/bin/phpunit -c phpunit.xml.dist --bootstrap=tests/phpunit/class-simplesaml-auth-simple.php
