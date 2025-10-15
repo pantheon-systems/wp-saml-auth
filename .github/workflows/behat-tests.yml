@@ -77,39 +77,30 @@ jobs:
           sudo apt-get install -y subversion mariadb-client
           composer install --prefer-dist --no-progress
 
+      - name: Patch the Test Installer Script
+        run: sed -i '/phpunit/d' bin/install-local-tests.sh
+
       - name: Install SimpleSAMLphp
         env:
-          # This can be changed to test different versions
           SIMPLESAMLPHP_VERSION: '2.4.0'
         run: |
           set -euxo pipefail
           INSTALL_DIR="${WP_TESTS_DIR}/simplesamlphp"
-
-          # Handle different URL formats for different versions
           if [ "${SIMPLESAMLPHP_VERSION}" == '2.0.0' ]; then
             DOWNLOAD_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}.tar.gz"
           else
             DOWNLOAD_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}-full.tar.gz"
           fi
-
-          # Download and extract
           wget -q -O simplesamlphp.tar.gz "${DOWNLOAD_URL}"
           mkdir -p "${INSTALL_DIR}"
           tar -zxf simplesamlphp.tar.gz --strip-components=1 -C "${INSTALL_DIR}"
-
-          # Delete the lock file to force resolving dependencies for the current PHP version
           rm -f "${INSTALL_DIR}/composer.lock"
-
-          # Install dependencies compatible with the runner's PHP version
           composer install --no-dev --working-dir="${INSTALL_DIR}"
-
-          # Create a basic, empty config file so the autoloader doesn't fail
           mkdir -p "${INSTALL_DIR}/config"
           touch "${INSTALL_DIR}/config/config.php"
-
           echo "SimpleSAMLphp v${SIMPLESAMLPHP_VERSION} installed in ${INSTALL_DIR}"
 
-      - name: Install WordPress Test Suite and Run PHPUnit
+      - name: Install WordPress Test Suite
         env:
           WP_TESTS_DB_NAME: ${{ env.DB_NAME }}
           WP_TESTS_DB_USER: ${{ env.DB_USER }}
