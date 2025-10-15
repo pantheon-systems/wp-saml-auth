@@ -139,12 +139,17 @@ class WP_SAML_Auth {
 	}
 
 	/**
+	 * Deprecated camelCase wrapper for {@see self::maybe_log_error()}.
+	 *
 	 * @deprecated 3.x Use maybe_log_error() instead.
-	 * Kept for backward compatibility with subclasses.
+	 * @phpcsSuppress WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid
+	 *
+	 * @param string $path Path to autoloader.
+	 * @return void
 	 */
 	// phpcs:ignore WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid
 	protected function maybeLogError( $path = '' ) {
-		return $this->maybe_log_error( $path );
+		$this->maybe_log_error( $path );
 	}
 
 	/**

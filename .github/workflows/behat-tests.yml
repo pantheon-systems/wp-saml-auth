@@ -71,6 +71,15 @@ jobs:
           sudo apt-get install -y subversion mariadb-client
           composer install --prefer-dist --no-progress
 
+      - name: Configure WP-CLI for Database Access
+        run: |
+          mkdir -p ~/.wp-cli/
+          cat > ~/.wp-cli/config.yml <<-EOF
+          db user: ${{ env.DB_USER }}
+          db pass: ${{ env.DB_PASSWORD }}
+          db host: ${{ env.DB_HOST }}
+          EOF
+
       - name: Make all bin scripts executable
         run: find ./bin -type f -iname "*.sh" -exec chmod +x {} +
 
