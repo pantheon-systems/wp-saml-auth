@@ -56,9 +56,6 @@ jobs:
           extensions: imagick, mysqli
           tools: wp-cli
 
-      - name: Create test database
-        run: mysql -h 127.0.0.1 -u root -proot -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;"
-
       - name: Cache Composer dependencies
         uses: actions/cache@v4
         with:
