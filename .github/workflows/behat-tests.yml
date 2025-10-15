@@ -109,7 +109,7 @@ jobs:
 
           echo "SimpleSAMLphp v${SIMPLESAMLPHP_VERSION} installed in ${INSTALL_DIR}"
 
-      - name: Install WordPress Test Suite (direct)
+      - name: Install WordPress Test Suite and Run PHPUnit
         env:
           WP_TESTS_DB_NAME: ${{ env.DB_NAME }}
           WP_TESTS_DB_USER: ${{ env.DB_USER }}
