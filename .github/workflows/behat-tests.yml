@@ -99,17 +99,17 @@ jobs:
       - name: Install WordPress Test Suite
         run: |
           set -euxo pipefail
-          # 1. Temporarily replace the project's LOCAL phpunit executable
+          # 1. Temporarily replace the project's local phpunit executable
           mv vendor/bin/phpunit vendor/bin/phpunit.real
           echo -e '#!/bin/bash\necho "Skipping phpunit execution during installation."\nexit 0' > vendor/bin/phpunit
           chmod +x vendor/bin/phpunit
           
-          # 2. Run the installer script WITH arguments for the database
+          # 2. Run the installer script with the CORRECT short-form arguments
           bash bin/install-local-tests.sh \
-            --dbname="${DB_NAME}" \
-            --dbuser="${DB_USER}" \
-            --dbpass="${DB_PASSWORD}" \
-            --dbhost="${DB_HOST}"
+            -d "${DB_NAME}" \
+            -u "${DB_USER}" \
+            -p "${DB_PASSWORD}" \
+            -h "${DB_HOST}"
           
           # 3. Restore the original phpunit executable
           rm vendor/bin/phpunit
@@ -194,7 +194,7 @@ jobs:
 
       - name: Compute unique Multidev env name (≤11 chars)
         run: |
-          # Map each matrix version to a 1-char suffix so we stay ≤11 chars total:
+          # Map each matrix version to a 1-char suffix to keep names short
           case "${{ matrix.simplesamlphp_version }}" in
             1.18.0) SUF="a" ;;
             2.0.0)  SUF="b" ;;
@@ -202,10 +202,12 @@ jobs:
             *)      SUF="x" ;;
           esac
 
-          # 2 ("ci") + up to 8 (run_number) + 1 (suffix) == 11
-          NAME="ci${GITHUB_RUN_NUMBER}${SUF}"
+          RN="${GITHUB_RUN_NUMBER}"
+          RA="${GITHUB_RUN_ATTEMPT:-1}"
+          RN_LAST6="${RN: -6}"   # last 6 digits
+          NAME="ci${RN_LAST6}${RA}${SUF}"  # e.g., ci2345671b
 
-          # Safety: lowercase, strip invalid chars, hard truncate to 11 anyway
+          # Safety: lowercase, allowed chars only, hard truncate to 11
           NAME="$(printf '%s' "$NAME" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9-')"
           NAME="${NAME:0:11}"
 
