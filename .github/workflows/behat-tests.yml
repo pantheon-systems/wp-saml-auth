@@ -173,10 +173,16 @@ jobs:
         run: |
           set -euxo pipefail
           INSTALL_DIR="${WP_TESTS_DIR}/simplesamlphp"
+          
+          
           if [ "${SIMPLESAMLPHP_VERSION}" == '2.0.0' ]; then
             DOWNLOAD_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}.tar.gz"
           else
-            DOWNLOAD_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}-full.tar.gz"
+            if [ "${SIMPLESAMLPHP_VERSION}" == '1.18.0' ]; then
+              DOWNLOAD_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v1.18.0/simplesamlphp-1.18.0.tar.gz" 
+            else
+              DOWNLOAD_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}-full.tar.gz"
+            fi
           fi
           wget -q -O simplesamlphp.tar.gz "${DOWNLOAD_URL}"
           mkdir -p "${INSTALL_DIR}"
