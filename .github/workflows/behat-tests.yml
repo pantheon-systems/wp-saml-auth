@@ -58,23 +58,12 @@ jobs:
           echo "---- ls -l bin ----"
           ls -l bin || true
 
-      # Create the mock BEFORE PHP config so we can auto-prepend it for all PHP invocations
-      - name: Create Mock SimpleSAMLphp Class for Tests
-        run: bash ./bin/create-phpunit-mocks.sh
-
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php_version }}
           extensions: imagick, mysqli
           tools: wp-cli
-          # Force-load the mock for every PHP process (Composer + PHPUnit inside scripts)
-          ini-values: auto_prepend_file=${{ github.workspace }}/tests/phpunit/class-simplesaml-auth-simple.php
-
-      - name: "DEBUG: Confirm auto_prepend_file is active"
-        run: |
-          php -r 'echo "auto_prepend_file=".ini_get("auto_prepend_file")."\n";'
-          php -r "echo class_exists('SimpleSAML_Auth_Simple') ? 'Mock class present\n' : 'Mock class NOT present\n';"
 
       - name: Cache Composer dependencies
         uses: actions/cache@v4
@@ -90,37 +79,6 @@ jobs:
         run: |
           sudo apt-get install -y subversion mariadb-client
           composer install --prefer-dist --no-progress
-
-      # Prime SimpleSAML autoloader paths for BOTH the core and test-suite directories
-      - name: Prime SimpleSAML autoloader paths
-        run: |
-          # --- Paths for the core WordPress installation ---
-          CORE_DIR="/tmp/wordpress"
-          mkdir -p "${CORE_DIR}/simplesamlphp/lib"
-          mkdir -p "${CORE_DIR}/simplesamlphp/vendor"
-          printf "<?php /* dummy */" > "${CORE_DIR}/simplesamlphp/lib/_autoload.php"
-          printf "<?php /* dummy */" > "${CORE_DIR}/simplesamlphp/vendor/autoload.php"
-          # Mirror under wp-content
-          mkdir -p "${CORE_DIR}/wp-content/simplesamlphp"
-          cp -r "${CORE_DIR}/simplesamlphp/." "${CORE_DIR}/wp-content/simplesamlphp"
-          # Mirror under wp-content/plugins
-          mkdir -p "${CORE_DIR}/wp-content/plugins/simplesamlphp"
-          cp -r "${CORE_DIR}/simplesamlphp/." "${CORE_DIR}/wp-content/plugins/simplesamlphp"
-          
-          # --- Paths for the PHPUnit test suite installation ---
-          TESTS_DIR="/tmp/wordpress-tests-lib"
-          mkdir -p "${TESTS_DIR}/simplesamlphp/lib"
-          mkdir -p "${TESTS_DIR}/simplesamlphp/vendor"
-          printf "<?php /* dummy */" > "${TESTS_DIR}/simplesamlphp/lib/_autoload.php"
-          printf "<?php /* dummy */" > "${TESTS_DIR}/simplesamlphp/vendor/autoload.php"
-          # Mirror under plugins (most likely lookup path for tests)
-          mkdir -p "${TESTS_DIR}/plugins/simplesamlphp"
-          cp -r "${TESTS_DIR}/simplesamlphp/." "${TESTS_DIR}/plugins/simplesamlphp"
-          
-          echo "==== Paths created in ${CORE_DIR} ===="
-          ls -R "${CORE_DIR}/wp-content/plugins/simplesamlphp" || true
-          echo "==== Paths created in ${TESTS_DIR} ===="
-          ls -R "${TESTS_DIR}/plugins/simplesamlphp" || true
 
       # Bypass composer script & call the installer directly with bash
       - name: Install WordPress Test Suite (direct)
@@ -144,8 +102,7 @@ jobs:
 
       # Belt-and-suspenders: keep --bootstrap even though auto_prepend_file covers it
       - name: Run PHPUnit
-        run: |
-          vendor/bin/phpunit -c phpunit.xml.dist --bootstrap=tests/phpunit/class-simplesaml-auth-simple.php
+        run: vendor/bin/phpunit -c phpunit.xml.dist
 
   # Behat integration tests against Pantheon (runs on PRs and nightly on master)
   test-behat:
@@ -180,6 +137,28 @@ jobs:
 
       - name: Install Composer dependencies
         run: composer install -n --prefer-dist
+
+      - name: Install SimpleSAMLphp
+        env:
+          SIMPLESAMLPHP_VERSION: '2.4.0' # Use a recent, stable version for tests
+        run: |
+          set -euxo pipefail
+          INSTALL_DIR="${WP_CORE_DIR}simplesamlphp"
+          DOWNLOAD_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}.tar.gz"
+          
+          # Download and extract
+          wget -q -O simplesamlphp.tar.gz "${DOWNLOAD_URL}"
+          mkdir -p "${INSTALL_DIR}"
+          tar -zxf simplesamlphp.tar.gz --strip-components=1 -C "${INSTALL_DIR}"
+          
+          # Install its dependencies
+          composer install --no-dev --working-dir="${INSTALL_DIR}"
+          
+          # Create a basic, empty config file so the autoloader doesn't fail
+          mkdir -p "${INSTALL_DIR}/config"
+          touch "${INSTALL_DIR}/config/config.php"
+          
+          echo "SimpleSAMLphp v${SIMPLESAMLPHP_VERSION} installed in ${INSTALL_DIR}"
 
       - name: Set environment variables
         run: |
