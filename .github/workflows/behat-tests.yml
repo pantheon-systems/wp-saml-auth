@@ -104,12 +104,12 @@ jobs:
           echo -e '#!/bin/bash\necho "Skipping phpunit execution during installation."\nexit 0' > vendor/bin/phpunit
           chmod +x vendor/bin/phpunit
           
-          # 2. Run the installer script with the CORRECT short-form arguments
+          # 2. Run the installer script with the CORRECT long-form arguments
           bash bin/install-local-tests.sh \
-            -d "${DB_NAME}" \
-            -u "${DB_USER}" \
-            -p "${DB_PASSWORD}" \
-            -h "${DB_HOST}"
+            --dbname="${DB_NAME}" \
+            --dbuser="${DB_USER}" \
+            --dbpass="${DB_PASSWORD}" \
+            --dbhost="${DB_HOST}"
           
           # 3. Restore the original phpunit executable
           rm vendor/bin/phpunit
