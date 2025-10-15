@@ -3,7 +3,7 @@ set -euo pipefail
 
 echo "🚀 Preparing WordPress test environment (Manual Setup)..."
 
-# 1. Create directories
+# 1. Create directories and clean up previous runs
 rm -rf "${WP_CORE_DIR}" "${WP_TESTS_DIR}" /tmp/simplesaml* || true
 mkdir -p "${WP_CORE_DIR}" "${WP_TESTS_DIR}"
 
@@ -49,7 +49,6 @@ cat > "$SSP_TEMP_CONFIG_DIR/config.php" <<PHP
     'timezone' => 'UTC', 'secretsalt' => 'defaultsecretsalt',
     'auth.adminpassword' => 'admin', 'admin.protectindexpage' => false,
     'admin.protectmetadata' => false, 'store.type' => 'phpsession',
-    // FIX: The path must be relative to the config directory.
     'metadata.sources' => [['type' => 'flatfile', 'directory' => 'metadata']],
 ];
 PHP
@@ -74,7 +73,14 @@ $metadata['https://localhost/simplesaml/saml2/idp/metadata.php'] = [
 ];
 PHP
 
-# 5. Create the PHPUnit bootstrap file
+# 5. Set the environment variable BEFORE running composer
+export SIMPLESAMLPHP_CONFIG_DIR="$SSP_TEMP_CONFIG_DIR"
+
+# 6. Install dependencies. Now, any composer plugins will see the ENV var.
+echo "Installing Composer dependencies..."
+composer install --prefer-dist --no-progress
+
+# 7. Create the PHPUnit bootstrap file (can happen after install)
 if [ -d "tests/phpunit" ]; then
     echo "Creating PHPUnit bootstrap file..."
     cat > tests/phpunit/bootstrap.php <<'PHP'
@@ -86,13 +92,13 @@ $_SERVER['SERVER_PORT']      = 443;
 $_SERVER['REQUEST_URI']      = '/';
 $_SERVER['HTTPS']            = 'on';
 
-// 1. Load Composer and SimpleSAMLphp autoloaders.
+// Load Composer and SimpleSAMLphp autoloaders.
 require_once dirname( __DIR__, 2 ) . '/vendor/autoload.php';
 if ( file_exists( dirname( __DIR__, 2 ) . '/vendor/simplesamlphp/simplesamlphp/lib/_autoload.php' ) ) {
     require_once dirname( __DIR__, 2 ) . '/vendor/simplesamlphp/simplesamlphp/lib/_autoload.php';
 }
 
-// 2. Load WordPress test environment.
+// Load WordPress test environment.
 require_once getenv( 'WP_TESTS_DIR' ) . '/includes/functions.php';
 function _manually_load_plugin() {
     require dirname( __DIR__, 2 ) . '/wp-saml-auth.php';
@@ -100,21 +106,12 @@ function _manually_load_plugin() {
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 require getenv( 'WP_TESTS_DIR' ) . '/includes/bootstrap.php';
 PHP
-else
-    echo "Skipping bootstrap file creation: tests/phpunit directory not found."
 fi
 
-# 6. Install dependencies LAST, after all config files are created.
-echo "Installing Composer dependencies..."
-composer install --prefer-dist --no-progress
-
 echo "✅ Environment ready."
-echo ""
 echo "=========================================================================="
 echo "Running PHPUnit Tests..."
 echo "=========================================================================="
 
-# 7. Run the tests
-# Point SimpleSAMLphp to the isolated, non-cached config directory.
-export SIMPLESAMLPHP_CONFIG_DIR="$SSP_TEMP_CONFIG_DIR"
+# 8. Run the tests. The ENV var is already set from step 5.
 composer phpunit
