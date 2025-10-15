@@ -69,24 +69,11 @@ jobs:
           sudo apt-get install -y subversion mariadb-client
           composer install --prefer-dist --no-progress
 
-      - name: "DEBUG: Inspect PHPUnit Bootstrap Configuration"
-        id: bootstrap_debug
-        run: |
-          echo "--- Contents of phpunit.xml.dist ---"
-          cat phpunit.xml.dist
-          
-          BOOTSTRAP_FILE=$(grep -oP 'bootstrap="\K[^"]+' phpunit.xml.dist)
-          echo "BOOTSTRAP_FILE=${BOOTSTRAP_FILE}" >> $GITHUB_OUTPUT
-
-      - name: "DEBUG: Display Bootstrap File"
-        run: |
-          echo "--- Bootstrap file found: ${{ steps.bootstrap_debug.outputs.BOOTSTRAP_FILE }} ---"
-          echo "--- Contents of ${{ steps.bootstrap_debug.outputs.BOOTSTRAP_FILE }}: ---"
-          cat ${{ steps.bootstrap_debug.outputs.BOOTSTRAP_FILE }}
-          echo "--------------------------------------------------------"
-
       - name: Make all bin scripts executable
         run: find ./bin -type f -iname "*.sh" -exec chmod +x {} +
+
+      - name: Create Mock SimpleSAMLphp Class for Tests
+        run: ./bin/create-phpunit-mocks.sh
 
       - name: Run PHPUnit tests
         env:
@@ -95,12 +82,6 @@ jobs:
           WP_TESTS_DB_PASSWORD: ${{ env.DB_PASSWORD }}
           WP_TESTS_DB_HOST: ${{ env.DB_HOST }}
         run: |
-          # We still need to download the library for the test to attempt loading it
-          SIMPLESAMLPHP_VERSION='2.4.0'
-          wget "https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}-full.tar.gz" -O simplesamlphp-latest.tar.gz
-          tar -zxvf simplesamlphp-latest.tar.gz
-          mv simplesamlphp-${SIMPLESAMLPHP_VERSION} simplesamlphp
-          
           composer test:install:withdb -- \
             --dbname=${WP_TESTS_DB_NAME} \
             --dbuser=${WP_TESTS_DB_USER} \
