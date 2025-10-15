@@ -25,7 +25,6 @@ define( 'DB_HOST',     '${DB_HOST}' );
 define( 'DB_CHARSET',  'utf8' );
 define( 'DB_COLLATE',  '' );
 \$table_prefix = 'wptests_';
-// FIX: Align the WP test domain with the mocked server environment.
 define( 'WP_TESTS_DOMAIN', 'localhost' );
 define( 'WP_TESTS_EMAIL',  'admin@example.org' );
 define( 'WP_TESTS_TITLE',  'Test Blog' );
@@ -50,7 +49,8 @@ cat > "$SSP_TEMP_CONFIG_DIR/config.php" <<PHP
     'timezone' => 'UTC', 'secretsalt' => 'defaultsecretsalt',
     'auth.adminpassword' => 'admin', 'admin.protectindexpage' => false,
     'admin.protectmetadata' => false, 'store.type' => 'phpsession',
-    'metadata.sources' => [['type' => 'flatfile', 'directory' => 'metadata']],
+    // FIX: Provide the absolute path to the metadata directory.
+    'metadata.sources' => [['type' => 'flatfile', 'directory' => '${SSP_METADATA_DIR}']],
 ];
 PHP
 
