@@ -117,6 +117,7 @@ echo "Installing Composer dependencies..."
 composer install --prefer-dist --no-progress
 
 echo "✅ Environment ready."
+echo ""
 echo "=========================================================================="
 echo "Running PHPUnit Tests..."
 echo "=========================================================================="
