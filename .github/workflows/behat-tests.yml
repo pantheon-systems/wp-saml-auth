@@ -76,25 +76,21 @@ jobs:
           fi
 
       - name: Install WordPress Test Suite
-        env:
-          # These are the standard env vars the WP test script uses
-          WP_TESTS_DB_NAME: ${{ env.DB_NAME }}
-          WP_TESTS_DB_USER: ${{ env.DB_USER }}
-          WP_TESTS_DB_PASS: ${{ env.DB_PASSWORD }}
-          WP_TESTS_DB_HOST: ${{ env.DB_HOST }}
-          # This forces the mysql client to use the password, fixing the "Access Denied" error
-          MYSQL_PWD: ${{ env.DB_PASSWORD }}
         run: |
-          # The installer script tries to run tests automatically.
-          # We need to temporarily disable phpunit to prevent this.
+          set -euxo pipefail
+          # 1. Temporarily replace the project's local phpunit executable to prevent auto-run
           mv vendor/bin/phpunit vendor/bin/phpunit.real
-          echo -e '#!/bin/bash\nexit 0' > vendor/bin/phpunit
+          echo -e '#!/bin/bash\necho "Skipping phpunit execution during installation."\nexit 0' > vendor/bin/phpunit
           chmod +x vendor/bin/phpunit
           
-          # Run the installer via Composer to ensure the correct environment
-          composer test:install:withdb
+          # 2. Run the installer via Composer, using '--' to pass the db arguments through
+          composer test:install:withdb -- \
+            --dbname="${DB_NAME}" \
+            --dbuser="${DB_USER}" \
+            --dbpass="${DB_PASSWORD}" \
+            --dbhost="${DB_HOST}"
           
-          # Restore the original phpunit executable
+          # 3. Restore the original phpunit executable
           rm vendor/bin/phpunit
           mv vendor/bin/phpunit.real vendor/bin/phpunit
 
@@ -103,7 +99,6 @@ jobs:
           SIMPLESAMLPHP_VERSION: '2.4.0'
         run: |
           set -euxo pipefail
-          # Install SimpleSAMLphp into the directory created by the step above
           INSTALL_DIR="${WP_TESTS_DIR}/simplesamlphp"
           if [ "${SIMPLESAMLPHP_VERSION}" == '2.0.0' ]; then
             DOWNLOAD_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}.tar.gz"
@@ -124,10 +119,6 @@ jobs:
   test-behat:
     name: "Behat - SimpleSAMLphp ${{ matrix.simplesamlphp_version }}"
     runs-on: ubuntu-latest
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: false
-
     # Only run scheduled jobs on the master branch.
     if: github.event_name != 'schedule' || (github.event_name == 'schedule' && github.ref == 'refs/heads/master')
 
