@@ -15,6 +15,13 @@ fi
 
 set -ex
 
+###
+# Install Composer dependencies, including Behat. This makes the
+# ./vendor/bin/behat executable available for the test runner.
+###
+composer install --no-progress --prefer-dist
+
+
 if [ -z "$TERMINUS_SITE" ] || [ -z "$TERMINUS_ENV" ]; then
 	echo "TERMINUS_SITE and TERMINUS_ENV environment variables must be set"
 	exit 1
@@ -75,7 +82,7 @@ rm -rf "$PREPARE_DIR"/wp-content/plugins/wp-saml-auth/.git
 
 # Add extra tests if we're running 2.0.0
 if [ "$SIMPLESAMLPHP_VERSION" == '2.0.0' ]; then
-	WORKING_DIR="/home/tester/pantheon-systems/wp-saml-auth"
+	WORKING_DIR="${GITHUB_WORKSPACE}"
 	# Check that the WORKING _DIRECTORY exists
 	if [ ! -d "$WORKING_DIR" ]; then
 		echo "WORKING_DIR ($WORKING_DIR) does not exist"
@@ -226,7 +233,7 @@ git commit -m "Include SimpleSAMLphp and its configuration files"
 git push
 
 # Sometimes Pantheon takes a little time to refresh the filesystem
-terminus build:workflow:wait "$SITE_ENV"
+terminus workflow:wait "$SITE_ENV"
 
 ###
 # Set up WordPress, theme, and plugins for the test run

@@ -210,6 +210,11 @@ jobs:
     needs: test-behat
     if: always() && (github.event_name != 'schedule' || (github.event_name == 'schedule' && github.ref == 'refs/heads/master'))
 
+    env:
+      TERMINUS_SITE: wp-saml-auth
+      TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
+      TERMINUS_ENV: cleanup-${{ github.run_number }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
