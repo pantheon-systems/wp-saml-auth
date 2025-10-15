@@ -29,7 +29,6 @@ jobs:
         image: mariadb:10.4
         env:
           MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: wordpress
         ports: [ "3306:3306" ]
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
