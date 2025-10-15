@@ -129,6 +129,10 @@ jobs:
       matrix:
         simplesamlphp_version: ["1.18.0", "2.0.0", "2.4.0"]
 
+    env:
+      WP_TESTS_DIR: /tmp/wordpress-tests-lib
+      WP_CORE_DIR: /tmp/wordpress/
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
