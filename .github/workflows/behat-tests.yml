@@ -228,17 +228,17 @@ jobs:
           if terminus env:info "${TERMINUS_SITE}.${TERMINUS_ENV}" >/dev/null 2>&1; then
             echo "Reusing existing ${TERMINUS_ENV}"
           else
-            # Try to create; if it races and reports "already exists", verify and continue
+            # Try to create; if it reports "already exists" due to a race, verify and continue
             if ! terminus env:create "${TERMINUS_SITE}.dev" "${TERMINUS_ENV}"; then
               echo "env:create returned non-zero; checking if it now exists..."
               if terminus env:info "${TERMINUS_SITE}.${TERMINUS_ENV}" >/dev/null 2>&1; then
                 echo "Environment ${TERMINUS_ENV} exists now; continuing."
               else
-                echo "Failed to create or find environment ${TERMINUS_ENV}"; exit 1
+                echo "Failed to create or find environment ${TERMINUS_ENV}"
+                exit 1
               fi
             fi
           fi
-      
 
       - name: Upload environment name artifact
         uses: actions/upload-artifact@v4
@@ -290,7 +290,9 @@ jobs:
       - name: Download all environment name artifacts
         uses: actions/download-artifact@v4
         with:
+          pattern: behat-env-*
           path: /tmp/behat-envs
+          merge-multiple: true
 
       - name: Install Terminus
         uses: pantheon-systems/terminus-github-actions@v1
