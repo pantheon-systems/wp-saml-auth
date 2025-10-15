@@ -69,19 +69,19 @@ jobs:
           sudo apt-get install -y subversion mariadb-client
           composer install --prefer-dist --no-progress
 
-      # This is the ONLY step that has changed. It will show us the script's contents.
-      - name: Inspect Generated Test Script
+      - name: Download SimpleSAMLphp for PHPUnit
         run: |
-          echo "--- Displaying contents of bin/install-local-tests.sh ---"
-          cat bin/install-local-tests.sh
-          echo "--------------------------------------------------------"
+          SIMPLESAMLPHP_VERSION='2.4.0'
+          wget "https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}-full.tar.gz" -O simplesamlphp-latest.tar.gz
+          tar -zxvf simplesamlphp-latest.tar.gz
+          # Rename the extracted folder to a predictable name
+          mv simplesamlphp-${SIMPLESAMLPHP_VERSION} simplesamlphp
 
       - name: Make all bin scripts executable
         run: find ./bin -type f -iname "*.sh" -exec chmod +x {} +
 
       - name: Run PHPUnit tests
         env:
-          MYSQL_PWD: ${{ env.DB_PASSWORD }}
           WP_TESTS_DB_NAME: ${{ env.DB_NAME }}
           WP_TESTS_DB_USER: ${{ env.DB_USER }}
           WP_TESTS_DB_PASSWORD: ${{ env.DB_PASSWORD }}
@@ -94,7 +94,6 @@ jobs:
             --dbhost=${WP_TESTS_DB_HOST}
           
           composer phpunit
-
   # This job corresponds to the 'test-behat' job in CircleCI.
   # It uses a matrix strategy for SimpleSAMLphp versions.
   # It runs on push/PR, and also on the nightly schedule for the master branch.
