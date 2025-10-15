@@ -44,7 +44,7 @@ mkdir -p "$SSP_TEMP_CONFIG_DIR" "$SSP_METADATA_DIR"
 cat > "$SSP_TEMP_CONFIG_DIR/config.php" <<PHP
 <?php
 \$config = [
-    'baseurlpath' => 'http://localhost/simplesaml/', 'certdir' => 'cert/',
+    'baseurlpath' => 'https://localhost/simplesaml/', 'certdir' => 'cert/',
     'loggingdir' => 'log/', 'datadir' => 'data/', 'tempdir' => '/tmp/simplesaml',
     'technicalcontact_name' => 'Admin', 'technicalcontact_email' => 'na@example.org',
     'timezone' => 'UTC', 'secretsalt' => 'defaultsecretsalt',
@@ -57,31 +57,40 @@ cat > "$SSP_TEMP_CONFIG_DIR/authsources.php" <<PHP
 <?php
 \$config = [ 'default-sp' => [
     'saml:SP', 'entityID' => 'wp-saml',
-    'idp' => 'http://localhost/simplesaml/saml2/idp/metadata.php', 'discoURL' => null,
+    'idp' => 'https://localhost/simplesaml/saml2/idp/metadata.php', 'discoURL' => null,
 ]];
 PHP
 
 cat > "$SSP_METADATA_DIR/saml20-idp-remote.php" <<'PHP'
 <?php
-$metadata['http://localhost/simplesaml/saml2/idp/metadata.php'] = [
-    'entityid' => 'http://localhost/simplesaml/saml2/idp/metadata.php',
+$metadata['https://localhost/simplesaml/saml2/idp/metadata.php'] = [
+    'entityid' => 'https://localhost/simplesaml/saml2/idp/metadata.php',
     'SingleSignOnService' => [
         ['Binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
-         'Location' => 'http://localhost/simplesaml/saml2/idp/SSOService.php'],
+         'Location' => 'https://localhost/simplesaml/saml2/idp/SSOService.php'],
     ],
     'certFingerprint' => 'c99b251e63d86f2b7f00f860551a362b5b32f915',
 ];
 PHP
 
-# 5. Create the PHPUnit bootstrap file
+# 5. Create the PHPUnit bootstrap file with a more complete server mock
 if [ -d "tests/phpunit" ]; then
     echo "Creating PHPUnit bootstrap file..."
     cat > tests/phpunit/bootstrap.php <<'PHP'
 <?php
-// Set up a fake server environment FIRST.
-$_SERVER['SERVER_NAME'] = 'localhost';
-$_SERVER['SERVER_PORT'] = 80;
-$_SERVER['REQUEST_URI'] = '/';
+/**
+ * PHPUnit bootstrap file.
+ */
+
+// FIX: Create a more complete fake server environment before any other code loads.
+$_SERVER['SERVER_NAME']      = 'localhost';
+$_SERVER['HTTP_HOST']        = 'localhost';
+$_SERVER['SERVER_PORT']      = 443;
+$_SERVER['REQUEST_URI']      = '/';
+$_SERVER['HTTPS']            = 'on';
+$_SERVER['SCRIPT_NAME']      = '/index.php';
+$_SERVER['PHP_SELF']         = '/index.php';
+$_SERVER['SCRIPT_FILENAME']  = '/var/www/html/index.php';
 
 // 1. Load Composer and SimpleSAMLphp autoloaders.
 require_once dirname( __DIR__, 2 ) . '/vendor/autoload.php';
@@ -106,6 +115,7 @@ echo "Installing Composer dependencies..."
 composer install --prefer-dist --no-progress
 
 echo "✅ Environment ready."
+echo ""
 echo "=========================================================================="
 echo "Running PHPUnit Tests..."
 echo "=========================================================================="
