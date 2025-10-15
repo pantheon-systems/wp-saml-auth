@@ -50,8 +50,8 @@ cat > "$SSP_TEMP_CONFIG_DIR/config.php" <<PHP
     'timezone' => 'UTC', 'secretsalt' => 'defaultsecretsalt',
     'auth.adminpassword' => 'admin', 'admin.protectindexpage' => false,
     'admin.protectmetadata' => false, 'store.type' => 'phpsession',
-    // FIX: Explicitly tell SimpleSAMLphp to load metadata from the flatfile directory.
-    'metadata.sources' => [['type' => 'flatfile']],
+    // FIX: Explicitly tell SimpleSAMLphp where to find the metadata files.
+    'metadata.sources' => [['type' => 'flatfile', 'directory' => '${SSP_METADATA_DIR}']],
 ];
 PHP
 
