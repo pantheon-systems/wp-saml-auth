@@ -10,7 +10,9 @@ permissions:
   actions: read
 
 jobs:
-  # -------- PHPUnit --------
+  # =======================
+  # PHPUnit
+  # =======================
   test-phpunit:
     if: github.event_name != 'schedule'
     name: "PHPUnit - PHP ${{ matrix.php_version }}"
@@ -22,7 +24,7 @@ jobs:
         include:
           - php_version: '7.4'
             composer_flags: '--no-dev'
-            phpunit_bin: 'phpunit'        # provided by setup-php tool
+            phpunit_bin: 'phpunit'                # from setup-php
           - php_version: '8.1'
             composer_flags: ''
             phpunit_bin: 'vendor/bin/phpunit'
@@ -60,8 +62,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
+        with: { fetch-depth: 0 }
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -70,7 +71,7 @@ jobs:
           extensions: imagick, mysqli
           tools: wp-cli, phpunit:^9.6
 
-      - name: Cache Composer dependencies
+      - name: Cache Composer (project)
         uses: actions/cache@v4
         with:
           path: |
@@ -81,22 +82,44 @@ jobs:
             php-${{ matrix.php_version }}-composer-
 
       - name: Install system deps
-        run: sudo apt-get update && sudo apt-get install -y subversion mariadb-client dos2unix
+        run: sudo apt-get update && sudo apt-get install -y subversion mariadb-client dos2unix curl
 
-      # ---------- Critical: make WP test subprocesses see your mock ----------
-      - name: Force-load SAML mock for WP tests
+      # -------- Critical: guaranteed SimpleSAML mock for ALL PHP children (PHP 8.x too)
+      - name: Write SimpleSAML mock and prepend it
         run: |
           set -euxo pipefail
-          MOCK="$GITHUB_WORKSPACE/tests/phpunit/class-simplesaml-auth-simple.php"
-          test -f "$MOCK" || { echo "Missing $MOCK"; exit 1; }
+          MOCK=/tmp/ssp-mock.php
+          cat > "$MOCK" <<'PHP'
+          <?php
+          namespace SimpleSAML\Auth {
+            class Simple {
+              public function isAuthenticated(){ return true; }
+              public function requireAuth(array $params = []){ return true; }
+              public function logout($returnTo = null){ return true; }
+              public function login($returnTo = null, array $params = [], $force = false){ return true; }
+              public function getAttributes(){
+                return [
+                  'uid'          => ['ci-user'],
+                  'email'        => ['user@example.com'],
+                  'mail'         => ['user@example.com'],
+                  'display_name' => ['CI User'],
+                  'first_name'   => ['CI'],
+                  'last_name'    => ['User'],
+                ];
+              }
+            }
+          }
+          namespace {
+            // Legacy alias for older references, if any.
+            if (!class_exists('SimpleSAML_Auth_Simple') && class_exists('\SimpleSAML\Auth\Simple')) {
+              class SimpleSAML_Auth_Simple extends \SimpleSAML\Auth\Simple {}
+            }
+          }
+          PHP
           echo "WP_PHP_BINARY=\"$(command -v php) -d auto_prepend_file=$MOCK\"" >> $GITHUB_ENV
+          php -r "require '$MOCK'; echo (class_exists('\SimpleSAML\Auth\Simple')?'OK':'FAIL'),\"\n\";"
 
-      - name: Sanity check mock preload
-        run: |
-          php -r 'echo "auto_prepend_file=".ini_get("auto_prepend_file")."\n";'
-          php -r "echo class_exists('SimpleSAML_Auth_Simple') ? 'Mock class present\n' : 'Mock class NOT present\n';"
-
-      - name: Install Composer dependencies
+      - name: Install Composer deps
         run: composer install --prefer-dist --no-progress ${{ matrix.composer_flags }}
 
       - name: Set Script Permissions
@@ -105,44 +128,55 @@ jobs:
             find ./bin -type f -name "*.sh" -exec dos2unix {} \; -exec chmod +x {} \;
           fi
 
-      - name: Install WordPress Test Suite
+      # -------- Portable WP test-suite installer (works without dev deps)
+      - name: Install WordPress tests (portable)
         run: |
           set -euxo pipefail
-          # 1) Temporarily stub phpunit to avoid accidental run during install
-          if [ -f vendor/bin/phpunit ]; then
-            mv vendor/bin/phpunit vendor/bin/phpunit.real
-            printf '#!/usr/bin/env bash\necho "Skipping phpunit execution during installation."\nexit 0\n' > vendor/bin/phpunit
-            chmod +x vendor/bin/phpunit
-          fi
+          WP_VERSION="latest"
+          CORE_DIR="${WP_CORE_DIR}"
+          TESTS_DIR="${WP_TESTS_DIR}"
 
-          # 2) Run your installer via Composer (passes DB params after --)
-          composer test:install:withdb -- \
-            --dbname="${DB_NAME}" \
-            --dbuser="${DB_USER}" \
-            --dbpass="${DB_PASSWORD}" \
-            --dbhost="${DB_HOST}"
+          mkdir -p "$CORE_DIR" "$TESTS_DIR"
 
-          # 3) Restore real phpunit if present
-          if [ -f vendor/bin/phpunit.real ]; then
-            rm -f vendor/bin/phpunit
-            mv vendor/bin/phpunit.real vendor/bin/phpunit
-          fi
+          # 1) Download WordPress core
+          curl -fsSL "https://wordpress.org/${WP_VERSION}.tar.gz" | tar -xzf - -C /tmp
+          rsync -a /tmp/wordpress/ "$CORE_DIR/"
 
-      # Optional: if your unit tests need an SSP tree available under the test suite
-      - name: Install SimpleSAMLphp for PHPUnit (lightweight)
+          # 2) Fetch tests library from develop.svn (stable includes + data)
+          svn export --quiet https://develop.svn.wordpress.org/trunk/tests/phpunit/includes/ "$TESTS_DIR/includes"
+          svn export --quiet https://develop.svn.wordpress.org/trunk/tests/phpunit/data/     "$TESTS_DIR/data"
+
+          # 3) Create wp-tests-config.php
+          cat > "$TESTS_DIR/wp-tests-config.php" <<CFG
+          <?php
+          define( 'ABSPATH', '${CORE_DIR}/' );
+          define( 'DB_NAME', '${DB_NAME}' );
+          define( 'DB_USER', '${DB_USER}' );
+          define( 'DB_PASSWORD', '${DB_PASSWORD}' );
+          define( 'DB_HOST', '${DB_HOST}' );
+          define( 'WP_DEBUG', true );
+          \$table_prefix = 'wptests_';
+          CFG
+
+          # 4) Create DB
+          mysql -h "${DB_HOST}" -u"${DB_USER}" -p"${DB_PASSWORD}" -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+      - name: (Optional) Install SimpleSAMLphp tree for unit tests
         run: |
           set -euxo pipefail
           INSTALL_DIR="${WP_TESTS_DIR}/plugins/simplesamlphp"
-          DOWNLOAD_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v2.4.0/simplesamlphp-2.4.0-full.tar.gz"
           mkdir -p "${INSTALL_DIR}"
-          curl -fsSL "$DOWNLOAD_URL" | tar -zxf - --strip-components=1 -C "${INSTALL_DIR}"
+          curl -fsSL "https://github.com/simplesamlphp/simplesamlphp/releases/download/v2.4.0/simplesamlphp-2.4.0-full.tar.gz" \
+            | tar -zxf - --strip-components=1 -C "${INSTALL_DIR}"
           mkdir -p "${INSTALL_DIR}/config"
           : > "${INSTALL_DIR}/config/config.php"
 
       - name: Run PHPUnit
         run: ${{ matrix.phpunit_bin }}
 
-  # -------- Behat against Pantheon (PRs + nightly on master) --------
+  # =======================
+  # Behat (Pantheon)
+  # =======================
   test-behat:
     name: "Behat - SimpleSAMLphp ${{ matrix.simplesamlphp_version }}"
     runs-on: ubuntu-latest
@@ -160,15 +194,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
+        with: { fetch-depth: 0 }
 
       - name: Install Terminus
         uses: pantheon-systems/terminus-github-actions@v1
         with:
           pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
 
-      - name: Cache Composer dependencies
+      - name: Cache Composer (project)
         uses: actions/cache@v4
         with:
           path: vendor
@@ -176,29 +209,33 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-behat-composer-
 
-      - name: Install Composer dependencies
+      - name: Install Composer deps
         run: composer install -n --prefer-dist
 
-      # Matrix-aware SSP install:
-      # - 2.x uses *-full (includes vendor)
-      # - 1.18 uses plain tar (no composer run!)
+      # Matrix-aware SimpleSAMLphp install:
+      #  - 1.18.0 => plain tar (NO composer)
+      #  - 2.0.0  => plain tar + composer install --no-dev  (no "-full" available)
+      #  - 2.4.0  => "-full" tar (vendor included)
       - name: Install SimpleSAMLphp
         env:
           SIMPLESAMLPHP_VERSION: ${{ matrix.simplesamlphp_version }}
         run: |
           set -euxo pipefail
           INSTALL_DIR="${WP_TESTS_DIR}/simplesamlphp"
+          mkdir -p "${INSTALL_DIR}"
 
           if [ "${SIMPLESAMLPHP_VERSION}" = "1.18.0" ]; then
-            DOWNLOAD_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v1.18.0/simplesamlphp-1.18.0.tar.gz"
-            mkdir -p "${INSTALL_DIR}"
-            curl -fsSL "$DOWNLOAD_URL" | tar -zxf - --strip-components=1 -C "${INSTALL_DIR}"
-            # Legacy autoloader exists here:
+            URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v1.18.0/simplesamlphp-1.18.0.tar.gz"
+            curl -fsSL "$URL" | tar -zxf - --strip-components=1 -C "${INSTALL_DIR}"
             test -f "${INSTALL_DIR}/lib/_autoload.php"
+          elif [ "${SIMPLESAMLPHP_VERSION}" = "2.0.0" ]; then
+            URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v2.0.0/simplesamlphp-2.0.0.tar.gz"
+            curl -fsSL "$URL" | tar -zxf - --strip-components=1 -C "${INSTALL_DIR}"
+            # vendor is NOT bundled for 2.0.0, install only runtime deps
+            composer install --no-dev --working-dir="${INSTALL_DIR}"
           else
-            DOWNLOAD_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}-full.tar.gz"
-            mkdir -p "${INSTALL_DIR}"
-            curl -fsSL "$DOWNLOAD_URL" | tar -zxf - --strip-components=1 -C "${INSTALL_DIR}"
+            URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}-full.tar.gz"
+            curl -fsSL "$URL" | tar -zxf - --strip-components=1 -C "${INSTALL_DIR}"
           fi
 
           mkdir -p "${INSTALL_DIR}/config"
@@ -207,33 +244,27 @@ jobs:
       - name: Configure SSH (non-strict)
         run: |
           mkdir -p ~/.ssh
-          echo -e "Host *\n  StrictHostKeyChecking no\n" >> ~/.ssh/config
+          printf "Host *\n  StrictHostKeyChecking no\n" >> ~/.ssh/config
 
       - name: Configure Composer for GitHub Token
         if: env.GITHUB_TOKEN != ''
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        env: { GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} }
         run: composer config -g github-oauth.github.com $GITHUB_TOKEN
 
       - name: Authenticate with Terminus
         if: env.TERMINUS_TOKEN != ''
-        env:
-          TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
+        env: { TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }} }
         run: terminus auth:login --machine-token=$TERMINUS_TOKEN
 
       - name: Compute unique Multidev env name (≤11 chars)
         run: |
           set -euo pipefail
           case "${{ matrix.simplesamlphp_version }}" in
-            1.18.0) SUF="a" ;;
-            2.0.0)  SUF="b" ;;
-            2.4.0)  SUF="c" ;;
-            *)      SUF="x" ;;
+            1.18.0) SUF="a" ;; 2.0.0) SUF="b" ;; 2.4.0) SUF="c" ;; *) SUF="x" ;;
           esac
           H=$(printf '%s' "${GITHUB_RUN_ID}-${{ matrix.simplesamlphp_version }}-${GITHUB_JOB}-${GITHUB_RUN_ATTEMPT}" | sha1sum | cut -c1-7)
           NAME="ci${H}${SUF}"
           NAME="${NAME:0:11}"
-
           {
             echo "TERMINUS_SITE=wp-saml-auth"
             echo "TERMINUS_ENV=$NAME"
@@ -242,12 +273,10 @@ jobs:
             echo "WORDPRESS_ADMIN_PASSWORD=$(openssl rand -hex 8)"
             echo "SIMPLESAMLPHP_VERSION=${{ matrix.simplesamlphp_version }}"
           } >> $GITHUB_ENV
-
           echo "wp-saml-auth.${NAME}" > site_env.txt
 
-      - name: Create or reuse Multidev (race-safe)
-        env:
-          TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
+      - name: Create or reuse Multidev (race-safe, non-fatal if exists)
+        env: { TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }} }
         run: |
           set -euo pipefail
           terminus auth:login --machine-token="$TERMINUS_TOKEN"
@@ -255,7 +284,7 @@ jobs:
             echo "Reusing existing ${TERMINUS_ENV}"
           else
             terminus env:create "${TERMINUS_SITE}.dev" "${TERMINUS_ENV}" || \
-              echo "env:create non-zero; will continue if env exists now"
+              echo "env:create non-zero; will continue if env now exists"
             terminus env:info "${TERMINUS_SITE}.${TERMINUS_ENV}" >/dev/null
           fi
 
@@ -279,16 +308,17 @@ jobs:
           else
             bash ./bin/1.18/behat-prepare-simplesaml1.18.0.sh
           fi
-
-          echo ""
+          echo
           echo "=========================================================================="
           echo "Running Behat on https://${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io/wp-login.php"
           echo "with SimpleSAMLphp version $SIMPLESAMLPHP_VERSION"
           echo "=========================================================================="
-          echo ""
+          echo
           bash ./bin/behat-test.sh --strict
 
-  # -------- Cleanup (always) --------
+  # =======================
+  # Cleanup (always)
+  # =======================
   behat-cleanup:
     name: "Behat Cleanup"
     runs-on: ubuntu-latest
@@ -303,8 +333,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
+        with: { fetch-depth: 0 }
 
       - name: Download all environment name artifacts
         uses: actions/download-artifact@v4
