@@ -69,3 +69,25 @@ ssp_download_url() {
     echo "https://github.com/simplesamlphp/simplesamlphp/releases/download/v${version}/simplesamlphp-${version}-full.tar.gz"
   fi
 }
+
+terminus_env_ensure() {
+  local site="${1}"      # e.g. wp-saml-auth
+  local env="${2}"       # e.g. ci1180c4b
+  local site_env="${site}.${env}"
+
+  if terminus env:info "${site_env}" >/dev/null 2>&1; then
+    log "Env ${site_env} already exists."
+    return 0
+  fi
+
+  log "Creating ${site_env} from ${site}.dev ..."
+  if ! terminus multidev:create "${site}.dev" "${env}"; then
+    # tolerate races
+    if terminus env:info "${site_env}" >/dev/null 2>&1; then
+      log "Env ${site_env} now exists; continue."
+      return 0
+    fi
+    echo "Failed to create ${site_env}" >&2
+    return 1
+  fi
+}

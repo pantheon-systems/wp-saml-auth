@@ -16,6 +16,10 @@ if [ -f vendor/bin/phpunit ]; then
   chmod +x vendor/bin/phpunit
 fi
 
+if [ -f bin/install-local-tests.sh ]; then
+  chmod +x bin/install-local-tests.sh || true
+fi
+
 # 2) Install test scaffolding (from Pantheon helper that ships in require-dev)
 composer test:install:withdb -- \
   --dbname="${DB_NAME}" \
