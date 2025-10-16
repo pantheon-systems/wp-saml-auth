@@ -1,477 +1,170 @@
-name: Behat & PHPUnit
+name: Behat tests
 
 on:
+  push:
+    branches: [ develop ]
   pull_request:
-  schedule:
-    - cron: '0 0 * * *'
 
 permissions:
   contents: read
-  actions: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  WP_TESTS_DIR: /tmp/wordpress-tests-lib
+  WP_CORE_DIR: /tmp/wordpress
+  DB_HOST: 127.0.0.1
+  DB_USER: root
+  DB_PASSWORD: root
+  DB_NAME: wordpress_test
+  COMPOSER_PROCESS_TIMEOUT: 0
+  COMPOSER_NO_INTERACTION: 1
+  COMPOSER_NO_AUDIT: 1
 
 jobs:
-  # =======================
-  # PHPUnit
-  # =======================
-  test-phpunit:
-    if: github.event_name != 'schedule'
-    name: "PHPUnit - PHP ${{ matrix.php_version }}"
-    runs-on: ubuntu-latest
+  phpunit-74:
+    name: "PHPUnit (PHP 7.4)"
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v4
 
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          coverage: none
+          tools: phpunit
+          extensions: mbstring, intl, xml, dom, curl, json, mysqli
+
+      - name: Composer cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Install Composer deps
+        run: composer install --no-progress --prefer-dist
+
+      - name: Build PHP wrapper (with SimpleSAML mock)
+        run: bin/ci/make-php-wrapper.sh
+
+      - name: Install WP tests (DB + Core + Polyfills path)
+        run: bin/ci/wp-tests-install.sh
+
+      - name: Run PHPUnit (7.4)
+        env:
+          PHP_VERSION: "7.4"
+        run: bin/ci/run-phpunit.sh
+
+  phpunit-8x:
+    name: "PHPUnit (PHP ${{ matrix.php }})"
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - php_version: '7.4'
-            composer_flags: '--no-dev'
-            phpunit_bin: 'phpunit'
-            install_polyfills: 'true'
-          - php_version: '8.1'
-            composer_flags: ''
-            phpunit_bin: 'vendor/bin/phpunit'
-            install_polyfills: 'false'
-          - php_version: '8.2'
-            composer_flags: ''
-            phpunit_bin: 'vendor/bin/phpunit'
-            install_polyfills: 'false'
-          - php_version: '8.3'
-            composer_flags: ''
-            phpunit_bin: 'vendor/bin/phpunit'
-            install_polyfills: 'false'
-          - php_version: '8.4'
-            composer_flags: ''
-            phpunit_bin: 'vendor/bin/phpunit'
-            install_polyfills: 'false'
-
-    services:
-      mariadb:
-        image: mariadb:10.4
-        env:
-          MYSQL_ROOT_PASSWORD: root
-        ports:
-          - "3306:3306"
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
-          --health-interval=10s --health-timeout=5s --health-retries=10
-
-    env:
-      WP_TESTS_DIR: /tmp/wordpress-tests-lib
-      WP_CORE_DIR: /tmp/wordpress/
-      DB_HOST: 127.0.0.1
-      DB_USER: root
-      DB_PASSWORD: root
-      DB_NAME: wordpress_test
-      COMPOSER_PROCESS_TIMEOUT: 0
-      COMPOSER_NO_INTERACTION: 1
-      COMPOSER_NO_AUDIT: 1
-
+        php: ['8.0', '8.1', '8.2', '8.3']
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v4
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php_version }}
-          extensions: imagick, mysqli
-          tools: wp-cli, phpunit:^9.6
+          php-version: ${{ matrix.php }}
+          coverage: none
+          extensions: mbstring, intl, xml, dom, curl, json, mysqli
 
-      - name: Cache Composer (project)
+      - name: Composer cache
         uses: actions/cache@v4
         with:
-          path: |
-            vendor
-            ~/.composer/cache
-          key: php-${{ matrix.php_version }}-composer-${{ hashFiles('composer.lock', 'composer.json') }}
-          restore-keys: |
-            php-${{ matrix.php_version }}-composer-
-
-      - name: Install system deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y subversion mariadb-client dos2unix curl rsync
-
-      # ---------- SimpleSAML mock for ALL PHP children (preloaded)
-      - name: Write SimpleSAML mock and prepend it
-        run: |
-          set -euxo pipefail
-          MOCK=/tmp/ssp-mock.php
-          cat > "$MOCK" <<'PHP'
-          <?php
-          namespace SimpleSAML\Auth {
-            class Simple {
-              public function isAuthenticated(){ return true; }
-              public function requireAuth(array $params = []){ return true; }
-              public function logout($returnTo = null){ return true; }
-              public function login($returnTo = null, array $params = [], $force = false){ return true; }
-              public function getAttributes(){
-                return [
-                  'uid'          => ['ci-user'],
-                  'email'        => ['user@example.com'],
-                  'mail'         => ['user@example.com'],
-                  'display_name' => ['CI User'],
-                  'first_name'   => ['CI'],
-                  'last_name'    => ['User'],
-                ];
-              }
-            }
-          }
-          namespace {
-            if (!class_exists('SimpleSAML_Auth_Simple') && class_exists('\SimpleSAML\Auth\Simple')) {
-              class SimpleSAML_Auth_Simple extends \SimpleSAML\Auth\Simple {}
-            }
-          }
-          PHP
-          echo "WP_PHP_BINARY=\"$(command -v php) -d auto_prepend_file=$MOCK\"" >> $GITHUB_ENV
+          path: ~/.composer/cache/files
+          key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
 
       - name: Install Composer deps
-        run: composer install --prefer-dist --no-progress ${{ matrix.composer_flags }}
+        run: composer install --no-progress --prefer-dist
 
-      - name: Set Script Permissions
-        run: |
-          if [ -d ./bin ]; then
-            find ./bin -type f -name "*.sh" -exec dos2unix {} \; -exec chmod +x {} \;
-          fi
+      - name: Build PHP wrapper (with SimpleSAML mock)
+        run: bin/ci/make-php-wrapper.sh
 
-      # ---------- WordPress test-suite (portable) + full config
-      - name: Install WordPress tests (portable)
-        run: |
-          set -euxo pipefail
-          WP_VERSION="latest"
-          CORE_DIR="${WP_CORE_DIR}"
-          TESTS_DIR="${WP_TESTS_DIR}"
+      - name: Install WP tests (DB + Core + Polyfills path)
+        run: bin/ci/wp-tests-install.sh
 
-          mkdir -p "$CORE_DIR" "$TESTS_DIR"
+      - name: Run PHPUnit (${{ matrix.php }})
+        env:
+          PHP_VERSION: "${{ matrix.php }}"
+        run: bin/ci/run-phpunit.sh
 
-          # 1) Download WordPress core
-          curl -fsSL "https://wordpress.org/${WP_VERSION}.tar.gz" | tar -xzf - -C /tmp
-          rsync -a /tmp/wordpress/ "$CORE_DIR/"
-
-          # 2) Fetch tests library
-          svn export --quiet https://develop.svn.wordpress.org/trunk/tests/phpunit/includes/ "$TESTS_DIR/includes"
-          svn export --quiet https://develop.svn.wordpress.org/trunk/tests/phpunit/data/     "$TESTS_DIR/data"
-
-          # 3) Create wp-tests-config.php (NO polyfills constant here)
-          cat > "$TESTS_DIR/wp-tests-config.php" <<CFG
-          <?php
-          define( 'ABSPATH', '${CORE_DIR}/' );
-          define( 'DB_NAME', '${DB_NAME}' );
-          define( 'DB_USER', '${DB_USER}' );
-          define( 'DB_PASSWORD', '${DB_PASSWORD}' );
-          define( 'DB_HOST', '${DB_HOST}' );
-          define( 'WP_DEBUG', true );
-          \$table_prefix = 'wptests_';
-
-          // Required by WP test suite:
-          define( 'WP_TESTS_DOMAIN', 'example.org' );
-          define( 'WP_TESTS_EMAIL',  'admin@example.org' );
-          define( 'WP_TESTS_TITLE',  'Test Blog' );
-
-          // Point WP at our wrapper binary only (no args in this constant)
-          define( 'WP_PHP_BINARY', getenv('WP_PHP_BINARY') ?: 'php' );
-          CFG
-
-          # 4) Create DB
-          mysql -h "${DB_HOST}" -u"${DB_USER}" -p"${DB_PASSWORD}" -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-
-      # ---------- PHP 7.4 only: install Yoast PHPUnit Polyfills without dev-deps
-      - name: Install Yoast PHPUnit Polyfills (PHP 7.4)
-        if: matrix.install_polyfills == 'true'
-        run: |
-          WP_TESTS_PHPUNIT_POLYFILLS_PATH=/tmp/yoast-phpunit-polyfills
-          set -euxo pipefail
-          POLY=/tmp/yoast-phpunit-polyfills
-          mkdir -p "$POLY"
-          curl -fsSL https://github.com/Yoast/PHPUnit-Polyfills/archive/refs/tags/3.1.2.tar.gz \
-            | tar -zxf - --strip-components=1 -C "$POLY"
-          echo "WP_TESTS_PHPUNIT_POLYFILLS_PATH=$POLY" >> $GITHUB_ENV
-
-      # ---------- Optional: provide a SimpleSAML tree (not required, mock is used)
-      - name: (Optional) Install SimpleSAMLphp tree for unit tests
-        run: |
-          set -euxo pipefail
-          INSTALL_DIR="${WP_TESTS_DIR}/plugins/simplesamlphp"
-          mkdir -p "${INSTALL_DIR}"
-          curl -fsSL "https://github.com/simplesamlphp/simplesamlphp/releases/download/v2.4.0/simplesamlphp-2.4.0-full.tar.gz" \
-            | tar -zxf - --strip-components=1 -C "${INSTALL_DIR}"
-          mkdir -p "${INSTALL_DIR}/config"
-          : > "${INSTALL_DIR}/config/config.php"
-
-      - name: Write SimpleSAML mock and set PHP wrapper
-        run: |
-          set -euxo pipefail
-      
-          # 1) Mock
-          MOCK=/tmp/ssp-mock.php
-          cat > "$MOCK" <<'PHP'
-          <?php
-          namespace SimpleSAML\Auth {
-            class Simple {
-              public function isAuthenticated(){ return true; }
-              public function requireAuth(array $params = []){ return true; }
-              public function logout($returnTo = null){ return true; }
-              public function login($returnTo = null, array $params = [], $force = false){ return true; }
-              public function getAttributes(){
-                return [
-                  'uid'          => ['ci-user'],
-                  'email'        => ['user@example.com'],
-                  'mail'         => ['user@example.com'],
-                  'display_name' => ['CI User'],
-                  'first_name'   => ['CI'],
-                  'last_name'    => ['User'],
-                ];
-              }
-            }
-          }
-          namespace {
-            if (!class_exists('SimpleSAML_Auth_Simple') && class_exists('\SimpleSAML\Auth\Simple')) {
-              class SimpleSAML_Auth_Simple extends \SimpleSAML\Auth\Simple {}
-            }
-          }
-          PHP
-      
-          # 2) Wrapper (executable path, no args in the constant)
-          WRAP=/tmp/php-with-ssp-mock
-          cat > "$WRAP" <<'SH'
-          #!/usr/bin/env bash
-          exec /usr/bin/php -d auto_prepend_file=/tmp/ssp-mock.php "$@"
-          SH
-          chmod +x "$WRAP"
-      
-          echo "WP_PHP_BINARY=$WRAP" >> $GITHUB_ENV
-
-
-      - name: Run PHPUnit
-        run: ${{ matrix.phpunit_bin }}
-
-  # =======================
-  # Behat (Pantheon)
-  # =======================
-  test-behat:
-    name: "Behat - SimpleSAMLphp ${{ matrix.simplesamlphp_version }}"
-    runs-on: ubuntu-latest
-    if: github.event_name != 'schedule' || (github.event_name == 'schedule' && github.ref == 'refs/heads/master')
-
+  behat:
+    name: "Behat (SSP ${{ matrix.ssp }})"
+    runs-on: ubuntu-22.04
+    needs: [phpunit-74, phpunit-8x]
     strategy:
       fail-fast: false
       matrix:
-        simplesamlphp_version: ["1.18.0", "2.0.0", "2.4.0"]
-
+        ssp: ['1.18.0', '2.0.0', '2.4.0']
     env:
-      WP_TESTS_DIR: /tmp/wordpress-tests-lib
-      WP_CORE_DIR: /tmp/wordpress/
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - name: Install Terminus
-        uses: pantheon-systems/terminus-github-actions@v1
-        with:
-          pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
-
-      - name: Cache Composer (project)
-        uses: actions/cache@v4
-        with:
-          path: vendor
-          key: ${{ runner.os }}-behat-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-behat-composer-
-
-      - name: Install Composer deps
-        run: composer install -n --prefer-dist
-
-      - name: Install SimpleSAMLphp
-        env:
-          SIMPLESAMLPHP_VERSION: ${{ matrix.simplesamlphp_version }}
-        run: |
-          set -euxo pipefail
-          INSTALL_DIR="${WP_TESTS_DIR}/simplesamlphp"
-          mkdir -p "${INSTALL_DIR}"
-
-          if [ "${SIMPLESAMLPHP_VERSION}" = "1.18.0" ]; then
-            URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v1.18.0/simplesamlphp-1.18.0.tar.gz"
-            curl -fsSL "$URL" | tar -zxf - --strip-components=1 -C "${INSTALL_DIR}"
-            test -f "${INSTALL_DIR}/lib/_autoload.php"
-          elif [ "${SIMPLESAMLPHP_VERSION}" = "2.0.0" ]; then
-            URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v2.0.0/simplesamlphp-2.0.0.tar.gz"
-            curl -fsSL "$URL" | tar -zxf - --strip-components=1 -C "${INSTALL_DIR}"
-            composer install --no-dev --working-dir="${INSTALL_DIR}"
-          else
-            URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}-full.tar.gz"
-            curl -fsSL "$URL" | tar -zxf - --strip-components=1 -C "${INSTALL_DIR}"
-          fi
-
-          mkdir -p "${INSTALL_DIR}/config"
-          : > "${INSTALL_DIR}/config/config.php"
-
-      - name: Configure SSH (non-strict)
-        run: |
-          mkdir -p ~/.ssh
-          printf "Host *\n  StrictHostKeyChecking no\n" >> ~/.ssh/config
-
-      - name: Configure Composer for GitHub Token
-        if: env.GITHUB_TOKEN != ''
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: composer config -g github-oauth.github.com $GITHUB_TOKEN
-
-      - name: Authenticate with Terminus
-        if: env.TERMINUS_TOKEN != ''
-        env:
-          TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
-        run: terminus auth:login --machine-token=$TERMINUS_TOKEN
-
-      - name: Install idempotent Terminus shim (env:create)
-        run: |
-          set -euxo pipefail
-          REAL_BIN="$(command -v terminus)"
-          DIR="$(dirname "$REAL_BIN")"
-          mv "$REAL_BIN" "${REAL_BIN}.real"
-
-          cat > "$REAL_BIN" <<'SH'
-          #!/usr/bin/env bash
-          set -euo pipefail
-          REAL="${0}.real"
-
-          if [[ "${1:-}" == "env:create" ]]; then
-            # Expect: terminus env:create <site>.<source_env> <new_env>
-            SITE_ENV="${2:-}"
-            NEW_ENV="${3:-}"
-
-            # Try normal create first
-            if "$REAL" "$@" ; then
-              exit 0
-            fi
-
-            # If it failed, check if the env now exists; if yes, pretend success
-            if [[ -n "$SITE_ENV" && -n "$NEW_ENV" ]]; then
-              SITE="${SITE_ENV%%.*}"
-              if "$REAL" env:info "${SITE}.${NEW_ENV}" >/dev/null 2>&1; then
-                echo "Terminus shim: '${SITE}.${NEW_ENV}' already exists; continuing."
-                exit 0
-              fi
-            fi
-
-            # Otherwise, real failure
-            exit 1
-          fi
-
-          exec "$REAL" "$@"
-          SH
-          chmod +x "$REAL_BIN"
-
-      - name: Compute unique Multidev env name (≤11 chars)
-        run: |
-          set -euo pipefail
-          case "${{ matrix.simplesamlphp_version }}" in
-            1.18.0) SUF="a" ;;
-            2.0.0)  SUF="b" ;;
-            2.4.0)  SUF="c" ;;
-            *)      SUF="x" ;;
-          esac
-          H=$(printf '%s' "${GITHUB_RUN_ID}-${{ matrix.simplesamlphp_version }}-${GITHUB_JOB}-${GITHUB_RUN_ATTEMPT}" | sha1sum | cut -c1-7)
-          NAME="ci${H}${SUF}"
-          NAME="${NAME:0:11}"
-          {
-            echo "TERMINUS_SITE=wp-saml-auth"
-            echo "TERMINUS_ENV=$NAME"
-            echo "WORDPRESS_ADMIN_USERNAME=pantheon"
-            echo "WORDPRESS_ADMIN_EMAIL=no-reply@getpantheon.com"
-            echo "WORDPRESS_ADMIN_PASSWORD=$(openssl rand -hex 8)"
-            echo "SIMPLESAMLPHP_VERSION=${{ matrix.simplesamlphp_version }}"
-          } >> $GITHUB_ENV
-          echo "wp-saml-auth.${NAME}" > site_env.txt
-
-      - name: Create or reuse Multidev (race-safe)
-        env:
-          TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
-        run: |
-          set -euo pipefail
-          terminus auth:login --machine-token="$TERMINUS_TOKEN"
-
-          if terminus env:info "${TERMINUS_SITE}.${TERMINUS_ENV}" >/dev/null 2>&1; then
-            echo "Reusing existing ${TERMINUS_ENV}"
-          else
-            if ! terminus env:create "${TERMINUS_SITE}.dev" "${TERMINUS_ENV}"; then
-              echo "env:create returned non-zero; checking if it already exists..."
-              if terminus env:info "${TERMINUS_SITE}.${TERMINUS_ENV}" >/dev/null 2>&1; then
-                echo "Environment ${TERMINUS_ENV} exists now; continuing."
-              else
-                echo "Failed to create or find environment ${TERMINUS_ENV}"
-                exit 1
-              fi
-            fi
-          fi
-
-      - name: Upload environment name artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: behat-env-${{ matrix.simplesamlphp_version }}
-          path: site_env.txt
-
-      - name: Validate fixture version
-        uses: jazzsequence/action-validate-plugin-version@v1
-        with:
-          branch: ${{ github.head_ref }}
-          dry-run: 'true'
-
-      - name: Prepare and run Behat tests
-        run: |
-          set -e
-          if [ "${{ matrix.simplesamlphp_version }}" != '1.18.0' ]; then
-            bash ./bin/behat-prepare.sh
-          else
-            bash ./bin/1.18/behat-prepare-simplesaml1.18.0.sh
-          fi
-
-          echo ""
-          echo "=========================================================================="
-          echo "Running Behat on https://${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io/wp-login.php"
-          echo "with SimpleSAMLphp version $SIMPLESAMLPHP_VERSION"
-          echo "=========================================================================="
-          echo ""
-          bash ./bin/behat-test.sh --strict
-
-  # =======================
-  # Cleanup (always)
-  # =======================
-  behat-cleanup:
-    name: "Behat Cleanup"
-    runs-on: ubuntu-latest
-    needs: test-behat
-    if: always() && (github.event_name != 'schedule' || (github.event_name == 'schedule' && github.ref == 'refs/heads/master'))
-
-    env:
+      TERMINUS_RELEASE: 4.1.0
       TERMINUS_SITE: wp-saml-auth
-      TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
-      TERMINUS_ENV: cleanup-${{ github.run_number }}
-
+      # Each job should vary ENV to avoid collisions; we derive one from GITHUB_SHA
+      TERMINUS_ENV: ci${{ matrix.ssp }}${{ github.sha.substr(0,8) }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v4
 
-      - name: Download all environment name artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: behat-env-*
-          path: /tmp/behat-envs
-          merge-multiple: true
+      - name: Install Composer deps (for Behat)
+        run: composer install --no-progress --prefer-dist
 
       - name: Install Terminus
-        uses: pantheon-systems/terminus-github-actions@v1
-        with:
-          pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
-
-      - name: Run Cleanup Script
         run: |
-          echo "The following environments will be cleaned up:"
-          find /tmp/behat-envs -type f -name "*.txt" -exec cat {} +
-          export TERMINUS_ENVS=$(find /tmp/behat-envs -type f -name "*.txt" -exec cat {} + | tr '\n' ' ')
-          bash ./bin/behat-cleanup.sh
+          curl -L https://github.com/pantheon-systems/terminus/releases/download/${TERMINUS_RELEASE}/terminus.phar -o terminus
+          chmod +x terminus
+          sudo mv terminus /usr/local/bin/terminus
+          terminus --version
+
+      - name: Authenticate Terminus
+        env:
+          TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
+        run: |
+          terminus auth:login --machine-token="$TERMINUS_TOKEN"
+          terminus auth:whoami
+
+      - name: Ensure Multidev exists (create or wipe)
+        id: ensure
+        run: |
+          SITE_ENV=$(bin/ci/terminus-ensure-env.sh)
+          echo "site_env=${SITE_ENV}" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare SimpleSAMLphp (download/copy for tests if needed)
+        env:
+          SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
+        run: bin/ci/simplesaml-download.sh
+
+      - name: Behat Prepare
+        env:
+          SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
+          # Pass explicit env pieces; scripts in repo expect these:
+          TERMINUS_SITE: ${{ env.TERMINUS_SITE }}
+          TERMINUS_ENV: ${{ env.TERMINUS_ENV }}
+        run: |
+          if [[ "${SIMPLESAMLPHP_VERSION}" == "1.18.0" ]]; then
+            bash ./bin/1.18/behat-prepare-simplesaml1.18.0.sh
+          else
+            bash ./bin/behat-prepare.sh
+          fi
+
+      - name: Behat Run
+        env:
+          WORDPRESS_ADMIN_USERNAME: pantheon
+          WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
+          WORDPRESS_ADMIN_PASSWORD: ${{ secrets.WORDPRESS_ADMIN_PASSWORD }}
+          SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
+          TERMINUS_SITE: ${{ env.TERMINUS_SITE }}
+          TERMINUS_ENV: ${{ env.TERMINUS_ENV }}
+        run: bash ./bin/behat-test.sh --strict
+
+      - name: Always cleanup Multidevs (and prune)
+        if: always()
+        env:
+          TERMINUS_SITE: ${{ env.TERMINUS_SITE }}
+          TERMINUS_ENV: ${{ env.TERMINUS_ENV }}
+        run: bash ./bin/behat-cleanup.sh
