@@ -97,16 +97,26 @@ jobs:
           echo "TERMINUS_ENV=${ENV_NAME}" >> "$GITHUB_ENV"
           echo "Using Multidev: ${ENV_NAME}"
 
+      - name: Detect private key presence
+        id: has_key
+        shell: bash
+        run: |
+          if [ -n "${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}" ]; then
+            echo "present=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=0" >> "$GITHUB_OUTPUT"
+          fi
+
       # Path A: Use a stored SSH private key (requires repo/org secret)
       - name: Load SSH key for Pantheon appserver (secret)
-        if: ${{ secrets.PANTHEON_SSH_PRIVATE_KEY != '' }}
+        if: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY != '' }}
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ secrets.PANTHEON_SSH_PRIVATE_KEY }}
+          ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
 
       # Path B: Create ephemeral SSH key and register with Pantheon (no secret needed)
       - name: Create ephemeral SSH key and add to Pantheon
-        if: ${{ secrets.PANTHEON_SSH_PRIVATE_KEY == '' }}
+        if: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY == '' }}
         shell: bash
         run: |
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
