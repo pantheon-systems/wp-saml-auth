@@ -25,18 +25,23 @@ jobs:
           - php_version: '7.4'
             composer_flags: '--no-dev'
             phpunit_bin: 'phpunit'
+            install_polyfills: 'true'
           - php_version: '8.1'
             composer_flags: ''
             phpunit_bin: 'vendor/bin/phpunit'
+            install_polyfills: 'false'
           - php_version: '8.2'
             composer_flags: ''
             phpunit_bin: 'vendor/bin/phpunit'
+            install_polyfills: 'false'
           - php_version: '8.3'
             composer_flags: ''
             phpunit_bin: 'vendor/bin/phpunit'
+            install_polyfills: 'false'
           - php_version: '8.4'
             composer_flags: ''
             phpunit_bin: 'vendor/bin/phpunit'
+            install_polyfills: 'false'
 
     services:
       mariadb:
@@ -88,7 +93,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y subversion mariadb-client dos2unix curl rsync
 
-      # -------- SimpleSAML mock for ALL PHP children (preloaded)
+      # ---------- SimpleSAML mock for ALL PHP children (preloaded)
       - name: Write SimpleSAML mock and prepend it
         run: |
           set -euxo pipefail
@@ -120,7 +125,6 @@ jobs:
           }
           PHP
           echo "WP_PHP_BINARY=\"$(command -v php) -d auto_prepend_file=$MOCK\"" >> $GITHUB_ENV
-          php -r "require '$MOCK'; echo (class_exists('\SimpleSAML\Auth\Simple')?'OK\n':'FAIL\n');"
 
       - name: Install Composer deps
         run: composer install --prefer-dist --no-progress ${{ matrix.composer_flags }}
@@ -131,7 +135,7 @@ jobs:
             find ./bin -type f -name "*.sh" -exec dos2unix {} \; -exec chmod +x {} \;
           fi
 
-      # -------- Portable WP test-suite installer (no project scripts required)
+      # ---------- WordPress test-suite (portable) + full config
       - name: Install WordPress tests (portable)
         run: |
           set -euxo pipefail
@@ -145,11 +149,11 @@ jobs:
           curl -fsSL "https://wordpress.org/${WP_VERSION}.tar.gz" | tar -xzf - -C /tmp
           rsync -a /tmp/wordpress/ "$CORE_DIR/"
 
-          # 2) Fetch tests library from develop.svn
+          # 2) Fetch tests library
           svn export --quiet https://develop.svn.wordpress.org/trunk/tests/phpunit/includes/ "$TESTS_DIR/includes"
           svn export --quiet https://develop.svn.wordpress.org/trunk/tests/phpunit/data/     "$TESTS_DIR/data"
 
-          # 3) Create wp-tests-config.php
+          # 3) Create wp-tests-config.php (including required constants)
           cat > "$TESTS_DIR/wp-tests-config.php" <<CFG
           <?php
           define( 'ABSPATH', '${CORE_DIR}/' );
@@ -159,11 +163,36 @@ jobs:
           define( 'DB_HOST', '${DB_HOST}' );
           define( 'WP_DEBUG', true );
           \$table_prefix = 'wptests_';
+
+          // Required by WP test suite:
+          define( 'WP_TESTS_DOMAIN', 'example.org' );
+          define( 'WP_TESTS_EMAIL',  'admin@example.org' );
+          define( 'WP_TESTS_TITLE',  'Test Blog' );
+
+          // Let the test suite know where the binary (with the mock) lives:
+          define( 'WP_PHP_BINARY', getenv('WP_PHP_BINARY') ?: 'php' );
+
+          // If we download polyfills outside of vendor, point WP to it:
+          if (getenv('WP_TESTS_PHPUNIT_POLYFILLS_PATH')) {
+            define( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH', getenv('WP_TESTS_PHPUNIT_POLYFILLS_PATH') );
+          }
           CFG
 
           # 4) Create DB
           mysql -h "${DB_HOST}" -u"${DB_USER}" -p"${DB_PASSWORD}" -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
+      # ---------- PHP 7.4 only: install Yoast PHPUnit Polyfills without dev-deps
+      - name: Install Yoast PHPUnit Polyfills (PHP 7.4)
+        if: matrix.install_polyfills == 'true'
+        run: |
+          set -euxo pipefail
+          POLY=/tmp/yoast-phpunit-polyfills
+          mkdir -p "$POLY"
+          curl -fsSL https://github.com/Yoast/PHPUnit-Polyfills/archive/refs/tags/3.1.2.tar.gz \
+            | tar -zxf - --strip-components=1 -C "$POLY"
+          echo "WP_TESTS_PHPUNIT_POLYFILLS_PATH=$POLY" >> $GITHUB_ENV
+
+      # ---------- Optional: provide a SimpleSAML tree (not required, mock is used)
       - name: (Optional) Install SimpleSAMLphp tree for unit tests
         run: |
           set -euxo pipefail
@@ -279,18 +308,25 @@ jobs:
           } >> $GITHUB_ENV
           echo "wp-saml-auth.${NAME}" > site_env.txt
 
-      - name: Create or reuse Multidev (race-safe, non-fatal if exists)
+      - name: Create or reuse Multidev (race-safe)
         env:
           TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
         run: |
           set -euo pipefail
           terminus auth:login --machine-token="$TERMINUS_TOKEN"
+
           if terminus env:info "${TERMINUS_SITE}.${TERMINUS_ENV}" >/dev/null 2>&1; then
             echo "Reusing existing ${TERMINUS_ENV}"
           else
-            terminus env:create "${TERMINUS_SITE}.dev" "${TERMINUS_ENV}" || \
-              echo "env:create non-zero; will continue if env now exists"
-            terminus env:info "${TERMINUS_SITE}.${TERMINUS_ENV}" >/dev/null
+            if ! terminus env:create "${TERMINUS_SITE}.dev" "${TERMINUS_ENV}"; then
+              echo "env:create returned non-zero; checking if it already exists..."
+              if terminus env:info "${TERMINUS_SITE}.${TERMINUS_ENV}" >/dev/null 2>&1; then
+                echo "Environment ${TERMINUS_ENV} exists now; continuing."
+              else
+                echo "Failed to create or find environment ${TERMINUS_ENV}"
+                exit 1
+              fi
+            fi
           fi
 
       - name: Upload environment name artifact
@@ -354,13 +390,9 @@ jobs:
         with:
           pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
 
-      - name: Run Cleanup Script (robust)
+      - name: Run Cleanup Script
         run: |
-          set -euo pipefail
-          echo "The following environments will be cleaned up (if any):"
-          if compgen -G "/tmp/behat-envs/*.txt" > /dev/null; then
-            cat /tmp/behat-envs/*.txt || true
-          else
-            echo "(none found)"
-          fi
+          echo "The following environments will be cleaned up:"
+          find /tmp/behat-envs -type f -name "*.txt" -exec cat {} +
+          export TERMINUS_ENVS=$(find /tmp/behat-envs -type f -name "*.txt" -exec cat {} + | tr '\n' ' ')
           bash ./bin/behat-cleanup.sh
