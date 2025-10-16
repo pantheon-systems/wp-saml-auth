@@ -132,11 +132,11 @@ jobs:
       - name: Create ephemeral SSH key and add to Pantheon
         shell: bash
         run: |
-          mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519 -C "github-actions@${GITHUB_REPOSITORY}"
-          eval "$(ssh-agent -s)"
-          ssh-add ~/.ssh/id_ed25519
-          # Register the public key with Pantheon for this auth session
+          #          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          #          ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519 -C "github-actions@${GITHUB_REPOSITORY}"
+          #          eval "$(ssh-agent -s)"
+          #          ssh-add ~/.ssh/id_ed25519
+          #          # Register the public key with Pantheon for this auth session
           terminus ssh-key:add ~/.ssh/id_ed25519.pub --yes
           terminus auth:whoami
 
