@@ -58,3 +58,23 @@ chmod +x "${WRAP}"
 
 # 5) Export wrapper for the WP test runner
 echo "WP_PHP_BINARY=${WRAP}" >> "$GITHUB_ENV"
+
+REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+SSP_MOCK_PATH="${REPO_ROOT}/tests/phpunit/includes/ssp-mock.php"
+
+if [ ! -f "${SSP_MOCK_PATH}" ]; then
+  echo "ERROR: ${SSP_MOCK_PATH} not found"
+  exit 1
+fi
+
+WRAP_BIN="/tmp/php-with-ssp-mock"
+cat > "${WRAP_BIN}" <<'PHPWRAP'
+#!/usr/bin/env bash
+# Prepend SSP mock so plugin autoload finds a SimpleSAMLphp-compatible API.
+exec php -d auto_prepend_file='"'"${SSP_MOCK_PATH}"'"' "$@"
+PHPWRAP
+# Inject real path
+sed -i "s|${SSP_MOCK_PATH}|${SSP_MOCK_PATH}|g" "${WRAP_BIN}"
+chmod +x "${WRAP_BIN}"
+
+echo "WP_PHP_BINARY=${WRAP_BIN}" >> "$GITHUB_ENV"

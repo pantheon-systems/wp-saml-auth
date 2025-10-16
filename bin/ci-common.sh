@@ -4,7 +4,10 @@ set -euo pipefail
 # ------------------------------------------------------------
 # Logging + basic guards
 # ------------------------------------------------------------
+# shellcheck disable=SC2317
 log() { printf '[%s] %s\n' "$(date +%H:%M:%S)" "$*"; }
+
+# shellcheck disable=SC2317
 require_env() {
   local name="${1}"
   if [[ -z "${!name:-}" ]]; then
@@ -38,8 +41,11 @@ terminus_env_exists() {
 }
 
 # Log helper
+# shellcheck disable=SC2317
 log() { echo "[$(date +'%H:%M:%S')] $*"; }
+
 # Ensure a multidev exists: site (e.g. wp-saml-auth), env (e.g. ci123abc)
+# shellcheck disable=SC2317
 terminus_env_ensure() {
   local site="$1"
   local env="$2"
@@ -91,7 +97,6 @@ ssp_download_url() {
     echo "https://github.com/simplesamlphp/simplesamlphp/releases/download/v${v}/simplesamlphp-${v}-full.tar.gz"
   fi
 }
-
 
 # ------------------------------------------------------------
 # WordPress install on a Multidev
