@@ -13,6 +13,20 @@ jobs:
       matrix:
         php: ['7.4', '8.1', '8.2', '8.3']
 
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
     env:
       WP_TESTS_DIR: /tmp/wordpress-tests-lib
       WP_CORE_DIR: /tmp/wordpress/

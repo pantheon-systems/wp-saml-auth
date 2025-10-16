@@ -36,7 +36,8 @@ fi
 # 3) Ensure Yoast PHPUnit Polyfills path is available to the WP test suite
 if [ -d "vendor/yoast/phpunit-polyfills" ]; then
   # WP core loader will detect this constant if present.
-  export WP_TESTS_PHPUNIT_POLYFILLS_PATH="$(pwd)/vendor/yoast/phpunit-polyfills"
+  WP_TESTS_PHPUNIT_POLYFILLS_PATH="$(pwd)/vendor/yoast/phpunit-polyfills"
+  export WP_TESTS_PHPUNIT_POLYFILLS_PATH
 fi
 
 # 4) Create PHP wrapper that auto-prepends the SimpleSAML mock used by tests
