@@ -1,123 +1,73 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ------------------------------------------------------------
-# Logging + basic guards
-# ------------------------------------------------------------
-# shellcheck disable=SC2317
-log() { printf '[%s] %s\n' "$(date +%H:%M:%S)" "$*"; }
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-# shellcheck disable=SC2317
-require_env() {
-  local name="${1}"
-  if [[ -z "${!name:-}" ]]; then
-    echo "Required env var '$name' is not set" >&2
-    exit 1
-  fi
-}
+# Let ShellCheck know where this file lives when it runs from repo root:
+# shellcheck source=bin/ci-common.sh
+if [ -f "${SCRIPT_DIR}/ci-common.sh" ]; then
+  . "${SCRIPT_DIR}/ci-common.sh"
+else
+  . "${REPO_ROOT}/bin/ci-common.sh"
+fi
 
-# ------------------------------------------------------------
-# Environment helpers
-# ------------------------------------------------------------
+require_env TERMINUS_SITE
+require_env TERMINUS_ENV
+require_env SIMPLESAMLPHP_VERSION
+require_env WORDPRESS_ADMIN_USERNAME
+require_env WORDPRESS_ADMIN_EMAIL
+require_env WORDPRESS_ADMIN_PASSWORD
 
-# Deterministic, short, Pantheon-safe Multidev env name (<= 11 chars).
-# Format: ci<ver4><sha3><attempt1>  e.g. "ci1180f011"
-# - version "1.18.0" -> "1180"
-# - sha trimmed to first 3 hex
-# - attempt = first digit of GITHUB_RUN_ATTEMPT (or 0)
-compute_env_name() {
-  local version="${1:-}" sha="${2:-}" attempt="${GITHUB_RUN_ATTEMPT:-0}"
-  local ver="${version//./}"               # strip dots -> 1180
-  ver="${ver:0:4}"                         # keep up to 4
-  local sh="${sha:0:3}"                    # 3 chars of SHA
-  local at="${attempt:0:1}"                # 1 digit attempt
-  echo "ci${ver}${sh}${at}"
-}
+SITE_ENV="${TERMINUS_SITE}.${TERMINUS_ENV}"
+SITE_URL="https://${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io"
 
-# Return 0 if <site>.<env> exists, else non-zero
-terminus_env_exists() {
-  local site="${1}" env="${2}"
-  terminus env:info "${site}.${env}" >/dev/null 2>&1
-}
+log "[prepare] Ensuring multidev exists: ${SITE_ENV}"
+terminus_env_ensure "${TERMINUS_SITE}" "${TERMINUS_ENV}"
+log "Created ${SITE_ENV}"
 
-# Log helper
-# shellcheck disable=SC2317
-log() { echo "[$(date +'%H:%M:%S')] $*"; }
+log "[prepare] Wiping environment: ${SITE_ENV}"
+terminus_env_wipe "${SITE_ENV}"
 
-# Ensure a multidev exists: site (e.g. wp-saml-auth), env (e.g. ci123abc)
-# shellcheck disable=SC2317
-terminus_env_ensure() {
-  local site="$1"
-  local env="$2"
-  local site_env="${site}.${env}"
+log "[prepare] Setting connection mode to git: ${SITE_ENV}"
+terminus_connection_set_git "${SITE_ENV}"
 
-  if terminus env:info "$site_env" >/dev/null 2>&1; then
-    log "Env $site_env already exists."
-    return 0
-  fi
+# Export useful URLs for later steps
+GIT_URL="$(terminus_git_url "${SITE_ENV}")"
+{
+  echo "PANTHEON_GIT_URL=${GIT_URL}"
+  echo "PANTHEON_SITE_URL=${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io"
+} >> "$GITHUB_ENV"
 
-  log "Creating $site_env ..."
-  # Create from dev -> <env>
-  if ! terminus multidev:create "${site}.dev" "$env" --yes; then
-    # Race safety: if it now exists, continue
-    if terminus env:info "$site_env" >/dev/null 2>&1; then
-      log "Env $site_env exists (race); continue."
-      return 0
-    fi
-    echo "Failed to create ${site_env}" >&2
-    return 1
-  fi
+# Install WP on the environment (idempotent)
+log "[prepare] Installing WordPress (idempotent) on ${SITE_ENV} with URL ${SITE_URL}"
 
-  log "Created $site_env"
-}
+# Switch to SFTP so remote writes are allowed (terminus wp invokes over SSH)
+terminus connection:set "${SITE_ENV}" sftp >/dev/null
 
-terminus_env_wipe() {
-  local site_env="$1"
-  log "Wiping $site_env ..."
-  terminus env:wipe "$site_env" --yes
-}
+# Best-effort probe (helps avoid immediate SSH flake)
+terminus env:info "${SITE_ENV}" >/dev/null 2>&1 || true
 
-terminus_connection_set_git() {
-  local site_env="$1"
-  log "Setting $site_env connection to git ..."
-  terminus connection:set "$site_env" git
-}
-
-terminus_git_url() {
-  local site_env="$1"
-  terminus connection:info "$site_env" --field=git_url
-}
-
-# Build a version-specific SimplesSAMLphp URL
-ssp_download_url() {
-  local v="$1"
-  if [[ "$v" == "2.0.0" ]]; then
-    echo "https://github.com/simplesamlphp/simplesamlphp/releases/download/v${v}/simplesamlphp-${v}.tar.gz"
-  else
-    echo "https://github.com/simplesamlphp/simplesamlphp/releases/download/v${v}/simplesamlphp-${v}-full.tar.gz"
-  fi
-}
-
-# ------------------------------------------------------------
-# WordPress install on a Multidev
-# ------------------------------------------------------------
-# Ensures WordPress is installed on <site>.<env> using the credentials provided.
-wp_core_install_if_needed() {
-  local site="${1}" env="${2}" url="${3}" title="${4}" admin_user="${5}" admin_pass="${6}" admin_email="${7}"
-
-  # Check install status
-  if terminus remote:wp "${site}.${env}" -- core is-installed >/dev/null 2>&1; then
-    log "WordPress already installed on ${site}.${env}"
-    return 0
-  fi
-
-  log "Installing WordPress on ${site}.${env} ..."
-  terminus remote:wp "${site}.${env}" -- core install \
-    --url="${url}" \
-    --title="${title}" \
-    --admin_user="${admin_user}" \
-    --admin_password="${admin_pass}" \
-    --admin_email="${admin_email}" \
+# Run install only if not installed
+if ! terminus wp "${SITE_ENV}" -- core is-installed >/dev/null 2>&1; then
+  terminus wp "${SITE_ENV}" -- core install \
+    --url="${SITE_URL}" \
+    --title="WP SAML Auth CI" \
+    --admin_user="${WORDPRESS_ADMIN_USERNAME}" \
+    --admin_email="${WORDPRESS_ADMIN_EMAIL}" \
+    --admin_password="${WORDPRESS_ADMIN_PASSWORD}" \
     --skip-email
-}
+fi
 
+# Prepare SimpleSAMLphp tarball in /tmp for the test step that syncs/uses it
+INSTALL_DIR="${WP_TESTS_DIR:-/tmp/wordpress-tests-lib}/simplesamlphp"
+mkdir -p "${INSTALL_DIR}"
+URL="$(ssp_download_url "${SIMPLESAMLPHP_VERSION}")"
+log "[prepare] Downloading SimpleSAMLphp ${SIMPLESAMLPHP_VERSION} from ${URL}"
+curl -fsSL "${URL}" | tar -zxf - --strip-components=1 -C "${INSTALL_DIR}"
+
+# Minimal config presence for both 1.18 and 2.x
+mkdir -p "${INSTALL_DIR}/config"
+: > "${INSTALL_DIR}/config/config.php"
+
+log "[prepare] Done."

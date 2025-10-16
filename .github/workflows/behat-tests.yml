@@ -1,7 +1,6 @@
 name: Behat and phpunit
 
 on:
-  push:
   pull_request:
 
 jobs:
