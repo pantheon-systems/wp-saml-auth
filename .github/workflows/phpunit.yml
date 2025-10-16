@@ -62,6 +62,13 @@ jobs:
         if: ${{ matrix.php != '7.4' }}
         run: composer install --no-progress --prefer-dist
 
+      - name: Install WP-CLI (phar)
+        run: |
+          curl -fsSL -o wp-cli.phar https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+          php wp-cli.phar --info
+          chmod +x wp-cli.phar
+          sudo mv wp-cli.phar /usr/local/bin/wp
+
       - name: Bootstrap WP tests & wrapper
         run: bin/phpunit-bootstrap.sh
 

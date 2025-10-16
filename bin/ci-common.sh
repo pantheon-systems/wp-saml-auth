@@ -97,14 +97,14 @@ ssp_download_url() {
 wp_core_install_if_needed() {
   local site="${1}" env="${2}" url="${3}" title="${4}" admin_user="${5}" admin_pass="${6}" admin_email="${7}"
 
-  # If already installed, bail out quickly
-  if terminus remote:wp "${site}.${env}" core is-installed >/dev/null 2>&1; then
+  # Check install status
+  if terminus remote:wp "${site}.${env}" -- core is-installed >/dev/null 2>&1; then
     log "WordPress already installed on ${site}.${env}"
     return 0
   fi
 
   log "Installing WordPress on ${site}.${env} ..."
-  terminus remote:wp "${site}.${env}" core install \
+  terminus remote:wp "${site}.${env}" -- core install \
     --url="${url}" \
     --title="${title}" \
     --admin_user="${admin_user}" \
@@ -112,3 +112,4 @@ wp_core_install_if_needed() {
     --admin_email="${admin_email}" \
     --skip-email
 }
+
