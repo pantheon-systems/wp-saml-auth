@@ -32,7 +32,7 @@ jobs:
       - name: Load SSH key for Pantheon appserver
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ secrets.PANTHEON_SSH_PRIVATE_KEY }}
+          ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
 
       # Option B (ephemeral key) — use this instead of the step above if preferred:
       # - name: Create ephemeral SSH key and add to Pantheon
