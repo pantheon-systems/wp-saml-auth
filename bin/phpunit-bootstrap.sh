@@ -27,6 +27,15 @@ composer test:install:withdb -- \
   --dbpass="${DB_PASSWORD}" \
   --dbhost="${DB_HOST}"
 
+# Ensure the SimpleSAMLphp mock is available for phpunit *process* as well.
+# The repo already has tests/phpunit/includes/ssp-mock.php
+if [ -f "tests/phpunit/includes/ssp-mock.php" ]; then
+  cp -f tests/phpunit/includes/ssp-mock.php /tmp/ssp-mock.php
+else
+  echo "ERROR: tests/phpunit/includes/ssp-mock.php not found" >&2
+  exit 1
+fi
+
 # Restore phpunit
 if [ -f vendor/bin/phpunit.real ]; then
   rm -f vendor/bin/phpunit

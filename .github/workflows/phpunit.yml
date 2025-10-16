@@ -77,10 +77,5 @@ jobs:
           php -v
           vendor/bin/phpunit --version || phpunit --version || true
 
-      - name: Run PHPUnit (PHP >= 8)
-        if: ${{ matrix.php != '7.4' }}
-        run: vendor/bin/phpunit
-
-      - name: Run PHPUnit (PHP 7.4)
-        if: ${{ matrix.php == '7.4' }}
-        run: phpunit
+      - name: Run PHPUnit
+        run: php -d auto_prepend_file=/tmp/ssp-mock.php vendor/bin/phpunit

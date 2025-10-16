@@ -37,58 +37,61 @@ terminus_env_exists() {
   terminus env:info "${site}.${env}" >/dev/null 2>&1
 }
 
-# Ensure <site>.<env> exists (create from 'dev' if missing)
+# Log helper
+log() { echo "[$(date +'%H:%M:%S')] $*"; }
+# Ensure a multidev exists: site (e.g. wp-saml-auth), env (e.g. ci123abc)
 terminus_env_ensure() {
-  local site="${1}" env="${2}"
-  if terminus_env_exists "${site}" "${env}"; then
-    log "Env ${site}.${env} already exists."
+  local site="$1"
+  local env="$2"
+  local site_env="${site}.${env}"
+
+  if terminus env:info "$site_env" >/dev/null 2>&1; then
+    log "Env $site_env already exists."
     return 0
   fi
-  log "Creating Multidev ${site}.${env} from ${site}.dev ..."
-  # Create from dev; tolerate race (already created) as success
-  if ! terminus multidev:create "${site}.dev" "${env}"; then
-    if terminus_env_exists "${site}" "${env}"; then
-      log "Env ${site}.${env} exists (race); continue."
+
+  log "Creating $site_env ..."
+  # Create from dev -> <env>
+  if ! terminus multidev:create "${site}.dev" "$env" --yes; then
+    # Race safety: if it now exists, continue
+    if terminus env:info "$site_env" >/dev/null 2>&1; then
+      log "Env $site_env exists (race); continue."
       return 0
     fi
-    echo "Failed to create ${site}.${env}" >&2
+    echo "Failed to create ${site_env}" >&2
     return 1
   fi
+
+  log "Created $site_env"
 }
 
-# Wipe <site>.<env> files+db
 terminus_env_wipe() {
-  local site_env="${1}" # format: <site>.<env>
-  log "Wiping ${site_env} (files + DB) ..."
-  terminus env:wipe "${site_env}" --yes
+  local site_env="$1"
+  log "Wiping $site_env ..."
+  terminus env:wipe "$site_env" --yes
 }
 
-# Set connection mode to git for <site>.<env>
 terminus_connection_set_git() {
-  local site_env="${1}"
-  log "Setting connection mode to git on ${site_env} ..."
-  terminus connection:set "${site_env}" git
+  local site_env="$1"
+  log "Setting $site_env connection to git ..."
+  terminus connection:set "$site_env" git
 }
 
-# Get Pantheon Git URL for <site>.<env>
 terminus_git_url() {
-  local site_env="${1}"
-  terminus connection:info "${site_env}" --field=git_url
+  local site_env="$1"
+  terminus connection:info "$site_env" --field=git_url
 }
 
-# ------------------------------------------------------------
-# SimpleSAMLphp download URL resolver
-# ------------------------------------------------------------
+# Build a version-specific SimplesSAMLphp URL
 ssp_download_url() {
-  local version="${1}"
-  # For 2.0.0+ use tar.gz (non-full); 1.18.* needs the 1.18 branch script elsewhere
-  if [[ "${version}" == "1.18.0" || "${version}" == 1.18.* ]]; then
-    echo "https://github.com/simplesamlphp/simplesamlphp/releases/download/v1.18.0/simplesamlphp-1.18.0.tar.gz"
+  local v="$1"
+  if [[ "$v" == "2.0.0" ]]; then
+    echo "https://github.com/simplesamlphp/simplesamlphp/releases/download/v${v}/simplesamlphp-${v}.tar.gz"
   else
-    # 2.x series
-    echo "https://github.com/simplesamlphp/simplesamlphp/releases/download/v${version}/simplesamlphp-${version}.tar.gz"
+    echo "https://github.com/simplesamlphp/simplesamlphp/releases/download/v${v}/simplesamlphp-${v}-full.tar.gz"
   fi
 }
+
 
 # ------------------------------------------------------------
 # WordPress install on a Multidev
