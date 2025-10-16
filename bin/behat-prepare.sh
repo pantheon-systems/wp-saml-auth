@@ -13,6 +13,19 @@ require_env TERMINUS_SITE
 require_env TERMINUS_ENV
 require_env SIMPLESAMLPHP_VERSION
 
+require_env WORDPRESS_ADMIN_USERNAME
+require_env WORDPRESS_ADMIN_PASSWORD
+require_env WORDPRESS_ADMIN_EMAIL
+
+wp_core_install_if_needed \
+  "${TERMINUS_SITE}" \
+  "${TERMINUS_ENV}" \
+  "https://${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io" \
+  "WP SAML Auth CI" \
+  "${WORDPRESS_ADMIN_USERNAME}" \
+  "${WORDPRESS_ADMIN_PASSWORD}" \
+  "${WORDPRESS_ADMIN_EMAIL}"
+
 SITE="${TERMINUS_SITE}"
 ENV="${TERMINUS_ENV}"
 SITE_ENV="${SITE}.${ENV}"

@@ -50,6 +50,15 @@ jobs:
       - name: Prepare Multidev + SimpleSAMLphp
         run: bin/behat-prepare.sh
 
+      - name: Compute Multidev name
+        shell: bash
+        run: |
+          set -euo pipefail
+          . bin/ci-common.sh
+          ENV_NAME="$(compute_env_name '${{ matrix.simplesamlphp }}' '${{ github.sha }}')"
+          echo "TERMINUS_ENV=${ENV_NAME}" >> "$GITHUB_ENV"
+          echo "env=${ENV_NAME}" >> "$GITHUB_OUTPUT"
+
       - name: Behat run tests
         env:
           TERMINUS_ENV: ${{ steps.envname.outputs.env }}

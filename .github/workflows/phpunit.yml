@@ -33,7 +33,7 @@ jobs:
       DB_HOST: 127.0.0.1
       DB_USER: root
       DB_PASSWORD: root
-      DB_NAME: wordpress_test
+      DB_NAME: wp_test_${{ matrix.php }}_${{ github.run_number }}_${{ github.run_attempt }}
       COMPOSER_PROCESS_TIMEOUT: 0
       COMPOSER_NO_INTERACTION: 1
       COMPOSER_NO_AUDIT: 1
