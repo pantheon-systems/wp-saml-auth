@@ -153,7 +153,7 @@ jobs:
           svn export --quiet https://develop.svn.wordpress.org/trunk/tests/phpunit/includes/ "$TESTS_DIR/includes"
           svn export --quiet https://develop.svn.wordpress.org/trunk/tests/phpunit/data/     "$TESTS_DIR/data"
 
-          # 3) Create wp-tests-config.php (including required constants)
+          # 3) Create wp-tests-config.php (NO polyfills constant here)
           cat > "$TESTS_DIR/wp-tests-config.php" <<CFG
           <?php
           define( 'ABSPATH', '${CORE_DIR}/' );
@@ -169,13 +169,8 @@ jobs:
           define( 'WP_TESTS_EMAIL',  'admin@example.org' );
           define( 'WP_TESTS_TITLE',  'Test Blog' );
 
-          // Let the test suite know where the binary (with the mock) lives:
+          // Point WP at our wrapper binary only (no args in this constant)
           define( 'WP_PHP_BINARY', getenv('WP_PHP_BINARY') ?: 'php' );
-
-          // If we download polyfills outside of vendor, point WP to it:
-          if (getenv('WP_TESTS_PHPUNIT_POLYFILLS_PATH')) {
-            define( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH', getenv('WP_TESTS_PHPUNIT_POLYFILLS_PATH') );
-          }
           CFG
 
           # 4) Create DB
@@ -185,6 +180,7 @@ jobs:
       - name: Install Yoast PHPUnit Polyfills (PHP 7.4)
         if: matrix.install_polyfills == 'true'
         run: |
+          WP_TESTS_PHPUNIT_POLYFILLS_PATH=/tmp/yoast-phpunit-polyfills
           set -euxo pipefail
           POLY=/tmp/yoast-phpunit-polyfills
           mkdir -p "$POLY"
@@ -202,6 +198,50 @@ jobs:
             | tar -zxf - --strip-components=1 -C "${INSTALL_DIR}"
           mkdir -p "${INSTALL_DIR}/config"
           : > "${INSTALL_DIR}/config/config.php"
+
+      - name: Write SimpleSAML mock and set PHP wrapper
+        run: |
+          set -euxo pipefail
+      
+          # 1) Mock
+          MOCK=/tmp/ssp-mock.php
+          cat > "$MOCK" <<'PHP'
+          <?php
+          namespace SimpleSAML\Auth {
+            class Simple {
+              public function isAuthenticated(){ return true; }
+              public function requireAuth(array $params = []){ return true; }
+              public function logout($returnTo = null){ return true; }
+              public function login($returnTo = null, array $params = [], $force = false){ return true; }
+              public function getAttributes(){
+                return [
+                  'uid'          => ['ci-user'],
+                  'email'        => ['user@example.com'],
+                  'mail'         => ['user@example.com'],
+                  'display_name' => ['CI User'],
+                  'first_name'   => ['CI'],
+                  'last_name'    => ['User'],
+                ];
+              }
+            }
+          }
+          namespace {
+            if (!class_exists('SimpleSAML_Auth_Simple') && class_exists('\SimpleSAML\Auth\Simple')) {
+              class SimpleSAML_Auth_Simple extends \SimpleSAML\Auth\Simple {}
+            }
+          }
+          PHP
+      
+          # 2) Wrapper (executable path, no args in the constant)
+          WRAP=/tmp/php-with-ssp-mock
+          cat > "$WRAP" <<'SH'
+          #!/usr/bin/env bash
+          exec /usr/bin/php -d auto_prepend_file=/tmp/ssp-mock.php "$@"
+          SH
+          chmod +x "$WRAP"
+      
+          echo "WP_PHP_BINARY=$WRAP" >> $GITHUB_ENV
+
 
       - name: Run PHPUnit
         run: ${{ matrix.phpunit_bin }}
@@ -285,6 +325,45 @@ jobs:
         env:
           TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
         run: terminus auth:login --machine-token=$TERMINUS_TOKEN
+
+      - name: Install idempotent Terminus shim (env:create)
+        run: |
+          set -euxo pipefail
+          REAL_BIN="$(command -v terminus)"
+          DIR="$(dirname "$REAL_BIN")"
+          mv "$REAL_BIN" "${REAL_BIN}.real"
+
+          cat > "$REAL_BIN" <<'SH'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          REAL="${0}.real"
+
+          if [[ "${1:-}" == "env:create" ]]; then
+            # Expect: terminus env:create <site>.<source_env> <new_env>
+            SITE_ENV="${2:-}"
+            NEW_ENV="${3:-}"
+
+            # Try normal create first
+            if "$REAL" "$@" ; then
+              exit 0
+            fi
+
+            # If it failed, check if the env now exists; if yes, pretend success
+            if [[ -n "$SITE_ENV" && -n "$NEW_ENV" ]]; then
+              SITE="${SITE_ENV%%.*}"
+              if "$REAL" env:info "${SITE}.${NEW_ENV}" >/dev/null 2>&1; then
+                echo "Terminus shim: '${SITE}.${NEW_ENV}' already exists; continuing."
+                exit 0
+              fi
+            fi
+
+            # Otherwise, real failure
+            exit 1
+          fi
+
+          exec "$REAL" "$@"
+          SH
+          chmod +x "$REAL_BIN"
 
       - name: Compute unique Multidev env name (≤11 chars)
         run: |
