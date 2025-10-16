@@ -1,11 +1,35 @@
-name: Behat and phpunit
+name: Behat and PHPUnit
 
 on:
   pull_request:
 
 jobs:
-  lint-and-tests:
+  phpunit:
+    name: PHPUnit (PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: [ '7.4', '8.1', '8.2' ]
+        include:
+          - php: '7.4'
+            db_name: wp_test_7_4
+          - php: '8.1'
+            db_name: wp_test_8_1
+          - php: '8.2'
+            db_name: wp_test_8_2
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports: [ '3306:3306' ]
+        # Give MySQL time to boot and be ready
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
 
     steps:
       - name: Checkout repository
@@ -13,44 +37,20 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Use PHP matrix
+      - name: Set up PHP ${{ matrix.php }}
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
           tools: composer, wp-cli
           coverage: none
-        if: ${{ matrix.php != '' }} # keep your real matrix
-
-      - name: Install Terminus
-        uses: pantheon-systems/terminus-github-actions@v1
-        with:
-          pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
-
-      # Load SSH key so `terminus wp <site.env> -- ...` can SSH to appserver
-      # Option A: use stored private key
-      - name: Load SSH key for Pantheon appserver
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
-
-      # Option B (ephemeral key) — use this instead of the step above if preferred:
-      # - name: Create ephemeral SSH key and add to Pantheon
-      #   run: |
-      #     mkdir -p ~/.ssh && chmod 700 ~/.ssh
-      #     ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519
-      #     eval "$(ssh-agent -s)"
-      #     ssh-add ~/.ssh/id_ed25519
-      #     terminus auth:ssh-key:add ~/.ssh/id_ed25519.pub --yes
 
       - name: Install dependencies
         run: composer install --no-progress --prefer-dist
 
-      - name: ShellCheck
-        run: shellcheck -x bin/*.sh
+      - name: Ensure bin scripts are executable
+        run: chmod +x bin/*.sh
 
-      # PHPUnit bootstrap (prepares WP tests & the SimpleSAMLphp mock)
       - name: PHPUnit bootstrap
-        run: bin/phpunit-bootstrap.sh
         env:
           DB_HOST: 127.0.0.1
           DB_USER: root
@@ -58,14 +58,20 @@ jobs:
           DB_NAME: ${{ matrix.db_name }}
           WP_TESTS_DIR: /tmp/wordpress-tests-lib
           WP_CORE_DIR: /tmp/wordpress/
+        run: bin/phpunit-bootstrap.sh
 
-      # Actual PHPUnit run
-      - name: PHPUnit
+      - name: Run PHPUnit
         run: |
           if [ -x vendor/bin/phpunit ]; then vendor/bin/phpunit; else phpunit; fi
 
   behat:
+    name: Behat (SSP ${{ matrix.ssp }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ssp: [ '1.18.0', '2.0.0', '2.4.0' ]
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -77,21 +83,64 @@ jobs:
         with:
           pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
 
-      - name: Load SSH key for Pantheon appserver
+      - name: Ensure bin scripts are executable
+        run: chmod +x bin/*.sh
+
+      # Compute a stable, short multidev env name for this run
+      - name: Compute Multidev name
+        id: compute_env
+        shell: bash
+        run: |
+          . bin/ci-common.sh
+          ENV_NAME="$(compute_env_name '${{ matrix.ssp }}' '${{ github.sha }}')"
+          echo "env=${ENV_NAME}" >> "$GITHUB_OUTPUT"
+          echo "TERMINUS_ENV=${ENV_NAME}" >> "$GITHUB_ENV"
+          echo "Using Multidev: ${ENV_NAME}"
+
+      # Path A: Use a stored SSH private key (requires repo/org secret)
+      - name: Load SSH key for Pantheon appserver (secret)
+        if: ${{ secrets.PANTHEON_SSH_PRIVATE_KEY != '' }}
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.PANTHEON_SSH_PRIVATE_KEY }}
 
-      - name: Behat prepare
-        run: bin/behat-prepare.sh
+      # Path B: Create ephemeral SSH key and register with Pantheon (no secret needed)
+      - name: Create ephemeral SSH key and add to Pantheon
+        if: ${{ secrets.PANTHEON_SSH_PRIVATE_KEY == '' }}
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519 -C "github-actions@${GITHUB_REPOSITORY}"
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/id_ed25519
+          # Register the public key with Pantheon for this auth session
+          terminus auth:ssh-key:add ~/.ssh/id_ed25519.pub --yes
+
+      - name: Behat prepare (create/wipe env, install WP, stage SSP bundle)
         env:
           TERMINUS_SITE: wp-saml-auth
-          TERMINUS_ENV: ${{ steps.compute_env.outputs.env }} # or however you set it
-          SIMPLESAMLPHP_VERSION: 2.4.0
+          TERMINUS_ENV: ${{ steps.compute_env.outputs.env }}
+          SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
           WORDPRESS_ADMIN_USERNAME: pantheon
           WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
           WORDPRESS_ADMIN_PASSWORD: pantheon
           WP_TESTS_DIR: /tmp/wordpress-tests-lib
           WP_CORE_DIR: /tmp/wordpress/
+        run: bin/behat-prepare.sh
 
-      # … your behat run + cleanup
+      - name: Run Behat
+        env:
+          TERMINUS_SITE: wp-saml-auth
+          TERMINUS_ENV: ${{ steps.compute_env.outputs.env }}
+          SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
+        run: |
+          export XDEBUG_MODE=off
+          export BEHAT_PARAMS='{"extensions":{"Behat\\MinkExtension":{"base_url":"http://${{ steps.compute_env.outputs.env }}-wp-saml-auth.pantheonsite.io"}}}'
+          if [ -x vendor/bin/behat ]; then vendor/bin/behat --strict; else ./vendor/bin/behat --strict; fi
+
+      - name: Behat cleanup
+        if: always()
+        env:
+          TERMINUS_SITE: wp-saml-auth
+          TERMINUS_ENV: ${{ steps.compute_env.outputs.env }}
+        run: bin/behat-cleanup.sh
