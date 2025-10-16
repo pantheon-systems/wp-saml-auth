@@ -14,6 +14,7 @@ jobs:
         include:
           - php: '7.4'
             db_name: wp_test_7_4
+            phpunit_phar_url: https://phar.phpunit.de/phpunit-9.6.19.phar
           - php: '8.1'
             db_name: wp_test_8_1
           - php: '8.2'
@@ -48,11 +49,16 @@ jobs:
           tools: composer, wp-cli
           coverage: none
 
-      - name: Install dependencies
-        run: composer install --no-progress --prefer-dist
-
       - name: Ensure bin scripts are executable
         run: chmod +x bin/*.sh
+
+      - name: Install dependencies (PHP 7.4)
+        if: ${{ matrix.php == '7.4' }}
+        run: composer install --no-dev --no-progress --prefer-dist
+
+      - name: Install dependencies (PHP 8.1+)
+        if: ${{ matrix.php != '7.4' }}
+        run: composer install --no-progress --prefer-dist
 
       - name: PHPUnit bootstrap
         env:
@@ -64,7 +70,18 @@ jobs:
           WP_CORE_DIR: /tmp/wordpress/
         run: bin/phpunit-bootstrap.sh
 
-      - name: Run PHPUnit
+      - name: Download PHPUnit PHAR (PHP 7.4)
+        if: ${{ matrix.php == '7.4' }}
+        run: |
+          curl -fsSL "${{ matrix.phpunit_phar_url }}" -o phpunit.phar
+          chmod +x phpunit.phar
+
+      - name: Run PHPUnit (PHP 7.4)
+        if: ${{ matrix.php == '7.4' }}
+        run: ./phpunit.phar
+
+      - name: Run PHPUnit (PHP 8.1+)
+        if: ${{ matrix.php != '7.4' }}
         run: |
           if [ -x vendor/bin/phpunit ]; then vendor/bin/phpunit; else phpunit; fi
 
@@ -95,21 +112,15 @@ jobs:
         id: compute_env
         shell: bash
         run: |
-          . bin/ci-common.sh
-          ENV_NAME="$(compute_env_name '${{ matrix.ssp }}' '${{ github.sha }}')"
+          # Build: ci + ssp digits (max 3) + short sha (4) + run num (2)  -> <= 11
+          SSP_DIGITS="$(echo '${{ matrix.ssp }}' | tr -cd '0-9' | cut -c1-3)"
+          SHORT_SHA="$(echo '${{ github.sha }}' | cut -c1-4)"
+          RN="$(printf '%02d' $(( ${{ github.run_number }} % 100 )))"
+          ENV_NAME="ci${SSP_DIGITS}${SHORT_SHA}${RN}"
           echo "env=${ENV_NAME}" >> "$GITHUB_OUTPUT"
           echo "TERMINUS_ENV=${ENV_NAME}" >> "$GITHUB_ENV"
           echo "Using Multidev: ${ENV_NAME}"
 
-      - name: Detect private key presence
-        id: has_key
-        shell: bash
-        run: |
-          if [ -n "${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}" ]; then
-            echo "present=1" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=0" >> "$GITHUB_OUTPUT"
-          fi
 
       # Path A: Use a stored SSH private key (requires repo/org secret)
       - name: Load SSH key for Pantheon appserver (secret)

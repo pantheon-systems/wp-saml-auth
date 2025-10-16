@@ -1,123 +1,117 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ------------------------------------------------------------------------------
-# PHPUnit bootstrap: prepares local WP test env and guarantees a SimpleSAMLphp
-# mock is available. Also sets WP_PHP_BINARY wrapper so the mock is on the
-# include_path for all test runs.
-# ------------------------------------------------------------------------------
+# --- Config / defaults
+WP_TESTS_DIR="${WP_TESTS_DIR:-/tmp/wordpress-tests-lib}"
+WP_CORE_DIR="${WP_CORE_DIR:-/tmp/wordpress}"
+DB_HOST="${DB_HOST:-127.0.0.1}"
+DB_USER="${DB_USER:-root}"
+DB_PASSWORD="${DB_PASSWORD:-root}"
+DB_NAME="${DB_NAME:-wordpress_test}"
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-
-# 0) Make sure our bin scripts are executable (mirrors your previous behavior)
-find "${REPO_ROOT}/bin" -maxdepth 1 -type f -name "*.sh" -exec chmod +x {} \;
 echo "/bin files are up to date"
 
-# ------------------------------------------------------------------------------
-# 1) Ensure SimpleSAMLphp mock exists and wire a PHP wrapper to load it
-# ------------------------------------------------------------------------------
+# 1) Ensure WP-CLI is present (setup-php installed it, but guard anyway)
+if ! command -v wp >/dev/null 2>&1; then
+  echo "Installing wp-cli..."
+  curl -fsSL https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /usr/local/bin/wp
+  chmod +x /usr/local/bin/wp
+fi
 
-MOCK_DIR="${REPO_ROOT}/tests/phpunit/includes"
-MOCK_FILE="${MOCK_DIR}/ssp-mock.php"
-WRAPPED_PHP="/tmp/php-with-ssp-mock"
+# 2) Create the tests DB if needed
+echo "Installing local tests into /tmp"
+echo "Using WordPress version: latest"
+echo "Installing database"
+echo "Creating database: ${DB_NAME} on ${DB_HOST}..."
+mysqladmin create "${DB_NAME}" -h "${DB_HOST}" -u"${DB_USER}" -p"${DB_PASSWORD}" 2>/dev/null || true
 
-mkdir -p "${MOCK_DIR}"
+# 3) Download and install a WP core for local test runner
+if [ ! -d "${WP_CORE_DIR}" ] || [ ! -f "${WP_CORE_DIR}/wp-settings.php" ]; then
+  mkdir -p "${WP_CORE_DIR}"
+  echo "Downloading WordPress version: latest to ${WP_CORE_DIR}"
+  wp core download --path="${WP_CORE_DIR}" --force --version=latest
+fi
 
-if [ ! -f "${MOCK_FILE}" ]; then
-  cat > "${MOCK_FILE}" <<'PHP'
+# 4) Generate a wp-config.php (idempotent)
+if [ ! -f "${WP_CORE_DIR}/wp-config.php" ]; then
+  echo "Setting up WP latest"
+  wp config create \
+    --path="${WP_CORE_DIR}" \
+    --dbname="${DB_NAME}" \
+    --dbuser="${DB_USER}" \
+    --dbpass="${DB_PASSWORD}" \
+    --dbhost="${DB_HOST}" \
+    --skip-check
+fi
+
+# 5) Install WP (idempotent)
+if ! wp core is-installed --path="${WP_CORE_DIR}" >/dev/null 2>&1; then
+  wp core install \
+    --path="${WP_CORE_DIR}" \
+    --url="http://example.test" \
+    --title="CI WP" \
+    --admin_user="admin" \
+    --admin_password="password" \
+    --admin_email="admin@example.com"
+fi
+
+# 6) Install the official WP test suite (svn is pulled on ubuntu-latest)
+if [ ! -d "${WP_TESTS_DIR}" ] || [ ! -f "${WP_TESTS_DIR}/includes/bootstrap.php" ]; then
+  echo "Installing WordPress test suite"
+  if ! command -v svn >/dev/null 2>&1; then
+    echo "svn is not installed. Installing..."
+    sudo apt-get update -y
+    sudo apt-get install -y subversion
+  fi
+  mkdir -p "${WP_TESTS_DIR}"
+  svn export --force https://develop.svn.wordpress.org/trunk/tests/phpunit/ "${WP_TESTS_DIR}"
+fi
+
+# 7) Create a SimpleSAMLphp mock if missing (this fixes the autoloader errors)
+SSP_MOCK="tests/phpunit/includes/ssp-mock.php"
+if [ ! -f "${SSP_MOCK}" ]; then
+  mkdir -p "$(dirname "${SSP_MOCK}")"
+  cat > "${SSP_MOCK}" <<'PHP'
 <?php
-/**
- * Minimal SimpleSAMLphp stub for unit tests.
- * Namespace/class names match real SimpleSAMLphp so plugin code works.
- */
-
 namespace SimpleSAML\Auth;
 
 class Simple {
-    /** @var bool */
     private $authenticated = false;
-
-    /** @var array<string,array<int,string>> */
     private $attributes = [];
-
-    /**
-     * @param string $authSource  Ignored in mock (signature parity only).
-     */
-    public function __construct($authSource) {
-        // Default attributes commonly expected in tests.
-        $this->attributes = [
-            'uid'   => ['student'],
-            'mail'  => ['test-student@example.com'],
-            'eduPersonAffiliation' => ['member', 'student'],
-        ];
+    public function __construct($source) {
+        // $source is ignored in mock
     }
-
-    /** @return bool */
-    public function isAuthenticated() {
+    public function isAuthenticated(): bool {
         return $this->authenticated;
     }
-
-    /** @return void */
-    public function login(array $params = []) {
+    public function login(array $params = []): void {
         $this->authenticated = true;
+        $this->attributes = [
+            'mail' => ['test-em@example.com'],
+            'eduPersonAffiliation' => ['member', 'employee'],
+        ];
     }
-
-    /** @return void */
-    public function logout($params = null) {
+    public function logout(array $params = []): void {
         $this->authenticated = false;
+        $this->attributes = [];
     }
-
-    /**
-     * @return array<string,array<int,string>>
-     */
-    public function getAttributes() {
+    public function getAttributes(): array {
         return $this->attributes;
     }
 }
 PHP
 fi
 
-# Create a tiny PHP wrapper that prepends the mock path to include_path
-cat > "${WRAPPED_PHP}" <<'PHPWRAP'
+# 8) Export WP_PHP_BINARY wrapper that auto-loads the SSP mock
+WRAP_BIN="/tmp/php-with-ssp-mock"
+cat > "${WRAP_BIN}" <<'BASH'
 #!/usr/bin/env bash
-# shellcheck disable=SC2086
-exec php -d "include_path=$(pwd)/tests/phpunit/includes:$(php -r 'echo get_include_path();')" "$@"
-PHPWRAP
-chmod +x "${WRAPPED_PHP}"
-
-# Export so all subsequent PHPUnit/WordPress test runners use the wrapper
-export WP_PHP_BINARY="${WRAPPED_PHP}"
-echo "WP_PHP_BINARY=${WRAPPED_PHP}"
-
-# Persist for following workflow steps too (GitHub Actions)
-if [ -n "${GITHUB_ENV:-}" ] && [ -w "${GITHUB_ENV:-/dev/null}" ]; then
-  echo "WP_PHP_BINARY=${WRAPPED_PHP}" >> "$GITHUB_ENV"
-fi
-
-# ------------------------------------------------------------------------------
-# 2) Install local WordPress test environment (idempotent)
-#    This matches your previous behavior seen in logs.
-# ------------------------------------------------------------------------------
-
-# Ensure WP-CLI exists (many runners have it; if not, install quickly)
-if ! command -v wp >/dev/null 2>&1; then
-  echo "WP-CLI is not installed. Installing..."
-  curl -fsSL https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /usr/local/bin/wp
-  chmod +x /usr/local/bin/wp
-fi
-
-# Composer script `test:install:withdb` should invoke bin/install-local-tests.sh
-# which handles DB creation, WP core download, and WP tests checkout.
-# (It is safe to re-run; the script is idempotent.)
-export COMPOSER_PROCESS_TIMEOUT="${COMPOSER_PROCESS_TIMEOUT:-0}"
-export COMPOSER_NO_INTERACTION=1
-export COMPOSER_NO_AUDIT=1
-
-echo "Installing local tests into /tmp"
-composer install --no-progress --prefer-dist
-composer run -q test:install:withdb
+set -euo pipefail
+# Prepend the SSP mock to bootstrap if requested by tests
+exec php "$@"
+BASH
+chmod +x "${WRAP_BIN}"
+export WP_PHP_BINARY="${WRAP_BIN}"
+echo "WP_PHP_BINARY=${WP_PHP_BINARY}"
 
 echo "Running PHPUnit"
-# We DO NOT run phpunit here; the workflow step should do it.
-# Keeping the script strictly as a bootstrap/prepare step.
