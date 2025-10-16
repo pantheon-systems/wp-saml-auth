@@ -115,7 +115,6 @@ jobs:
 
       # Path B: Create ephemeral SSH key and register with Pantheon (no secret needed)
       - name: Create ephemeral SSH key and add to Pantheon
-        if: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY == '' }}
         shell: bash
         run: |
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
