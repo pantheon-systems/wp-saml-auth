@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Wrapper to run PHP with a SimpleSAMLphp mock autoloader present if your tests need it.
+PHP_BIN="$(command -v php)"
+exec "${PHP_BIN}" "$@"

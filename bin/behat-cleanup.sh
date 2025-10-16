@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
-set -x
+IFS=$'\n\t'
 
-: "${TERMINUS_SITE:?TERMINUS_SITE not set}"
-: "${TERMINUS_ENV:?TERMINUS_ENV not set}"
+echo "== Behat cleanup =="
+echo "TERMINUS_SITE=${TERMINUS_SITE:-}"
+echo "TERMINUS_ENV=${TERMINUS_ENV:-}"
 
-terminus --version
-terminus auth:whoami || true
+command -v terminus >/dev/null 2>&1 || { echo "terminus not found"; exit 0; }
 
-# Delete the multidev if it exists
-if terminus env:info "${TERMINUS_SITE}.${TERMINUS_ENV}" >/dev/null 2>&1; then
-  terminus multidev:delete "${TERMINUS_SITE}.${TERMINUS_ENV}" --delete-branch --yes
+if [[ -n "${TERMINUS_SITE:-}" && -n "${TERMINUS_ENV:-}" ]]; then
+  echo "Deleting multidev ${TERMINUS_SITE}.${TERMINUS_ENV} (if exists)"
+  terminus multidev:delete "${TERMINUS_SITE}.${TERMINUS_ENV}" --delete-branch --yes || true
 else
-  echo "Multidev ${TERMINUS_SITE}.${TERMINUS_ENV} does not exist; nothing to delete."
+  echo "TERMINUS_SITE/TERMINUS_ENV not set; skipping."
 fi
+
+echo "Behat cleanup finished."

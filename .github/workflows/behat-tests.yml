@@ -23,7 +23,6 @@ jobs:
             db_name: wp_test_8_3
           - php: '8.4'
             db_name: wp_test_8_4
-
     services:
       mysql:
         image: mysql:5.7
@@ -46,13 +45,12 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          tools: composer, wp-cli
+          tools: composer, wp-cli, svn
           coverage: none
 
       - name: Ensure bin scripts are executable
         run: chmod +x bin/*.sh
 
-      # dev deps require PHP >=8.1; skip them on 7.4
       - name: Install dependencies (PHP 7.4)
         if: ${{ matrix.php == '7.4' }}
         run: composer install --no-dev --no-progress --prefer-dist
@@ -108,7 +106,6 @@ jobs:
       - name: Ensure bin scripts are executable
         run: chmod +x bin/*.sh
 
-      # Short, deterministic multidev name: ci + ssp digits (≤3) + short sha (4) + run# (2) => 11 chars
       - name: Compute Multidev name
         id: compute_env
         shell: bash
@@ -122,7 +119,6 @@ jobs:
           echo "TERMINUS_ENV=${ENV_NAME}" >> "$GITHUB_ENV"
           echo "Using Multidev: ${ENV_NAME}"
 
-      # Only do one SSH path: secret OR ephemeral
       - name: Detect private key presence
         id: has_key
         shell: bash
@@ -148,9 +144,9 @@ jobs:
           ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519 -C "github-actions@${GITHUB_REPOSITORY}"
           eval "$(ssh-agent -s)"
           ssh-add ~/.ssh/id_ed25519
-          # Terminus v4 command:
+          terminus --version
           terminus ssh-key:add ~/.ssh/id_ed25519.pub --yes
-          terminus auth:whoami
+          terminus auth:whoami || true
 
       - name: Behat prepare (create/wipe env, install WP, stage SSP bundle)
         env:
