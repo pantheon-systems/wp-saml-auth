@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: [ '7.4', '8.1', '8.2' ]
+        php: [ '7.4', '8.1', '8.2', '8.3', '8.4' ]
         include:
           - php: '7.4'
             db_name: wp_test_7_4
@@ -18,6 +18,10 @@ jobs:
             db_name: wp_test_8_1
           - php: '8.2'
             db_name: wp_test_8_2
+          - php: '8.3'
+            db_name: wp_test_8_3
+          - php: '8.4'
+            db_name: wp_test_8_4
     services:
       mysql:
         image: mysql:5.7
