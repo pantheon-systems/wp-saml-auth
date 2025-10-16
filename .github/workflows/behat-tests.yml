@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: [ '7.4', '8.1', '8.2', '8.3', '8.4' ]
+        php: ['7.4', '8.1', '8.2', '8.3', '8.4']
         include:
           - php: '7.4'
             db_name: wp_test_7_4
@@ -23,13 +23,13 @@ jobs:
             db_name: wp_test_8_3
           - php: '8.4'
             db_name: wp_test_8_4
+
     services:
       mysql:
         image: mysql:5.7
         env:
           MYSQL_ROOT_PASSWORD: root
-        ports: [ '3306:3306' ]
-        # Give MySQL time to boot and be ready
+        ports: ['3306:3306']
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
           --health-interval=5s
@@ -52,6 +52,7 @@ jobs:
       - name: Ensure bin scripts are executable
         run: chmod +x bin/*.sh
 
+      # dev deps require PHP >=8.1; skip them on 7.4
       - name: Install dependencies (PHP 7.4)
         if: ${{ matrix.php == '7.4' }}
         run: composer install --no-dev --no-progress --prefer-dist
@@ -91,7 +92,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ssp: [ '1.18.0', '2.0.0', '2.4.0' ]
+        ssp: ['1.18.0', '2.0.0', '2.4.0']
 
     steps:
       - name: Checkout repository
@@ -107,12 +108,12 @@ jobs:
       - name: Ensure bin scripts are executable
         run: chmod +x bin/*.sh
 
-      # Compute a stable, short multidev env name for this run
+      # Short, deterministic multidev name: ci + ssp digits (≤3) + short sha (4) + run# (2) => 11 chars
       - name: Compute Multidev name
         id: compute_env
         shell: bash
         run: |
-          # Build: ci + ssp digits (max 3) + short sha (4) + run num (2)  -> <= 11
+          set -euo pipefail
           SSP_DIGITS="$(echo '${{ matrix.ssp }}' | tr -cd '0-9' | cut -c1-3)"
           SHORT_SHA="$(echo '${{ github.sha }}' | cut -c1-4)"
           RN="$(printf '%02d' $(( ${{ github.run_number }} % 100 )))"
@@ -121,22 +122,33 @@ jobs:
           echo "TERMINUS_ENV=${ENV_NAME}" >> "$GITHUB_ENV"
           echo "Using Multidev: ${ENV_NAME}"
 
+      # Only do one SSH path: secret OR ephemeral
+      - name: Detect private key presence
+        id: has_key
+        shell: bash
+        run: |
+          if [ -n "${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}" ]; then
+            echo "present=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=0" >> "$GITHUB_OUTPUT"
+          fi
 
-      # Path A: Use a stored SSH private key (requires repo/org secret)
       - name: Load SSH key for Pantheon appserver (secret)
+        if: ${{ steps.has_key.outputs.present == '1' }}
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
 
-      # Path B: Create ephemeral SSH key and register with Pantheon (no secret needed)
       - name: Create ephemeral SSH key and add to Pantheon
+        if: ${{ steps.has_key.outputs.present == '0' }}
         shell: bash
         run: |
-          #          mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          #          ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519 -C "github-actions@${GITHUB_REPOSITORY}"
-          #          eval "$(ssh-agent -s)"
-          #          ssh-add ~/.ssh/id_ed25519
-          #          # Register the public key with Pantheon for this auth session
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519 -C "github-actions@${GITHUB_REPOSITORY}"
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/id_ed25519
+          # Terminus v4 command:
           terminus ssh-key:add ~/.ssh/id_ed25519.pub --yes
           terminus auth:whoami
 
