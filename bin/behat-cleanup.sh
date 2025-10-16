@@ -26,7 +26,7 @@ deleted_any=false
 # 1) Delete explicit envs recorded by matrix jobs (recursive search)
 ###
 while IFS= read -r -d '' env_file; do
-  SITE_ENV_FROM_FILE=$(cat "$env_file" | tr -d '\r\n')
+  SITE_ENV_FROM_FILE=$(tr -d '\r\n' < "$env_file")
   if [[ -n "$SITE_ENV_FROM_FILE" ]]; then
     echo "Deleting test environment from file: $SITE_ENV_FROM_FILE"
     terminus multidev:delete "$SITE_ENV_FROM_FILE" --delete-branch --yes || true

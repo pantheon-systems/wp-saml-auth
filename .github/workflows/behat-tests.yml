@@ -1,170 +1,75 @@
-name: Behat tests
+name: Behat Tests
 
 on:
-  push:
-    branches: [ develop ]
+  workflow_dispatch:
   pull_request:
 
-permissions:
-  contents: read
-
-defaults:
-  run:
-    shell: bash
-
-env:
-  WP_TESTS_DIR: /tmp/wordpress-tests-lib
-  WP_CORE_DIR: /tmp/wordpress
-  DB_HOST: 127.0.0.1
-  DB_USER: root
-  DB_PASSWORD: root
-  DB_NAME: wordpress_test
-  COMPOSER_PROCESS_TIMEOUT: 0
-  COMPOSER_NO_INTERACTION: 1
-  COMPOSER_NO_AUDIT: 1
-
 jobs:
-  phpunit-74:
-    name: "PHPUnit (PHP 7.4)"
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '7.4'
-          coverage: none
-          tools: phpunit
-          extensions: mbstring, intl, xml, dom, curl, json, mysqli
-
-      - name: Composer cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.composer/cache/files
-          key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
-          restore-keys: composer-${{ runner.os }}-
-
-      - name: Install Composer deps
-        run: composer install --no-progress --prefer-dist
-
-      - name: Build PHP wrapper (with SimpleSAML mock)
-        run: bin/ci/make-php-wrapper.sh
-
-      - name: Install WP tests (DB + Core + Polyfills path)
-        run: bin/ci/wp-tests-install.sh
-
-      - name: Run PHPUnit (7.4)
-        env:
-          PHP_VERSION: "7.4"
-        run: bin/ci/run-phpunit.sh
-
-  phpunit-8x:
-    name: "PHPUnit (PHP ${{ matrix.php }})"
-    runs-on: ubuntu-22.04
-    strategy:
-      fail-fast: false
-      matrix:
-        php: ['8.0', '8.1', '8.2', '8.3']
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ matrix.php }}
-          coverage: none
-          extensions: mbstring, intl, xml, dom, curl, json, mysqli
-
-      - name: Composer cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.composer/cache/files
-          key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
-          restore-keys: composer-${{ runner.os }}-
-
-      - name: Install Composer deps
-        run: composer install --no-progress --prefer-dist
-
-      - name: Build PHP wrapper (with SimpleSAML mock)
-        run: bin/ci/make-php-wrapper.sh
-
-      - name: Install WP tests (DB + Core + Polyfills path)
-        run: bin/ci/wp-tests-install.sh
-
-      - name: Run PHPUnit (${{ matrix.php }})
-        env:
-          PHP_VERSION: "${{ matrix.php }}"
-        run: bin/ci/run-phpunit.sh
-
   behat:
-    name: "Behat (SSP ${{ matrix.ssp }})"
-    runs-on: ubuntu-22.04
-    needs: [phpunit-74, phpunit-8x]
+    name: Behat (SSP ${{ matrix.ssp }})
+    runs-on: ubuntu-latest
+
     strategy:
       fail-fast: false
       matrix:
         ssp: ['1.18.0', '2.0.0', '2.4.0']
+
     env:
+      WP_TESTS_DIR: /tmp/wordpress-tests-lib
+      WP_CORE_DIR: /tmp/wordpress/
       TERMINUS_RELEASE: 4.1.0
       TERMINUS_SITE: wp-saml-auth
-      # Each job should vary ENV to avoid collisions; we derive one from GITHUB_SHA
-      TERMINUS_ENV: ci${{ matrix.ssp }}${{ github.sha.substr(0,8) }}
-    steps:
-      - uses: actions/checkout@v4
+      SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
+      WORDPRESS_ADMIN_USERNAME: pantheon
+      WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
+      WORDPRESS_ADMIN_PASSWORD: ${{ secrets.WORDPRESS_ADMIN_PASSWORD || 'pantheon' }}
 
-      - name: Install Composer deps (for Behat)
-        run: composer install --no-progress --prefer-dist
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Compute Multidev name
+        id: envname
+        run: |
+          . bin/ci-common.sh
+          ENV_NAME="$(compute_env_name '${{ matrix.ssp }}' '${{ github.sha }}')"
+          echo "TERMINUS_ENV=${ENV_NAME}" >> "$GITHUB_ENV"
+          echo "env=${ENV_NAME}" >> "$GITHUB_OUTPUT"
+          echo "Using Multidev: ${ENV_NAME}"
 
       - name: Install Terminus
-        run: |
-          curl -L https://github.com/pantheon-systems/terminus/releases/download/${TERMINUS_RELEASE}/terminus.phar -o terminus
-          chmod +x terminus
-          sudo mv terminus /usr/local/bin/terminus
-          terminus --version
+        uses: pantheon-systems/terminus-github-actions@v1
+        with:
+          pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
 
-      - name: Authenticate Terminus
+      - name: Install Composer deps (for Behat tooling)
+        run: composer install --no-progress --prefer-dist
+
+      - name: Prepare Multidev + SimpleSAMLphp
+        run: bin/behat-prepare.sh
+
+      - name: Behat run tests
         env:
-          TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
+          TERMINUS_ENV: ${{ steps.envname.outputs.env }}
         run: |
-          terminus auth:login --machine-token="$TERMINUS_TOKEN"
-          terminus auth:whoami
+          echo
+          echo "=========================================================================="
+          echo "Running Behat on https://${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io/wp-login.php"
+          echo "with SimpleSAMLphp version ${SIMPLESAMLPHP_VERSION}"
+          echo "=========================================================================="
+          echo
+          bash ./bin/behat-test.sh --strict
 
-      - name: Ensure Multidev exists (create or wipe)
-        id: ensure
-        run: |
-          SITE_ENV=$(bin/ci/terminus-ensure-env.sh)
-          echo "site_env=${SITE_ENV}" >> "$GITHUB_OUTPUT"
-
-      - name: Prepare SimpleSAMLphp (download/copy for tests if needed)
-        env:
-          SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
-        run: bin/ci/simplesaml-download.sh
-
-      - name: Behat Prepare
-        env:
-          SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
-          # Pass explicit env pieces; scripts in repo expect these:
-          TERMINUS_SITE: ${{ env.TERMINUS_SITE }}
-          TERMINUS_ENV: ${{ env.TERMINUS_ENV }}
-        run: |
-          if [[ "${SIMPLESAMLPHP_VERSION}" == "1.18.0" ]]; then
-            bash ./bin/1.18/behat-prepare-simplesaml1.18.0.sh
-          else
-            bash ./bin/behat-prepare.sh
-          fi
-
-      - name: Behat Run
-        env:
-          WORDPRESS_ADMIN_USERNAME: pantheon
-          WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
-          WORDPRESS_ADMIN_PASSWORD: ${{ secrets.WORDPRESS_ADMIN_PASSWORD }}
-          SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
-          TERMINUS_SITE: ${{ env.TERMINUS_SITE }}
-          TERMINUS_ENV: ${{ env.TERMINUS_ENV }}
-        run: bash ./bin/behat-test.sh --strict
-
-      - name: Always cleanup Multidevs (and prune)
+      # Always try to prune multidevs even on failure
+      # (Your cleanup script already tolerates missing auth/env)
+      # Use an explicit dependency so cleanup runs once per matrix leg.
+      # If you prefer a single cleanup after matrix, move this to a separate job-needs.
+      # For simplicity, keep it per-leg.
+      - name: Cleanup Multidev(s)
         if: always()
+        run: bin/behat-cleanup.sh
         env:
           TERMINUS_SITE: ${{ env.TERMINUS_SITE }}
           TERMINUS_ENV: ${{ env.TERMINUS_ENV }}
-        run: bash ./bin/behat-cleanup.sh
