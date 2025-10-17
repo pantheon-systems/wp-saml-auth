@@ -28,7 +28,8 @@ function _wp_saml_auth_baseline_attributes() {
 }
 
 /**
- * Option defaults for tests. Keep conservative; tests override as needed.
+ * Option defaults for tests. Keep them aligned with plugin defaults.
+ * Individual tests will override as needed.
  */
 function _wp_saml_auth_filter_option( $value, $option_name ) {
     switch ( $option_name ) {
@@ -48,10 +49,13 @@ function _wp_saml_auth_filter_option( $value, $option_name ) {
         case 'default_role':
             return 'subscriber';
 
-        // Crucial: enable auto-provision by default so “missing attribute” tests
-        // actually evaluate the missing key path instead of short-circuiting.
+        // Plugin default: auto-provision is disabled unless a test enables it.
         case 'auto_provision':
-            return true;
+            return false;
+
+        // Plugin default: do not attempt SLO during logout.
+        case 'allow_slo':
+            return false;
 
         default:
             return $value;
@@ -60,34 +64,25 @@ function _wp_saml_auth_filter_option( $value, $option_name ) {
 
 /**
  * Manually load the plugin being tested.
- * IMPORTANT: Install filters BEFORE requiring plugin so initial reads see them.
+ * Install filters BEFORE requiring plugin so initial reads see them.
  */
 function _manually_load_plugin() {
     $root = dirname( dirname( dirname( __FILE__ ) ) );
 
-    // 1) Core option filter (runs before plugin loads).
+    // Core option filter (runs before plugin loads).
     add_filter( 'wp_saml_auth_option', '_wp_saml_auth_filter_option', 1, 2 );
 
-    // 2) Dedicated convenience filters used by many code paths.
-    //    Tests can still override at default (10) or later priority.
-    add_filter( 'wp_saml_auth_permit_wp_login', '__return_false', 1 );
-    add_filter( 'wp_saml_auth_permit_user_login', '__return_false', 1 );
-
-    // For unit tests we want provisioning to run unless a test disables it.
-    add_filter( 'wp_saml_auth_auto_provision', '__return_true', 1 );
-
-    // 3) Always provide a baseline attribute set unless a test overrides it.
+    // Provide a baseline attribute set unless a test overrides it.
     add_filter( 'wp_saml_auth_attributes', function( $attrs ) {
         $baseline = _wp_saml_auth_baseline_attributes();
-        // If a test already forced attributes, respect those.
         if ( is_array( $attrs ) && ! empty( $attrs ) ) {
             return $attrs;
         }
         return $baseline;
     }, 1 );
 
-    // 4) Prevent real SLO side-effects in unit tests; the stub honors this.
-    add_filter( 'wp_saml_auth_allow_slo', '__return_false', 1 );
+    // IMPORTANT: don't force-permit or force-deny WP login here.
+    // Let each test pick the behavior it wants via filters inside the test.
 
     // Load plugin & CLI.
     require $root . '/wp-saml-auth.php';

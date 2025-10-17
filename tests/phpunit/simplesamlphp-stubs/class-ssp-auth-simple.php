@@ -2,10 +2,11 @@
 namespace SimpleSAML\Auth;
 
 /**
- * Extremely small SimpleSAMLphp stub tailored for unit tests.
+ * Tiny SimpleSAMLphp stub for unit tests.
+ * - Implements requireAuth() used by the plugin.
  * - Always "authenticated" unless a test manipulates via filters.
- * - Attributes are taken from 'wp_saml_auth_attributes' (with a safe baseline).
- * - logout() respects 'wp_saml_auth_allow_slo' and only flags when allowed.
+ * - Attributes come from 'wp_saml_auth_attributes' (with a safe baseline).
+ * - logout() just flags that it was called; plugin logic should check the option.
  */
 class Simple {
     public static $last_instance = null;
@@ -23,22 +24,22 @@ class Simple {
         return $this->authenticated;
     }
 
+    public function requireAuth(array $params = []) {
+        // In real SSP this would redirect. Here, just mark as authenticated.
+        $this->authenticated = true;
+    }
+
     public function login(array $params = []) {
         $this->authenticated = true;
     }
 
     public function logout(array $params = []) {
-        $allow = true;
-        if (function_exists('apply_filters')) {
-            $allow = apply_filters('wp_saml_auth_allow_slo', true);
-        }
-        if ($allow) {
-            self::$logout_called = true;
-        }
+        // The plugin should check the 'allow_slo' option before calling us.
+        // If it does call us, record that it happened so tests can assert.
+        self::$logout_called = true;
     }
 
     public function getAttributes() {
-        // Default baseline; will be replaced by filter if present.
         $attrs = [
             'uid'                  => ['student'],
             'mail'                 => ['student@example.org'],
@@ -51,7 +52,6 @@ class Simple {
                 $attrs = $maybe;
             }
         }
-
         return $attrs;
     }
 }
