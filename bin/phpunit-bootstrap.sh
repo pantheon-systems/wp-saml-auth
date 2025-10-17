@@ -50,29 +50,28 @@ echo "Preparing WP tests lib in ${WP_TESTS_DIR}..."
 rm -rf "${WP_TESTS_DIR}"
 mkdir -p "${WP_TESTS_DIR}"
 
-TAG_URL="https://develop.svn.wordpress.org/tags/${WP_VERSION}/tests/phpunit"
-TRUNK_URL="https://develop.svn.wordpress.org/trunk/tests/phpunit"
+BASE_TAG="https://develop.svn.wordpress.org/tags/${WP_VERSION}"
+BASE_TRUNK="https://develop.svn.wordpress.org/trunk"
 
-echo "Checking out tests from tag: ${TAG_URL}"
-if ! svn -q checkout "${TAG_URL}" "${WP_TESTS_DIR}"; then
+echo "Checking out phpunit tests from tag: ${BASE_TAG}/tests/phpunit"
+if ! svn -q checkout "${BASE_TAG}/tests/phpunit" "${WP_TESTS_DIR}"; then
   echo "Tag checkout failed, trying trunk..."
   rm -rf "${WP_TESTS_DIR}"
-  svn -q checkout "${TRUNK_URL}" "${WP_TESTS_DIR}"
+  svn -q checkout "${BASE_TRUNK}/tests/phpunit" "${WP_TESTS_DIR}"
+fi
+
+# Always fetch wp-tests-config-sample.php from repo root (it is NOT inside tests/phpunit)
+if ! svn -q export "${BASE_TAG}/wp-tests-config-sample.php" "${WP_TESTS_DIR}/wp-tests-config-sample.php"; then
+  echo "Tag did not have wp-tests-config-sample.php, trying trunk..."
+  svn -q export "${BASE_TRUNK}/wp-tests-config-sample.php" "${WP_TESTS_DIR}/wp-tests-config-sample.php"
 fi
 
 if [[ ! -f "${WP_TESTS_DIR}/wp-tests-config-sample.php" ]]; then
-  echo "wp-tests-config-sample.php still missing; trying trunk as fallback..."
-  rm -rf "${WP_TESTS_DIR}"
-  svn -q checkout "${TRUNK_URL}" "${WP_TESTS_DIR}"
-fi
-
-if [[ ! -f "${WP_TESTS_DIR}/wp-tests-config-sample.php" ]]; then
-  echo "ERROR: Could not obtain WordPress tests library (config sample missing)."
+  echo "ERROR: Could not obtain wp-tests-config-sample.php from tag or trunk."
   ls -la "${WP_TESTS_DIR}" || true
   exit 1
 fi
 
-# Create wp-tests-config.php
 cp "${WP_TESTS_DIR}/wp-tests-config-sample.php" "${WP_TESTS_DIR}/wp-tests-config.php"
 sed -i "s/youremptytestdbnamehere/${DB_NAME}/" "${WP_TESTS_DIR}/wp-tests-config.php"
 sed -i "s/yourusernamehere/${DB_USER}/" "${WP_TESTS_DIR}/wp-tests-config.php"
