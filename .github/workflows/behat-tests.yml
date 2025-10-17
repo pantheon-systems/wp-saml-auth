@@ -51,20 +51,28 @@ jobs:
           PHPV="${{ matrix.php }}"
           echo "PHPV=$PHPV" >> $GITHUB_ENV
           echo "DB_NAME=wp_test_${PHPV//./}" >> $GITHUB_ENV
+          # Unique temp paths per job to avoid 'already exists'
+          echo "WP_CORE_DIR=/tmp/wp-${PHPV//./}/wordpress" >> $GITHUB_ENV
+          echo "WP_TESTS_DIR=/tmp/wp-${PHPV//./}/wordpress-tests-lib" >> $GITHUB_ENV
+          echo "WP_VERSION=6.8.3" >> $GITHUB_ENV
 
       - name: Create test DB
         run: |
           mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS $DB_NAME;"
 
+      - name: Install Subversion (svn)
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y subversion
+
       # Avoid 7.4 dev-deps conflicts by skipping require-dev for PHPUnit job
       - name: Install Composer deps (no dev)
         run: composer install --no-progress --no-interaction --no-dev
 
-      # Make absolutely sure svn export has a clean target every run
-      - name: Clean WP temp dirs
+      - name: Clean unique WP temp dirs
         run: |
-          sudo rm -rf /tmp/wordpress /tmp/wordpress-tests-lib /tmp/wp-develop /tmp/wordpress.*
-          mkdir -p /tmp
+          sudo rm -rf "$(dirname "$WP_CORE_DIR")"
+          mkdir -p "$(dirname "$WP_CORE_DIR")"
 
       - name: Bootstrap WP test suite
         env:
@@ -72,9 +80,9 @@ jobs:
           DB_USER: root
           DB_PASSWORD: root
           DB_NAME: ${{ env.DB_NAME }}
-          WP_CORE_DIR: /tmp/wordpress/
-          WP_TESTS_DIR: /tmp/wordpress-tests-lib
-          WP_VERSION: 6.8.3
+          WP_CORE_DIR: ${{ env.WP_CORE_DIR }}
+          WP_TESTS_DIR: ${{ env.WP_TESTS_DIR }}
+          WP_VERSION: ${{ env.WP_VERSION }}
           WP_TESTS_PHPUNIT_POLYFILLS_PATH: /tmp/phpunit-deps
         run: |
           bash bin/phpunit-bootstrap.sh
@@ -85,8 +93,8 @@ jobs:
           DB_USER: root
           DB_PASSWORD: root
           DB_NAME: ${{ env.DB_NAME }}
-          WP_CORE_DIR: /tmp/wordpress/
-          WP_TESTS_DIR: /tmp/wordpress-tests-lib
+          WP_CORE_DIR: ${{ env.WP_CORE_DIR }}
+          WP_TESTS_DIR: ${{ env.WP_TESTS_DIR }}
           WP_TESTS_PHPUNIT_POLYFILLS_PATH: /tmp/phpunit-deps
           XDEBUG_MODE: off
         run: |
@@ -126,11 +134,11 @@ jobs:
           tools: composer:v2
           coverage: none
 
-      # Use the same constant as CircleCI did
-      - name: Set static Pantheon site name
+      # Set the same static site name as CircleCI
+      - name: Set Pantheon site name (static)
         run: echo "TERMINUS_SITE=wp-saml-auth" >> $GITHUB_ENV
 
-      # Validate that required secrets exist before starting SSH agent
+      # Validate that required secrets exist before SSH
       - name: Validate required secrets
         run: |
           MISS=0
@@ -138,23 +146,31 @@ jobs:
           [ -z "${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}" ] && echo "::error::SITE_OWNER_SSH_PRIVATE_KEY is missing" && MISS=1
           [ $MISS -ne 0 ] && exit 1 || exit 0
 
-      # ✅ Keep your required Terminus installer/action
+      # Official Terminus action (as requested)
       - name: Install Terminus
         uses: pantheon-systems/terminus-github-actions@v1
         with:
           pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
 
-      # Start ssh-agent using the correct key name you specified
+      # SSH agent with the correct key name you specified
       - name: SSH agent (Pantheon)
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
           log-public-key: true
 
-      - name: Add Pantheon hosts to known_hosts
+      # Replace ssh-keyscan (DNS flakiness) with SSH config disabling host key checking for *.drush.in
+      - name: Configure SSH for Pantheon
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -p 2222 drush.in >> ~/.ssh/known_hosts
+          {
+            echo "Host *.drush.in"
+            echo "  HostName %h"
+            echo "  Port 2222"
+            echo "  StrictHostKeyChecking no"
+            echo "  UserKnownHostsFile=/dev/null"
+          } >> ~/.ssh/config
+          chmod 600 ~/.ssh/config
 
       - name: Compute Pantheon env vars
         env:
