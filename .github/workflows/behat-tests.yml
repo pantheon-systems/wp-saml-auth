@@ -103,6 +103,13 @@ jobs:
         with:
           pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
 
+      - name: Set up PHP for Behat
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer
+          coverage: none
+
       - name: Ensure bin scripts are executable
         run: chmod +x bin/*.sh
 

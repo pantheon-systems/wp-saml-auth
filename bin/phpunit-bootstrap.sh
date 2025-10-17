@@ -1,5 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
+if ! command -v svn >/dev/null 2>&1; then
+  if command -v apt-get >/dev/null 2>&1; then
+    echo "svn not found; installing..."
+    sudo apt-get update -y
+    sudo apt-get install -y subversion
+  else
+    echo "svn is required"
+    exit 1
+  fi
+fi
 
 # --- Inputs (with defaults) ---
 DB_NAME="${DB_NAME:-wordpress_test}"
