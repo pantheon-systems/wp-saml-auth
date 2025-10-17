@@ -58,10 +58,9 @@ jobs:
           sudo apt-get install -y mysql-client
 
       - name: Compute DB name per PHP
-        id: dbn
         run: |
           PV="${{ matrix.php }}"
-          SAFE="${PV/./}"                # 7.4 -> 74, 8.1 -> 81, etc
+          SAFE="${PV/./}"
           echo "DB_NAME=wp_test_${SAFE}" >> "$GITHUB_ENV"
 
       - name: Create database
@@ -107,6 +106,9 @@ jobs:
       WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
       WORDPRESS_ADMIN_PASSWORD: pantheon
       TERMINUS_RELEASE: 4.1.0
+      # bring secrets into the job env so we can check them in a step
+      TERMINUS_SITE_SECRET: ${{ secrets.TERMINUS_SITE }}
+      TERMINUS_MACHINE_TOKEN: ${{ secrets.TERMINUS_MACHINE_TOKEN }}
 
     steps:
       - uses: actions/checkout@v4
@@ -119,11 +121,12 @@ jobs:
           tools: composer:v2
           coverage: none
 
-      - name: Fail early if Pantheon secrets are missing
-        if: ${{ secrets.TERMINUS_SITE == '' || secrets.TERMINUS_MACHINE_TOKEN == '' }}
+      - name: Check Pantheon secrets (fail early with a clear error)
         run: |
-          echo "::error::Behat requires Pantheon secrets. Please set repository secrets TERMINUS_SITE and TERMINUS_MACHINE_TOKEN."
-          exit 1
+          if [ -z "$TERMINUS_SITE_SECRET" ] || [ -z "$TERMINUS_MACHINE_TOKEN" ]; then
+            echo "::error::Behat requires Pantheon secrets. Please set repository secrets TERMINUS_SITE and TERMINUS_MACHINE_TOKEN."
+            exit 1
+          fi
 
       - name: Cache Composer
         uses: actions/cache@v4
@@ -144,22 +147,15 @@ jobs:
           terminus --version
 
       - name: Terminus auth
-        env:
-          TERMINUS_MACHINE_TOKEN: ${{ secrets.TERMINUS_MACHINE_TOKEN }}
         run: |
           terminus auth:login --machine-token="$TERMINUS_MACHINE_TOKEN"
           terminus auth:whoami
 
       - name: Compute Pantheon env vars
-        id: pantheon
         env:
           SSP: ${{ matrix.ssp }}
-          TERMINUS_SITE_SECRET: ${{ secrets.TERMINUS_SITE }}
         run: |
           set -e
-          if [ -z "$TERMINUS_SITE_SECRET" ]; then
-            echo "TERMINUS_SITE secret is missing"; exit 1;
-          fi
           export TERMINUS_SITE="$TERMINUS_SITE_SECRET"
           ssp_num="${SSP//./}"
           suffix=$(printf "%04d" $(( GITHUB_RUN_NUMBER % 10000 )) )
@@ -171,7 +167,7 @@ jobs:
           echo "PANTHEON_SITE_URL=${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io" >> $GITHUB_ENV
           echo "Using env: $TERMINUS_SITE.$TERMINUS_ENV -> https://${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io"
 
-      # Prepare the Pantheon environment. 1.18.0 has a dedicated script living in bin/1.18/.
+      # 1.18.0 uses your dedicated script under bin/1.18/
       - name: Prepare Pantheon env (SSP 1.18.0)
         if: ${{ matrix.ssp == '1.18.0' }}
         env:
@@ -183,9 +179,9 @@ jobs:
           WORDPRESS_ADMIN_PASSWORD: ${{ env.WORDPRESS_ADMIN_PASSWORD }}
         run: |
           bash bin/1.18/behat-prepare.sh
-          # If your 1.18 script still uses the old command, ensure it calls:
-          # terminus workflow:wait "$SITE_ENV"
+          # ensure the script uses: terminus workflow:wait "$SITE_ENV"
 
+      # 2.x uses your standard be-hat prepare
       - name: Prepare Pantheon env (SSP >= 2.x)
         if: ${{ matrix.ssp != '1.18.0' }}
         env:
@@ -197,7 +193,7 @@ jobs:
           WORDPRESS_ADMIN_PASSWORD: ${{ env.WORDPRESS_ADMIN_PASSWORD }}
         run: |
           bash bin/behat-prepare.sh
-          # Ensure your script uses: terminus workflow:wait "$SITE_ENV"
+          # ensure the script uses: terminus workflow:wait "$SITE_ENV"
 
       - name: Wait for filesystem workflows
         run: |
