@@ -2,19 +2,18 @@ name: Behat and PHPUnit
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
   pull_request:
-    branches: [ "**" ]
 
 jobs:
   phpunit:
     name: PHPUnit (PHP ${{ matrix.php }})
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
-        php: [ '7.4', '8.0', '8.1', '8.2', '8.3', '8.4' ]
+        php: ['7.4', '8.0', '8.1', '8.2', '8.3', '8.4']
 
     env:
       DB_HOST: 127.0.0.1
@@ -23,7 +22,8 @@ jobs:
       DB_NAME: wp_test_${{ matrix.php }}
       WP_CORE_DIR: /tmp/wordpress/
       WP_TESTS_DIR: /tmp/wordpress-tests-lib
-      WP_TESTS_PHPUNIT_POLYFILLS_PATH: /tmp/phpunit-deps/vendor/yoast/phpunit-polyfills
+      # Yoast Polyfills is installed as a *project root* here, not under vendor/.
+      WP_TESTS_PHPUNIT_POLYFILLS_PATH: /tmp/phpunit-deps
       COMPOSER_NO_INTERACTION: 1
       COMPOSER_NO_AUDIT: 1
       COMPOSER_PROCESS_TIMEOUT: 0
@@ -46,8 +46,7 @@ jobs:
           sudo systemctl start mysql
           mysql -uroot -proot -e "DROP DATABASE IF EXISTS \`${DB_NAME}\`; CREATE DATABASE \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
-      # Avoid PHP >=8.1-only dev deps on 7.4/8.0, but still get autoload for the plugin.
-      - name: Install Composer deps (compat mode on older PHP)
+      - name: Install Composer deps (compat mode for 7.4/8.0)
         run: |
           PHPV=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
           if [ "$PHPV" = "7.4" ] || [ "$PHPV" = "8.0" ]; then
@@ -56,15 +55,14 @@ jobs:
             composer install --no-progress --no-interaction
           fi
 
-      # Install the Yoast polyfills into a separate throwaway dir – independent of repo lock
       - name: Ensure PHPUnit Polyfills
         run: |
-          if [ ! -d /tmp/phpunit-deps/vendor/yoast/phpunit-polyfills ]; then
+          if [ ! -d /tmp/phpunit-deps ]; then
             composer create-project --no-dev --no-interaction yoast/phpunit-polyfills:^2 /tmp/phpunit-deps
           fi
-          test -f /tmp/phpunit-deps/vendor/yoast/phpunit-polyfills/phpunitpolyfills-autoload.php
+          test -f /tmp/phpunit-deps/phpunitpolyfills-autoload.php
 
-      - name: Make bootstrap executable
+      - name: Make PHPUnit bootstrap executable
         run: chmod +x bin/phpunit-bootstrap.sh
 
       - name: Bootstrap WordPress test suite
@@ -72,7 +70,6 @@ jobs:
           WP_VERSION: 6.8.3
         run: bin/phpunit-bootstrap.sh
 
-      # Prefer project PHPUnit if present; otherwise fetch suitable phar
       - name: Run PHPUnit
         env:
           XDEBUG_MODE: off
@@ -91,7 +88,7 @@ jobs:
 
   behat:
     name: Behat (SSP ${{ matrix.ssp }})
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -99,8 +96,7 @@ jobs:
         ssp: ['1.18.0', '2.0.0', '2.4.0']
 
     env:
-      # plain env (not secrets)
-      TERMINUS_SITE: wp-saml-auth
+      TERMINUS_SITE: ${{ secrets.PANTHEON_SITE }}
       SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
       WORDPRESS_ADMIN_USERNAME: pantheon
       WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
@@ -117,26 +113,23 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Terminus 4 requires PHP 8.2+
-      - name: Setup PHP 8.2
+      - name: Setup PHP 8.2 for Terminus & Behat
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
           tools: composer:v2
           coverage: none
 
-      # Compute a valid Multidev name:
-      #   - remove dots
-      #   - prefix "ci"
-      #   - truncate to 11 chars by taking version digits and last 4 of run number
-      - name: Compute Pantheon Multidev name
+      - name: Install Composer deps (dev)
+        run: composer install --no-progress --no-interaction
+
+      - name: Compute Pantheon Multidev name (no dots, <=11 chars)
         run: |
-          VER="${SIMPLESAMLPHP_VERSION//./}"        # e.g. 1180 -> 1.18.0
+          VER="${SIMPLESAMLPHP_VERSION//./}"           # e.g. "1.18.0" -> "1180"
           SUFFIX=$(printf "%04d" $(( GITHUB_RUN_NUMBER % 10000 )) )
-          # base "ci" + version digits (max 7) + 4 digit suffix => <= 11 chars
-          BASE="ci${VER}"
-          BASE="${BASE:0:7}"
-          TERMINUS_ENV="${BASE}${SUFFIX}"
+          BASE="ci${VER}"                              # e.g. "ci1180"
+          BASE="${BASE:0:7}"                           # hard cap base to keep <= 11 total
+          TERMINUS_ENV="${BASE}${SUFFIX}"              # e.g. "ci11800042"
           echo "TERMINUS_ENV=${TERMINUS_ENV}" | tee -a "$GITHUB_ENV"
           echo "Computed env: $TERMINUS_ENV"
 
@@ -145,7 +138,22 @@ jobs:
         with:
           pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
 
-      - name: Start ssh-agent and add key (for SFTP)
+      - name: Verify Terminus & fallback to PHAR if needed
+        run: |
+          set -e
+          if ! command -v terminus >/dev/null 2>&1; then
+            echo "Terminus not on PATH"; exit 1
+          fi
+          if ! terminus --version >/dev/null 2>&1; then
+            echo "Terminus action install failed; retrying manual install..."
+            TMP=/tmp/terminus.phar
+            curl -fsSL https://github.com/pantheon-systems/terminus/releases/download/4.1.0/terminus.phar -o "$TMP"
+            chmod +x "$TMP"
+            sudo mv "$TMP" /usr/local/bin/terminus
+            terminus --version
+          fi
+
+      - name: Start ssh-agent and add key (SFTP)
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
@@ -160,4 +168,3 @@ jobs:
         env:
           XDEBUG_MODE: off
         run: vendor/bin/behat --colors --no-interaction
-

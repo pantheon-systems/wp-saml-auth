@@ -1,85 +1,80 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ------- Inputs / defaults -------
-: "${DB_HOST:=127.0.0.1}"
-: "${DB_USER:=root}"
-: "${DB_PASSWORD:=root}"
-: "${DB_NAME:=wp_test}"
+# Inputs (already exported by workflow env)
 : "${WP_VERSION:=6.8.3}"
-: "${WP_CORE_DIR:=/tmp/wordpress}"
+: "${WP_CORE_DIR:=/tmp/wordpress/}"
 : "${WP_TESTS_DIR:=/tmp/wordpress-tests-lib}"
-: "${WP_DEBUG:=1}"
-
-# Required by the WP test suite
-export WP_PHP_BINARY="${WP_PHP_BINARY:-"$(command -v php)"}"
+: "${DB_NAME:?missing}"
+: "${DB_USER:?missing}"
+: "${DB_PASSWORD:?missing}"
+: "${DB_HOST:?missing}"
+: "${WP_TESTS_PHPUNIT_POLYFILLS_PATH:?missing}"
 
 echo "== Ensuring dependencies... =="
 
-# Clean up partial/invalid installs only (don’t nuke good caches)
-ensure_clean_dir() {
-  local path="$1"
-  local marker="$2"
-  if [ -d "$path" ] && [ ! -f "$path/$marker" ]; then
-    rm -rf "$path"
-  fi
-}
+# Always start clean to avoid mv/extract loops
+rm -rf "${WP_CORE_DIR}" "${WP_TESTS_DIR}"
+mkdir -p "${WP_CORE_DIR}" "${WP_TESTS_DIR}"
 
-# 1) WordPress core -----------------------------------------------------------
-ensure_clean_dir "$WP_CORE_DIR" ".wp-installed.ok"
-if [ ! -f "$WP_CORE_DIR/.wp-installed.ok" ]; then
-  echo "== Downloading WordPress core into $WP_CORE_DIR... =="
-  tmpcore="$(mktemp -d)"
-  curl -fsSL "https://wordpress.org/wordpress-${WP_VERSION}.tar.gz" -o "${tmpcore}/wp.tgz"
-  mkdir -p "$WP_CORE_DIR"
-  tar -xzf "${tmpcore}/wp.tgz" -C "${tmpcore}"
-  # Extracted into ${tmpcore}/wordpress — move atomically
-  rsync -a --delete "${tmpcore}/wordpress/" "$WP_CORE_DIR/"
-  touch "$WP_CORE_DIR/.wp-installed.ok"
-  rm -rf "$tmpcore"
-  echo "==   WP_VERSION=${WP_VERSION} =="
+# --- Download WordPress core ---
+echo "== Downloading WordPress core into ${WP_CORE_DIR} =="
+TMP_CORE="/tmp/wp-core-tmp"
+rm -rf "${TMP_CORE}"
+mkdir -p "${TMP_CORE}"
+curl -fsSL "https://wordpress.org/wordpress-${WP_VERSION}.tar.gz" -o /tmp/wordpress.tar.gz
+tar -xzf /tmp/wordpress.tar.gz -C "${TMP_CORE}"
+rm -f /tmp/wordpress.tar.gz
+# Move extracted 'wordpress' dir to target
+rm -rf "${WP_CORE_DIR}"
+mv "${TMP_CORE}/wordpress" "${WP_CORE_DIR}"
+rm -rf "${TMP_CORE}"
+
+echo "==   WP_VERSION=${WP_VERSION} =="
+
+# --- Download WordPress test library (no svn needed) ---
+echo "== Preparing WP tests lib in ${WP_TESTS_DIR} (WP ${WP_VERSION}) =="
+TMP_TESTS="/tmp/wp-tests-tmp"
+rm -rf "${TMP_TESTS}"
+mkdir -p "${TMP_TESTS}"
+curl -fsSL "https://github.com/WordPress/wordpress-develop/archive/refs/tags/${WP_VERSION}.zip" -o /tmp/wordpress-develop.zip
+unzip -q /tmp/wordpress-develop.zip -d "${TMP_TESTS}"
+rm -f /tmp/wordpress-develop.zip
+
+DEV_DIR="${TMP_TESTS}/wordpress-develop-${WP_VERSION}"
+if [ ! -d "${DEV_DIR}/tests/phpunit" ]; then
+  echo "Could not find tests/phpunit in ${DEV_DIR}"
+  exit 1
 fi
 
-# 2) WP tests library ---------------------------------------------------------
-ensure_clean_dir "$WP_TESTS_DIR" ".wp-tests.ok"
-if [ ! -f "$WP_TESTS_DIR/.wp-tests.ok" ]; then
-  echo "== Preparing WP tests lib in $WP_TESTS_DIR (WP ${WP_VERSION}) =="
-  mkdir -p "$WP_TESTS_DIR"
+# Copy the tests/phpunit directory to the expected location
+cp -a "${DEV_DIR}/tests/phpunit/." "${WP_TESTS_DIR}/"
 
-  # Pull test suite from develop.svn.wordpress.org
-  #   Includes: includes/, data/, etc.
-  svn export --quiet "https://develop.svn.wordpress.org/tags/${WP_VERSION}/tests/phpunit" "$WP_TESTS_DIR"
-
-  # We also need the sample config file (outside tests/phpunit)
-  curl -fsSL "https://develop.svn.wordpress.org/tags/${WP_VERSION}/wp-tests-config-sample.php" \
-    -o "$WP_TESTS_DIR/wp-tests-config-sample.php"
-
-  # Create wp-tests-config.php from scratch (avoids “cannot stat” issues)
-  cat > "$WP_TESTS_DIR/wp-tests-config.php" <<PHP
-<?php
-// ** MySQL settings ** //
-define( 'DB_NAME',     '${DB_NAME}' );
-define( 'DB_USER',     '${DB_USER}' );
-define( 'DB_PASSWORD', '${DB_PASSWORD}' );
-define( 'DB_HOST',     '${DB_HOST}' );
-define( 'DB_CHARSET',  'utf8' );
-define( 'DB_COLLATE',  '' );
-
-// WP test suite required constants
-define( 'WP_TESTS_DOMAIN', 'example.org' );
-define( 'WP_TESTS_EMAIL',  'admin@example.org' );
-define( 'WP_TESTS_TITLE',  'Test Blog' );
-define( 'WP_PHP_BINARY',   '${WP_PHP_BINARY}' );
-
-// Misc
-\$table_prefix = 'wptests_';
-define( 'WP_DEBUG', ${WP_DEBUG} );
-
-// Path to the WordPress codebase under test.
-define( 'ABSPATH', '${WP_CORE_DIR}/' );
-PHP
-
-  touch "$WP_TESTS_DIR/.wp-tests.ok"
+# Create wp-tests-config.php from sample
+if [ ! -f "${WP_TESTS_DIR}/wp-tests-config-sample.php" ]; then
+  echo "Sample config not found in ${WP_TESTS_DIR}"
+  exit 1
 fi
 
-echo "== Done PHPUnit bootstrap =="
+sed -e "s:youremptytestdbnamehere:${DB_NAME}:g" \
+    -e "s:yourusernamehere:${DB_USER}:g" \
+    -e "s:yourpasswordhere:${DB_PASSWORD}:g" \
+    -e "s:localhost:${DB_HOST}:g" \
+    -e "s:/path/to/wordpress/:${WP_CORE_DIR//\//\\/}:g" \
+    "${WP_TESTS_DIR}/wp-tests-config-sample.php" > "${WP_TESTS_DIR}/wp-tests-config.php"
+
+# Ensure required constants for some PHPUnit runners
+{
+  echo "define( 'WP_TESTS_DOMAIN', 'example.org' );"
+  echo "define( 'WP_TESTS_EMAIL',  'admin@example.org' );"
+  echo "define( 'WP_TESTS_TITLE',  'Test Blog' );"
+  echo "define( 'WP_PHP_BINARY',   'php' );"
+} >> "${WP_TESTS_DIR}/wp-tests-config.php"
+
+# Verify Yoast Polyfills autoload exists at the root of create-project
+if [ ! -f "${WP_TESTS_PHPUNIT_POLYFILLS_PATH}/phpunitpolyfills-autoload.php" ]; then
+  echo "Yoast PHPUnit Polyfills autoload not found at ${WP_TESTS_PHPUNIT_POLYFILLS_PATH}/phpunitpolyfills-autoload.php"
+  exit 1
+fi
+
+echo "Bootstrap complete."
