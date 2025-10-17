@@ -1,7 +1,7 @@
 <?php
 /**
- * Minimal SimpleSAMLphp stubs for unit tests.
- * These cover only the methods our tests exercise.
+ * Tiny SimpleSAMLphp stubs for unit tests.
+ * Only the pieces exercised by the tests are implemented.
  */
 
 namespace SimpleSAML\Auth;
@@ -15,21 +15,18 @@ class Simple {
     public function requireAuth(array $params = []) { self::$authed = true; }
     public function logout($returnTo = null) { self::$authed = false; }
     public function getAttributes() {
-        // Attributes used by tests (mapping, role, etc.)
+        // Attributes used by the tests (mapping, role, etc.)
         return [
-            'uid'                   => ['employee'],
-            'mail'                  => ['test-em@example.com'],
-            'eduPersonAffiliation'  => ['employee'],
+            'uid'                  => ['employee'],
+            'mail'                 => ['test-em@example.com'],
+            'eduPersonAffiliation' => ['employee'],
         ];
     }
 }
 
-// Optional: very light stubs that some codepaths may touch.
+// Optional light stubs some code paths may touch.
 namespace SimpleSAML;
-class Configuration {
-    public static function getInstance() { return new self(); }
-}
+class Configuration { public static function getInstance() { return new self(); } }
+
 namespace SimpleSAML\Utils;
-class HTTP {
-    public static function redirectTrustedURL($url) { /* no-op in unit tests */ }
-}
+class HTTP { public static function redirectTrustedURL($url) { /* no-op in unit tests */ } }
