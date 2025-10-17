@@ -1,69 +1,46 @@
 #!/usr/bin/env bash
-# Reliable, versioned setup of WordPress Core + WP test library.
-# Works for all PHP versions in CI.
-
+# bin/phpunit-bootstrap.sh
 set -euo pipefail
 
-# ---- Required envs (already present in your jobs) ---------------------------
-: "${WP_VERSION:?WP_VERSION is required (e.g. 6.8.3)}"
-: "${DB_NAME:?DB_NAME is required}"
-: "${DB_USER:?DB_USER is required}"
-: "${DB_PASSWORD:?DB_PASSWORD is required}"
-: "${DB_HOST:?DB_HOST is required}"
-: "${WP_CORE_DIR:?WP_CORE_DIR is required (e.g. /tmp/wordpress/)}"
-: "${WP_TESTS_DIR:?WP_TESTS_DIR is required (e.g. /tmp/wordpress-tests-lib)}"
+# Required env (already set by the workflow):
+: "${DB_HOST:?}"; : "${DB_USER:?}"; : "${DB_PASSWORD:?}"; : "${DB_NAME:?}"
+: "${WP_CORE_DIR:?}"; : "${WP_TESTS_DIR:?}"; : "${WP_VERSION:?}"
+: "${WP_TESTS_PHPUNIT_POLYFILLS_PATH:?}"
 
 echo "== Ensuring dependencies (svn) =="
-if ! command -v svn >/dev/null 2>&1; then
-  sudo apt-get update -y >/dev/null
-  sudo apt-get install -y subversion >/dev/null
-fi
 
-# Clean any previous partial state to avoid "already exists" or stale files
 echo "== Cleaning previous temp dirs =="
-rm -rf "${WP_CORE_DIR}" "${WP_TESTS_DIR}" /tmp/wp-develop || true
-mkdir -p "${WP_CORE_DIR}" "${WP_TESTS_DIR}"
-
-SVN_BASE="https://develop.svn.wordpress.org/tags/${WP_VERSION}"
+rm -rf "$WP_CORE_DIR" "$WP_TESTS_DIR"
+mkdir -p "$WP_CORE_DIR" "$WP_TESTS_DIR"
 
 echo "== Fetching WordPress develop tag ${WP_VERSION} =="
-# Export only what we need. This prevents path drift and flaky layouts.
-svn export --quiet "${SVN_BASE}/src" "${WP_CORE_DIR}"
-svn export --quiet "${SVN_BASE}/tests/phpunit" "${WP_TESTS_DIR}"
+# Use 'export' so svn never leaves a working copy and won't care about existing .svn dirs.
+svn export --quiet "https://develop.svn.wordpress.org/tags/${WP_VERSION}/src" "$WP_CORE_DIR"
+svn export --quiet "https://develop.svn.wordpress.org/tags/${WP_VERSION}/tests/phpunit" "$WP_TESTS_DIR"
 
-echo "== Preparing WP tests lib in ${WP_TESTS_DIR} =="
-SAMPLE_CFG="${WP_TESTS_DIR}/wp-tests-config-sample.php"
-TARGET_CFG="${WP_TESTS_DIR}/wp-tests-config.php"
-
-if [ ! -f "${SAMPLE_CFG}" ]; then
+# Build wp-tests-config.php
+if [ ! -f "$WP_TESTS_DIR/wp-tests-config-sample.php" ]; then
   echo "Sample config not found in ${WP_TESTS_DIR}"
   exit 1
 fi
 
-cp "${SAMPLE_CFG}" "${TARGET_CFG}"
+cp "$WP_TESTS_DIR/wp-tests-config-sample.php" "$WP_TESTS_DIR/wp-tests-config.php"
 
-# Update DB constants + ABSPATH in wp-tests-config.php
-php -d detect_unicode=0 -r '
-$cfgPath = getenv("TARGET_CFG");
-$cfg = file_get_contents($cfgPath);
+# Substitute DB settings
+sed -i "s/youremptytestdbnamehere/${DB_NAME}/"            "$WP_TESTS_DIR/wp-tests-config.php"
+sed -i "s/yourusernamehere/${DB_USER}/"                    "$WP_TESTS_DIR/wp-tests-config.php"
+sed -i "s/yourpasswordhere/${DB_PASSWORD}/"                "$WP_TESTS_DIR/wp-tests-config.php"
+sed -i "s|localhost|${DB_HOST}|"                           "$WP_TESTS_DIR/wp-tests-config.php"
 
-$repls = [
-  "/define\\(\\s*\\x27DB_NAME\\x27\\s*,\\s*\\x27.*?\\x27\\s*\\);/" =>
-    "define( \x27DB_NAME\x27, \x27".getenv("DB_NAME")."\x27 );",
-  "/define\\(\\s*\\x27DB_USER\\x27\\s*,\\s*\\x27.*?\\x27\\s*\\);/" =>
-    "define( \x27DB_USER\x27, \x27".getenv("DB_USER")."\x27 );",
-  "/define\\(\\s*\\x27DB_PASSWORD\\x27\\s*,\\s*\\x27.*?\\x27\\s*\\);/" =>
-    "define( \x27DB_PASSWORD\x27, \x27".getenv("DB_PASSWORD")."\x27 );",
-  "/define\\(\\s*\\x27DB_HOST\\x27\\s*,\\s*\\x27.*?\\x27\\s*\\);/" =>
-    "define( \x27DB_HOST\x27, \x27".getenv("DB_HOST")."\x27 );",
-  "/\\$table_prefix\\s*=\\s*\\x27wptests_\\x27\\s*;/" =>
-    "$table_prefix = \x27wptests_\x27;",
-  "/define\\(\\s*\\x27ABSPATH\\x27\\s*,\\s*.*?\\);/" =>
-    "define( \x27ABSPATH\x27, \x27".rtrim(getenv("WP_CORE_DIR"),"/")."/\x27 );",
-];
+# (Optional) ensure table prefix is the default 'wptests_' to match WP's scripts
+if ! grep -q "\$table_prefix" "$WP_TESTS_DIR/wp-tests-config.php"; then
+  echo "\$table_prefix = 'wptests_';" >> "$WP_TESTS_DIR/wp-tests-config.php"
+fi
 
-$cfg = preg_replace(array_keys($repls), array_values($repls), $cfg);
-file_put_contents($cfgPath, $cfg);
-' 2>/dev/null
+# Yoast PHPUnit Polyfills (for WP test suite compatibility on PHP 8.x)
+if [ ! -f "${WP_TESTS_PHPUNIT_POLYFILLS_PATH}/vendor/yoast/phpunit-polyfills/phpunitpolyfills-autoload.php" ]; then
+  echo "== Installing Yoast PHPUnit Polyfills to ${WP_TESTS_PHPUNIT_POLYFILLS_PATH} =="
+  composer create-project --no-dev --no-interaction yoast/phpunit-polyfills:^2 "${WP_TESTS_PHPUNIT_POLYFILLS_PATH}"
+fi
 
-echo "== Done: WP core at ${WP_CORE_DIR}, tests at ${WP_TESTS_DIR} =="
+echo "== Bootstrap complete =="
