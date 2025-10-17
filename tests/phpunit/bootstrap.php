@@ -65,3 +65,8 @@ function wp_logout() {
 
 // Start up the WP testing environment.
 require $_tests_dir . '/includes/bootstrap.php';
+
+// Force WP SAML Auth to use our SimpleSAMLphp stubs during unit tests.
+add_filter('wp_saml_auth_autoload', function () {
+    return __DIR__ . '/simplesamlphp-stubs/autoload.php';
+});
