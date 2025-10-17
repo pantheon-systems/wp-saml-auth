@@ -41,38 +41,56 @@ tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
  * Defaults aligned to unit tests.
  */
 function _wp_saml_auth_filter_option( $value, $option_name ) {
-	switch ( $option_name ) {
-		case 'simplesamlphp_autoload':
-			$value = defined( 'WP_SAML_AUTH_AUTOLOAD' ) ? WP_SAML_AUTH_AUTOLOAD : $value;
-			break;
+    // Only provide a default if nothing has set a value yet.
+    $has_value = ! is_null( $value );
 
-		// Default: do NOT permit username/password logins in tests.
-		case 'permit_wp_login':
-		case 'permit_user_login':
-			$value = false;
-			break;
+    switch ( $option_name ) {
+        case 'simplesamlphp_autoload':
+            // Always point to our stubs if available.
+            if ( defined( 'WP_SAML_AUTH_AUTOLOAD' ) ) {
+                $value = WP_SAML_AUTH_AUTOLOAD;
+            }
+            break;
 
-		// Auto-provision ON by default so SAML can create users when attributes exist.
-		case 'auto_provision':
-			$value = true;
-			break;
+        case 'permit_wp_login':
+        case 'permit_user_login':
+            if ( ! $has_value ) {
+                $value = false;
+            }
+            break;
 
-		// Map aligns with stub attributes.
-		case 'user_login_attribute':
-			$value = 'uid';
-			break;
-		case 'user_email_attribute':
-			$value = 'mail';
-			break;
-		case 'user_role_attribute':
-			$value = 'eduPersonAffiliation';
-			break;
+        case 'auto_provision':
+            if ( ! $has_value ) {
+                $value = true;
+            }
+            break;
 
-		case 'default_role':
-			$value = 'subscriber';
-			break;
-	}
-	return $value;
+        case 'user_login_attribute':
+            if ( ! $has_value ) {
+                $value = 'uid';
+            }
+            break;
+
+        case 'user_email_attribute':
+            if ( ! $has_value ) {
+                $value = 'mail';
+            }
+            break;
+
+        case 'user_role_attribute':
+            if ( ! $has_value ) {
+                $value = 'eduPersonAffiliation';
+            }
+            break;
+
+        case 'default_role':
+            if ( ! $has_value ) {
+                $value = 'subscriber';
+            }
+            break;
+    }
+
+    return $value;
 }
 
 // Start WP test environment.
