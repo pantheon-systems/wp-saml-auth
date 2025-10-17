@@ -46,13 +46,19 @@ jobs:
           coverage: none
           tools: composer:v2
 
+      - name: Compute PHP vars
+        run: |
+          PHPV="${{ matrix.php }}"
+          echo "PHPV=$PHPV" >> $GITHUB_ENV
+          echo "DB_NAME=wp_test_${PHPV//./}" >> $GITHUB_ENV
+
       - name: Create test DB
         run: |
-          mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS wp_test_${{ matrix.php//./ }};"
+          mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS $DB_NAME;"
 
-      # Keep your dependencies install separate from Behat locks to prevent 7.4 conflicts.
-      - name: Install Composer deps (root)
-        run: composer install --no-progress --no-interaction
+      # Avoid 7.4 conflicts: don't install dev (Behat etc.) in the PHPUnit job
+      - name: Install Composer deps (no dev)
+        run: composer install --no-progress --no-interaction --no-dev
 
       # Prepare WP Core + Tests library into stable paths
       - name: Bootstrap WP test suite
@@ -60,7 +66,7 @@ jobs:
           DB_HOST: 127.0.0.1
           DB_USER: root
           DB_PASSWORD: root
-          DB_NAME: wp_test_${{ matrix.php//./ }}
+          DB_NAME: ${{ env.DB_NAME }}
           WP_CORE_DIR: /tmp/wordpress/
           WP_TESTS_DIR: /tmp/wordpress-tests-lib
           WP_VERSION: 6.8.3
@@ -68,13 +74,13 @@ jobs:
         run: |
           bash bin/phpunit-bootstrap.sh
 
-      # Only for PHP ≥ 8.0 we’ll use PHAR fallback if vendor/bin/phpunit is missing
+      # Run PHPUnit (use PHAR if vendor binary is missing)
       - name: Run PHPUnit
         env:
           DB_HOST: 127.0.0.1
           DB_USER: root
           DB_PASSWORD: root
-          DB_NAME: wp_test_${{ matrix.php//./ }}
+          DB_NAME: ${{ env.DB_NAME }}
           WP_CORE_DIR: /tmp/wordpress/
           WP_TESTS_DIR: /tmp/wordpress-tests-lib
           WP_TESTS_PHPUNIT_POLYFILLS_PATH: /tmp/phpunit-deps
@@ -116,7 +122,7 @@ jobs:
           tools: composer:v2
           coverage: none
 
-      # 🔐 This is the bit you asked to restore: official Terminus Action.
+      # ✅ Terminus via official action (as requested)
       - name: Install Terminus
         uses: pantheon-systems/terminus-github-actions@v1
         with:
@@ -158,13 +164,9 @@ jobs:
           echo "PANTHEON_SITE_URL=${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io" >> $GITHUB_ENV
           echo "Using env: $TERMINUS_SITE.$TERMINUS_ENV -> https://${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io"
 
-      # Install project deps needed for Behat contexts
-      - name: Install Composer deps
+      - name: Install Composer deps (with dev)
         run: composer install --no-progress --no-interaction
 
-      # Prepare Pantheon env:
-      # * SSP 1.18.0 uses your custom script in bin/1.18/
-      # * SSP >= 2.x uses the generic prepare script.
       - name: Prepare Pantheon environment
         env:
           WORDPRESS_ADMIN_USERNAME: pantheon
@@ -178,7 +180,6 @@ jobs:
             bash bin/behat-prepare.sh
           fi
 
-      # Always use workflow:wait (build:* is gone)
       - name: Wait for Pantheon workflow
         run: |
           SITE_ENV="${TERMINUS_SITE}.${TERMINUS_ENV}"
