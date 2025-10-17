@@ -46,22 +46,24 @@ function _wp_saml_auth_filter_option( $value, $option_name ) {
 
     switch ( $option_name ) {
         case 'simplesamlphp_autoload':
-            // Always point to our stubs if available.
+            // Always point to the stubs.
             if ( defined( 'WP_SAML_AUTH_AUTOLOAD' ) ) {
                 $value = WP_SAML_AUTH_AUTOLOAD;
+            } else {
+                $value = __DIR__ . '/simplesamlphp-stubs/autoload.php';
             }
             break;
 
         case 'permit_wp_login':
         case 'permit_user_login':
             if ( ! $has_value ) {
-                $value = false;
+                $value = false; // Local user/pass not permitted by default.
             }
             break;
 
         case 'auto_provision':
             if ( ! $has_value ) {
-                $value = true;
+                $value = true; // Will only matter if SAML is authenticated.
             }
             break;
 
