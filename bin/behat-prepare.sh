@@ -48,3 +48,26 @@ if [[ -n "${SIMPLESAMLPHP_VERSION:-}" ]]; then
 fi
 
 echo "Behat prepare finished."
+
+# Force classic login form for tests (disable SAML auto redirect)
+terminus env:wake "$TERMINUS_SITE.$TERMINUS_ENV"
+
+cat > /tmp/force-login-form.php <<'PHP'
+<?php
+/**
+ * Plugin Name: CI - Force Classic Login Form
+ * Description: Keeps wp-saml-auth from auto-redirecting during Behat so fields are present.
+ */
+add_filter('wp_saml_auth_auto_redirect', '__return_false', 99);
+add_filter('wp_saml_auth_force', '__return_false', 99);
+add_filter('wp_saml_auth_show_password_fields', '__return_true', 99);
+PHP
+
+# Push the MU plugin to the appserver (Pantheon)
+terminus drush "$TERMINUS_SITE.$TERMINUS_ENV" -- ssh "mkdir -p code/wp-content/mu-plugins"
+terminus drush "$TERMINUS_SITE.$TERMINUS_ENV" -- ssh "cat > code/wp-content/mu-plugins/ci-force-login-form.php" < /tmp/force-login-form.php
+terminus connection:set "$TERMINUS_SITE.$TERMINUS_ENV" sftp
+terminus rsync /tmp/force-login-form.php "$TERMINUS_SITE.$TERMINUS_ENV":code/wp-content/mu-plugins/ci-force-login-form.php
+terminus connection:set "$TERMINUS_SITE.$TERMINUS_ENV" git
+terminus env:commit "$TERMINUS_SITE.$TERMINUS_ENV" --message="CI: add mu-plugin to show login fields for Behat"
+terminus env:clear-cache "$TERMINUS_SITE.$TERMINUS_ENV"
