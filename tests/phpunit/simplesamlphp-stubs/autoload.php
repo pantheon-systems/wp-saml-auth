@@ -3,11 +3,6 @@ namespace SimpleSAML\Auth;
 
 /**
  * Minimal SimpleSAMLphp stub for unit tests.
- * - Unauthenticated by default
- * - Default attributes represent a "student" user
- * - getAttributes() always returns attributes (even if not authenticated yet)
- * - Logout hook only fires if (a) this request started auth AND (b) a test
- *   explicitly allows it via the wp_saml_auth_test_allow_logout_hook filter.
  */
 class Simple {
     private $authenticated = false;
@@ -15,18 +10,17 @@ class Simple {
 
     private $attributes = [
         'uid'                  => ['student'],
-        'mail'                 => ['test-student@example.com'],
+        // Match test expectation exactly:
+        'mail'                 => ['student@example.org'],
         'eduPersonAffiliation' => ['student'],
     ];
 
     public function __construct( $source = null ) {
-        // Allow tests to pre-seed auth state and attributes via filters.
         $forcedAuth = \apply_filters( 'wp_saml_auth_test_is_authenticated', null );
         if ( $forcedAuth !== null ) {
             $this->authenticated = (bool) $forcedAuth;
             $this->auth_started_this_request = (bool) $forcedAuth;
         }
-
         $attrs = \apply_filters( 'wp_saml_auth_test_attributes', null );
         if ( \is_array( $attrs ) ) {
             $this->attributes = $this->normalize_attributes( $attrs );
@@ -38,11 +32,6 @@ class Simple {
         return $forced !== null ? (bool) $forced : $this->authenticated;
     }
 
-    /**
-     * Simulate IdP auth requirement.
-     * - Flip to authenticated
-     * - Refresh attributes if provided by a test filter
-     */
     public function requireAuth( array $params = [] ) {
         $this->authenticated = true;
         $this->auth_started_this_request = true;
@@ -53,10 +42,7 @@ class Simple {
         }
     }
 
-    /**
-     * Always return the attributes array so tests that peek at attributes
-     * prior to requireAuth() still see the expected values/persona.
-     */
+    /** Always expose attributes so tests can read them pre/post auth. */
     public function getAttributes() {
         $maybe = \apply_filters( 'wp_saml_auth_test_attributes', null );
         if ( \is_array( $maybe ) ) {
@@ -66,10 +52,10 @@ class Simple {
     }
 
     /**
-     * Only signal a SAML logout if:
-     *  - we are authenticated,
-     *  - AND this request actually started auth,
-     *  - AND the test explicitly allows the hook (default false).
+     * Only announce a “SAML logout” if:
+     *  - authenticated, and
+     *  - it started in this request, and
+     *  - test opts in (default false).
      */
     public function logout( array $params = [] ) {
         $allow = (bool) \apply_filters( 'wp_saml_auth_test_allow_logout_hook', false );
