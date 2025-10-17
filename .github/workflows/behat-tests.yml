@@ -8,11 +8,10 @@ on:
 
 jobs:
   phpunit:
-    name: PHPUnit (PHP ${{ matrix.php-versions }})
+    name: PHPUnit (PHP ${{ matrix.php }})
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     continue-on-error: ${{ matrix.experimental == true }}
-
     services:
       mysql:
         image: mysql:8.0
@@ -29,9 +28,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-versions: [ '7.4', '8.0', '8.1', '8.2', '8.3', '8.4' ]
+        php: [ '7.4', '8.0', '8.1', '8.2', '8.3', '8.4' ]
         include:
-          - php-versions: '8.4'
+          - php: '8.4'
             experimental: true
 
     env:
@@ -41,7 +40,7 @@ jobs:
       DB_HOST: 127.0.0.1
       DB_USER: root
       DB_PASSWORD: root
-      DB_NAME: wp_test_${{ matrix.php-versions }}
+      DB_NAME: wp_test_${{ matrix.php }}
       WP_TESTS_DIR: /tmp/wordpress-tests-lib
       WP_CORE_DIR: /tmp/wordpress/
 
@@ -51,12 +50,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup PHP ${{ matrix.php-versions }}
+      - name: Setup PHP ${{ matrix.php }}
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php-versions }}
-          coverage: none
+          php-version: ${{ matrix.php }}
           tools: composer:v2
+          coverage: none
           extensions: mysqli
 
       - name: Cache Composer
@@ -69,8 +68,12 @@ jobs:
           restore-keys: |
             composer-${{ runner.os }}-
 
-      - name: Install Composer dependencies
-        run: composer install --no-progress --no-interaction
+      - name: Install Composer dependencies (incl. yoast/phpunit-polyfills)
+        run: |
+          composer install --no-progress --no-interaction
+          if ! [ -d vendor/yoast/phpunit-polyfills ]; then
+            composer require --no-progress --no-interaction --dev yoast/phpunit-polyfills:^2
+          fi
 
       - name: Make CI scripts executable
         run: chmod +x bin/phpunit-bootstrap.sh || true
@@ -107,6 +110,10 @@ jobs:
       COMPOSER_PROCESS_TIMEOUT: 0
       COMPOSER_NO_INTERACTION: 1
       COMPOSER_NO_AUDIT: 1
+      # required secrets:
+      #   TERMINUS_TOKEN (Pantheon machine token)
+      #   PANTHEON_SITE  (Pantheon site machine name)
+      #   PANTHEON_SSH_PRIVATE_KEY (SSH key that has access to the site; add to Pantheon Dashboard)
       TERMINUS_SITE: ${{ secrets.PANTHEON_SITE }}
       TERMINUS_ENV: ci${{ matrix.ssp && replace(matrix.ssp, '.', '') }}${{ github.run_number }}${{ github.run_attempt }}
       WORDPRESS_ADMIN_USERNAME: pantheon
@@ -142,13 +149,12 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-progress --no-interaction
 
-      - name: Install Terminus
+      - name: Install Terminus (official action)
         uses: pantheon-systems/terminus-github-actions@v1
         with:
           pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
 
-      - name: Start ssh-agent and add key (optional)
-        if: ${{ secrets.PANTHEON_SSH_PRIVATE_KEY != '' }}
+      - name: Start ssh-agent and add key (required for SFTP upload)
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.PANTHEON_SSH_PRIVATE_KEY }}
@@ -157,6 +163,10 @@ jobs:
         run: chmod +x bin/behat-prepare.sh || true
 
       - name: Prepare Pantheon multidev + MU plugin
+        env:
+          PANTHEON_SITE: ${{ secrets.PANTHEON_SITE }}
+          TERMINUS_ENV: ${{ env.TERMINUS_ENV }}
+          SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
         run: bin/behat-prepare.sh
 
       - name: Run Behat suite

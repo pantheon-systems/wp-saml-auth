@@ -1,137 +1,99 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ------------------------------------------------------------------------------
-# WordPress PHPUnit bootstrap (matrix-safe)
-# - Installs unzip, subversion
-# - Ensures yoast/phpunit-polyfills is installed
-# - Downloads WP core to WP_CORE_DIR
-# - Exports tests lib to WP_TESTS_DIR with `svn export --force`
-# - Writes a COMPLETE wp-tests-config.php with required constants
-# ------------------------------------------------------------------------------
+# Inputs from env:
+#   DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
+#   WP_CORE_DIR (/tmp/wordpress)
+#   WP_TESTS_DIR (/tmp/wordpress-tests-lib)
 
-# ------- Config from env (with sane defaults) -------
-WP_CORE_DIR="${WP_CORE_DIR:-/tmp/wordpress}"
-WP_TESTS_DIR="${WP_TESTS_DIR:-/tmp/wordpress-tests-lib}"
+echo "== Ensuring dependencies... =="
+sudo apt-get update -yq
+sudo apt-get install -yq unzip subversion > /dev/null
 
-DB_HOST="${DB_HOST:-127.0.0.1}"
-DB_USER="${DB_USER:-root}"
-DB_PASSWORD="${DB_PASSWORD:-root}"
-DB_NAME="${DB_NAME:-wp_test}"
-DB_CHARSET="${DB_CHARSET:-utf8}"
-DB_COLLATE="${DB_COLLATE:-}"
-
-TABLE_PREFIX="${TABLE_PREFIX:-wptests_}"
-
-# Optional explicit WP version (otherwise latest.zip)
-WP_VERSION="${WP_VERSION:-}"
-
-# ------- Helpers -------
-log(){ printf '== %s ==\n' "$*"; }
-
-# ------- Deps -------
-log "Ensuring dependencies..."
-if ! command -v unzip >/dev/null 2>&1 || ! command -v svn >/dev/null 2>&1; then
-  sudo apt-get update -y -qq
-  sudo apt-get install -y -qq unzip subversion >/dev/null
+# Clean temp dirs to avoid svn/tar collisions seen earlier
+if [ -d "${WP_CORE_DIR}" ]; then
+  rm -rf "${WP_CORE_DIR}"
 fi
-
-# ------- Ensure PHPUnit Polyfills (fixes PHP 7.4 error) -------
-# We install it only if autoload is missing.
-POLY_ROOT="vendor/yoast/phpunit-polyfills"
-POLY_AUTO="${POLY_ROOT}/phpunitpolyfills-autoload.php"
-if [[ ! -f "$POLY_AUTO" ]]; then
-  if command -v composer >/dev/null 2>&1; then
-    log "Installing yoast/phpunit-polyfills (dev) via Composer..."
-    # ^1 works on PHP 7.4 and up. If your matrix includes newer PHP/PHPUnit,
-    # Composer may upgrade it appropriately during dependency resolution.
-    composer require --no-progress --no-scripts --no-interaction --dev yoast/phpunit-polyfills:^1 || {
-      echo "Composer install of yoast/phpunit-polyfills failed"; exit 1;
-    }
-  else
-    echo "Composer not available and polyfills missing: cannot continue."
-    exit 1
-  fi
+if [ -d "${WP_TESTS_DIR}" ]; then
+  rm -rf "${WP_TESTS_DIR}"
 fi
+mkdir -p "${WP_CORE_DIR}" "${WP_TESTS_DIR}"
 
-# ------- Download WP core (idempotent) -------
-log "Downloading WordPress core into ${WP_CORE_DIR}..."
-mkdir -p "${WP_CORE_DIR}"
-if [[ ! -f "${WP_CORE_DIR}/wp-settings.php" ]]; then
-  tmpdir="$(mktemp -d)"
-  trap 'rm -rf "${tmpdir}"' EXIT
+# Determine WP version (composer-installed plugin may not have WP)
+# Default to latest stable from wordpress.org/version-check (but offline here).
+# Safer: pick a known compatible version if not present.
+WP_VERSION="${WP_VERSION:-6.8.3}"
 
-  if [[ -n "${WP_VERSION}" ]]; then
-    CORE_URL="https://wordpress.org/wordpress-${WP_VERSION}.zip"
-  else
-    CORE_URL="https://wordpress.org/latest.zip"
-  fi
+echo "== Downloading WordPress core into ${WP_CORE_DIR}... =="
+echo "==   WP_VERSION=${WP_VERSION} =="
+curl -fsSL "https://wordpress.org/wordpress-${WP_VERSION}.zip" -o /tmp/wordpress.zip
+unzip -q /tmp/wordpress.zip -d /tmp
+# Move to ${WP_CORE_DIR}
+# unzip created /tmp/wordpress/
+mv /tmp/wordpress "${WP_CORE_DIR}"
 
-  curl -fsSL "${CORE_URL}" -o "${tmpdir}/wordpress.zip"
-  unzip -q "${tmpdir}/wordpress.zip" -d "${tmpdir}"
-  rsync -a --delete "${tmpdir}/wordpress/" "${WP_CORE_DIR}/"
-fi
-
-# Determine version in core
-WP_VER_IN_CORE="$(
-  php -r "include '${WP_CORE_DIR}/wp-includes/version.php'; echo isset(\$wp_version)?\$wp_version:'';"
-)"
-log "  WP_VERSION=${WP_VER_IN_CORE:-unknown}"
-
-# ------- Prepare WP tests lib (matrix-safe) -------
-log "Preparing WP tests lib in ${WP_TESTS_DIR} (WP ${WP_VER_IN_CORE})"
-mkdir -p "${WP_TESTS_DIR}"
-
-SVN_BASE="https://develop.svn.wordpress.org"
-if [[ -n "${WP_VER_IN_CORE}" ]] && svn ls "${SVN_BASE}/tags/${WP_VER_IN_CORE}/tests/phpunit" >/dev/null 2>&1; then
-  SVN_PATH="${SVN_BASE}/tags/${WP_VER_IN_CORE}/tests/phpunit"
-else
+echo "== Preparing WP tests lib in ${WP_TESTS_DIR} (WP ${WP_VERSION}) =="
+# Pull the test library that matches WP_VERSION
+# Use develop.svn.wordpress.org tags; if tag missing, fall back to trunk
+set +e
+svn checkout -q "https://develop.svn.wordpress.org/tags/${WP_VERSION}/tests/phpunit" "${WP_TESTS_DIR}/tests/phpunit"
+SVN_RC=$?
+set -e
+if [ $SVN_RC -ne 0 ]; then
   echo "Tag checkout failed; using trunk tests/phpunit…"
-  SVN_PATH="${SVN_BASE}/trunk/tests/phpunit"
+  svn checkout -q "https://develop.svn.wordpress.org/trunk/tests/phpunit" "${WP_TESTS_DIR}/tests/phpunit"
 fi
 
-# Export (or re-export) in-place
-svn export --force -q "${SVN_PATH}" "${WP_TESTS_DIR}"
+# Copy sample config; some layouts changed over the years, so derive a sample
+SAMPLE_SRC="${WP_TESTS_DIR}/tests/phpunit/includes/wp-tests-config-sample.php"
+if [ ! -f "${SAMPLE_SRC}" ]; then
+  # Older paths
+  SAMPLE_SRC="${WP_TESTS_DIR}/wp-tests-config-sample.php"
+fi
 
-# ------- Create full wp-tests-config.php (fixes missing constants) -------
-log "Creating wp-tests-config.php"
+if [ ! -f "${SAMPLE_SRC}" ]; then
+  echo "Could not locate wp-tests-config-sample.php in the test library"
+  exit 1
+fi
 
-# Absolute path to polyfills root for WP_TESTS_PHPUNIT_POLYFILLS_PATH
-POLY_ROOT_ABS="$(cd "$(dirname "${POLY_AUTO}")/.." && pwd)"
+cp "${SAMPLE_SRC}" "${WP_TESTS_DIR}/wp-tests-config.php"
 
-: "${WP_TESTS_DOMAIN:=example.org}"
-: "${WP_TESTS_EMAIL:=admin@example.org}"
-: "${WP_TESTS_TITLE:=Test Blog}"
-: "${WP_PHP_BINARY:=$(command -v php)}"
+# Patch wp-tests-config.php with DB + extra constants + polyfills path
+POLYFILLS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/vendor/yoast/phpunit-polyfills"
+PHP_BIN="$(command -v php)"
 
-cat > "${WP_TESTS_DIR}/wp-tests-config.php" <<PHP
-<?php
-// Auto-generated by phpunit-bootstrap.sh
+php -r '
+$cfg = file_get_contents(getenv("WP_TESTS_DIR") . "/wp-tests-config.php");
+$repl = [
+  "/^define\\(\\s*\\x27DB_NAME\\x27.*$/m"      => "define( '\''DB_NAME'\'', getenv('\''DB_NAME'\''));",
+  "/^define\\(\\s*\\x27DB_USER\\x27.*$/m"      => "define( '\''DB_USER'\'', getenv('\''DB_USER'\''));",
+  "/^define\\(\\s*\\x27DB_PASSWORD\\x27.*$/m"  => "define( '\''DB_PASSWORD'\'', getenv('\''DB_PASSWORD'\''));",
+  "/^define\\(\\s*\\x27DB_HOST\\x27.*$/m"      => "define( '\''DB_HOST'\'', getenv('\''DB_HOST'\''));",
+];
+foreach ($repl as $pat => $val) { $cfg = preg_replace($pat, $val, $cfg); }
 
-define( 'DB_NAME', '${DB_NAME}' );
-define( 'DB_USER', '${DB_USER}' );
-define( 'DB_PASSWORD', '${DB_PASSWORD}' );
-define( 'DB_HOST', '${DB_HOST}' );
-define( 'DB_CHARSET', '${DB_CHARSET}' );
-define( 'DB_COLLATE', '${DB_COLLATE}' );
+$extra = [];
+$extra[] = "define( '\''WP_TESTS_DOMAIN'\'', '\''example.org'\'' );";
+$extra[] = "define( '\''WP_TESTS_EMAIL'\'', '\''admin@example.org'\'' );";
+$extra[] = "define( '\''WP_TESTS_TITLE'\'', '\''Test Blog'\'' );";
+$extra[] = "define( '\''WP_PHP_BINARY'\'', '\''" . getenv("PHP_BIN") . "'\'' );";
+$extra[] = "define( '\''WP_DEBUG'\'', true );";
 
-\$table_prefix = '${TABLE_PREFIX}';
+$poly = rtrim(getenv("POLYFILLS_DIR"), "/");
+if (!is_dir($poly)) {
+  fwrite(STDERR, "Warning: PHPUnit Polyfills not found at {$poly}\n");
+} else {
+  $extra[] = "define( '\''WP_TESTS_PHPUNIT_POLYFILLS_PATH'\'', '\''{$poly}'\'' );";
+}
 
-define( 'WP_TESTS_DOMAIN', '${WP_TESTS_DOMAIN}' );
-define( 'WP_TESTS_EMAIL', '${WP_TESTS_EMAIL}' );
-define( 'WP_TESTS_TITLE', '${WP_TESTS_TITLE}' );
-define( 'WP_PHP_BINARY', '${WP_PHP_BINARY}' );
+$cfg = preg_replace("/\\?>\\s*$/", "", $cfg);
+$cfg .= "\n// === Added by CI bootstrap ===\n" . implode("\n", $extra) . "\n";
 
-// WP core path for tests
-define( 'ABSPATH', '${WP_CORE_DIR}/' );
+file_put_contents(getenv("WP_TESTS_DIR") . "/wp-tests-config.php", $cfg);
+'
 
-// PHPUnit Polyfills root dir (fixes "autoload not found" error)
-define( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH', '${POLY_ROOT_ABS}/' );
+# Create DB if needed
+echo "== Creating test database ${DB_NAME} =="
+mysqladmin -h "${DB_HOST}" -u"${DB_USER}" -p"${DB_PASSWORD}" create "${DB_NAME}" 2>/dev/null || true
 
-// CI niceties
-define( 'FS_METHOD', 'direct' );
-define( 'WP_DEBUG', true );
-define( 'WP_DEBUG_DISPLAY', true );
-PHP
-
-log "Bootstrap complete."
+echo "== Done bootstrapping WP tests =="

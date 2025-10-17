@@ -1,151 +1,138 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ------------------------------------------------------------------------------
-# Pantheon Behat environment prep
-# - Ensures Multidev exists
-# - Switches to SFTP
-# - Writes MU plugin that aliases #user_login/#user_pass to 'username'/'password'
-#   (first try: `wp eval`; fallback: `wp eval --skip-wordpress` to /code/)
-# - Single-argument base64 payload to avoid heredoc/escaping issues
-# ------------------------------------------------------------------------------
+# Required env:
+#   PANTHEON_SITE   (machine name)
+#   TERMINUS_ENV    (multidev env name)
+#   SIMPLESAMLPHP_VERSION
+#   SSH agent already running (webfactory/ssh-agent action) with key that has Pantheon access.
 
-# ------- Required env -------
-TERMINUS_SITE="${TERMINUS_SITE:?TERMINUS_SITE is required}"
-TERMINUS_ENV="${TERMINUS_ENV:?TERMINUS_ENV is required}"
-SIMPLESAMLPHP_VERSION="${SIMPLESAMLPHP_VERSION:-}"
-SITE_ENV="${TERMINUS_SITE}.${TERMINUS_ENV}"
+SITE="${PANTHEON_SITE:-${TERMINUS_SITE:-}}"
+ENV="${TERMINUS_ENV:?Missing TERMINUS_ENV}"
+SSP="${SIMPLESAMLPHP_VERSION:-}"
+if [ -z "${SITE}" ]; then
+  echo "PANTHEON_SITE secret is required"; exit 1;
+fi
 
-log(){ printf '== %s ==\n' "$*"; }
+echo "== Behat prepare =="
+echo "== TERMINUS_SITE=${SITE} =="
+echo "== TERMINUS_ENV=${ENV} =="
+echo "== SIMPLESAMLPHP_VERSION=${SSP} =="
 
-log "Behat prepare"
-log "TERMINUS_SITE=${TERMINUS_SITE}"
-log "TERMINUS_ENV=${TERMINUS_ENV}"
-[[ -n "${SIMPLESAMLPHP_VERSION}" ]] && log "SIMPLESAMLPHP_VERSION=${SIMPLESAMLPHP_VERSION}"
-
-export PATH="/usr/local/bin:/usr/bin:/bin${PATH:+:${PATH}}"
-
-log "== Terminus version: =="
+echo "== Terminus version: =="
 terminus --version
 
-# ------- Ensure Multidev -------
-log "== Ensuring Multidev environment ${SITE_ENV} =="
-if ! terminus env:info "${SITE_ENV}" >/dev/null 2>&1; then
-  echo "Multidev ${SITE_ENV} does not exist. Creating from dev…"
-  terminus env:create "${TERMINUS_SITE}.dev" "${TERMINUS_ENV}"
+echo "== Ensuring Multidev environment ${SITE}.${ENV} =="
+if ! terminus env:info "${SITE}.${ENV}" >/dev/null 2>&1; then
+  terminus env:create "${SITE}.dev" "${ENV}"
 else
-  echo "Multidev ${SITE_ENV} already exists."
+  echo "Multidev ${SITE}.${ENV} exists."
 fi
 
-# ------- Optional fixtures banner -------
-if [[ -n "${SIMPLESAMLPHP_VERSION}" ]]; then
-  log "== Staging SimpleSAMLphp ${SIMPLESAMLPHP_VERSION} (if required by tests)… =="
-  echo "No files staged (placeholder)."
-fi
+# Simple health check
+BASE_URL="$(terminus env:view "${SITE}.${ENV}" --print)"
+echo "== OK >> ${BASE_URL} responded =="
 
-# ------- Switch to SFTP so we can write MU plugin -------
-log "== Switching ${SITE_ENV} to SFTP mode so we can write MU plugins… =="
-terminus connection:set "${SITE_ENV}" sftp || true
+# Stage SimpleSAMLphp placeholder (kept from earlier logs – noop here)
+echo "== Staging SimpleSAMLphp ${SSP} (if required by tests)… =="
+echo "No files staged (placeholder)."
 
-# ------- MU plugin payload -------
+echo "== Switching ${SITE}.${ENV} to SFTP mode so we can write MU plugins… =="
+terminus connection:set "${SITE}.${ENV}" sftp || true
+
+echo "== Writing MU plugin for Behat login field aliases… =="
+
+# Build MU plugin content. We base64 it and send via wp-cli if present; if not, upload via SFTP.
 read -r -d '' MU_PLUGIN_PHP <<'PHP'
 <?php
 /**
- * Plugin Name: CI - Login Field Aliases (server-rendered)
- * Description: Adds hidden 'username' and 'password' inputs and maps them to core fields for Behat.
+ * Plugin Name: CI - Login Field Aliases
+ * Description: Adds username/password aliases on the WP login form for Behat steps.
  */
-add_action('login_form', function () {
+add_action("login_form", function () {
     ?>
-    <style>.ci-alias{position:absolute;left:-9999px;opacity:0;pointer-events:none;}</style>
-    <p class="ci-alias">
-        <label for="username">Username</label>
-        <input type="text" name="username" id="username" autocomplete="username">
-    </p>
-    <p class="ci-alias">
-        <label for="password">Password</label>
-        <input type="password" name="password" id="password" autocomplete="current-password">
-    </p>
     <script type="text/javascript">
-      (function() {
-        function mapAlias(origSel, aliasId) {
-          var orig = document.querySelector(origSel);
-          var alias = document.getElementById(aliasId);
-          if (!orig || !alias) return;
-          var syncing = false;
-          function sync(a, b) {
-            if (syncing) return;
-            syncing = true;
-            if (b.value !== a.value) b.value = a.value;
-            syncing = false;
-          }
-          sync(orig, alias);
-          orig.addEventListener('input', function(){ sync(orig, alias); });
-          alias.addEventListener('input', function(){ sync(alias, orig); });
-        }
-        mapAlias('#user_login', 'username');
-        mapAlias('#user_pass',  'password');
-      })();
+        (function() {
+            function ensureAlias(originalSelector, aliasId, aliasName) {
+                var orig = document.querySelector(originalSelector);
+                if (!orig) return;
+                var alias = document.getElementById(aliasId);
+                if (!alias) {
+                    alias = document.createElement("input");
+                    alias.type = orig.type || "text";
+                    alias.id = aliasId;
+                    alias.name = aliasName;
+                    alias.autocomplete = orig.autocomplete || "on";
+                    alias.style.position = "absolute";
+                    alias.style.opacity = "0";
+                    alias.style.pointerEvents = "none";
+                    alias.tabIndex = -1;
+                    orig.parentNode.appendChild(alias);
+                }
+                var syncing = false;
+                function sync(a, b) {
+                    if (syncing) return;
+                    syncing = true;
+                    if (b.value !== a.value) b.value = a.value;
+                    syncing = false;
+                }
+                orig.addEventListener("input", function(){ sync(orig, alias); });
+                alias.addEventListener("input", function(){ sync(alias, orig); });
+                sync(orig, alias);
+            }
+            // Map WP core fields to aliases expected by upstream tests
+            ensureAlias("#user_login", "username", "username");
+            ensureAlias("#user_pass",  "password", "password");
+        })();
     </script>
     <?php
 });
-
-// Server-side POST mapping (works even if JS is stripped)
-add_filter('authenticate', function ($user) {
-    if (empty($_POST['log']) && !empty($_POST['username'])) {
-        $_POST['log'] = $_POST['username'];
-        $_POST['user_login'] = $_POST['username'];
-    }
-    if (empty($_POST['pwd']) && !empty($_POST['password'])) {
-        $_POST['pwd'] = $_POST['password'];
-        $_POST['user_pass'] = $_POST['password'];
-    }
-    return $user;
-}, 0);
 PHP
 
-# Base64 payload as single argument
-if base64 --help >/dev/null 2>&1; then
-  B64="$(printf '%s' "${MU_PLUGIN_PHP}" | base64 -w0 2>/dev/null || printf '%s' "${MU_PLUGIN_PHP}" | base64 | tr -d '\n')"
-else
-  B64="$(python3 - <<'PY'
-import sys, base64
-print(base64.b64encode(sys.stdin.read().encode()).decode(), end="")
-PY
-  <<< "${MU_PLUGIN_PHP}")"
-fi
+MU_PLUGIN_B64="$(printf "%s" "${MU_PLUGIN_PHP}" | base64 -w0)"
 
-# First attempt: wp eval with WordPress loaded (ABSPATH available)
-PHP_WP=$'\n'
-PHP_WP+="\$d=ABSPATH.'wp-content/mu-plugins';"
-PHP_WP+=" if(!is_dir(\$d)){mkdir(\$d,0775,true);}"
-PHP_WP+=" \$c=base64_decode('${B64}');"
-PHP_WP+=" \$t=\$d.'/ci-login-field-aliases.php';"
-PHP_WP+=" if(file_put_contents(\$t,\$c)===false){fwrite(STDERR,'Failed to write MU plugin to '.\$t.PHP_EOL); exit(1);} "
-PHP_WP+=" echo 'Wrote MU plugin: '.\$t.PHP_EOL;"
-
+# Try wp-cli first (fastest). Some appservers don't have wp-cli; detect and fall back.
 set +e
-terminus wp "${SITE_ENV}" -- eval "${PHP_WP}"
-RC=$?
+terminus wp "${SITE}.${ENV}" -- wp --info >/dev/null 2>&1
+HAS_WP=$?
 set -e
 
-if [[ $RC -ne 0 ]]; then
-  # Fallback: wp eval --skip-wordpress and write to /code/ (Pantheon docroot)
-  PHP_SKIP=$'\n'
-  PHP_SKIP+="\$d='/code/wp-content/mu-plugins';"
-  PHP_SKIP+=" if(!is_dir(\$d)){mkdir(\$d,0775,true);}"
-  PHP_SKIP+=" \$c=base64_decode('${B64}');"
-  PHP_SKIP+=" \$t=\$d.'/ci-login-field-aliases.php';"
-  PHP_SKIP+=" if(file_put_contents(\$t,\$c)===false){fwrite(STDERR,'Failed to write MU plugin to '.\$t.PHP_EOL); exit(1);} "
-  PHP_SKIP+=" echo 'Wrote MU plugin: '.\$t.PHP_EOL;"
+TARGET_REL="wp-content/mu-plugins/ci-login-field-aliases.php"
 
-  terminus wp "${SITE_ENV}" -- eval --skip-wordpress "${PHP_SKIP}"
+if [ ${HAS_WP} -eq 0 ]; then
+  echo "wp-cli detected on appserver; writing via wp eval…"
+  # Pass the base64 via env var to avoid quoting issues
+  MU_PLUGIN_B64="${MU_PLUGIN_B64}" terminus wp "${SITE}.${ENV}" -- wp eval '
+    $dir = ABSPATH . "wp-content/mu-plugins";
+    if (!is_dir($dir)) { mkdir($dir, 0775, true); }
+    $b64 = getenv("MU_PLUGIN_B64") ?: "";
+    if ($b64 === "") { fwrite(STDERR, "Empty MU_PLUGIN_B64\n"); exit(1); }
+    $code = base64_decode($b64);
+    $target = $dir . "/ci-login-field-aliases.php";
+    file_put_contents($target, $code);
+    echo "Wrote MU plugin: {$target}\n";
+  '
+else
+  echo "wp-cli NOT available; uploading over SFTP…"
+  # Get SFTP connection details and push file using ssh
+  # We avoid jq; parse simple table output.
+  INFO=$(terminus connection:info "${SITE}.${ENV}" --fields=sftp_username,sftp_host,sftp_port --format=tsv)
+  SFTP_USER=$(echo "${INFO}" | awk '{print $1}')
+  SFTP_HOST=$(echo "${INFO}" | awk '{print $2}')
+  SFTP_PORT=$(echo "${INFO}" | awk '{print $3}')
+  if [ -z "${SFTP_USER}" ] || [ -z "${SFTP_HOST}" ] || [ -z "${SFTP_PORT}" ]; then
+    echo "Failed to get SFTP connection info"; exit 1
+  fi
+
+  # Ensure target dir and upload file by piping content over SSH
+  ssh -p "${SFTP_PORT}" "${SFTP_USER}@${SFTP_HOST}" "mkdir -p code/wp-content/mu-plugins"
+  echo "${MU_PLUGIN_B64}" | base64 -d | ssh -p "${SFTP_PORT}" "${SFTP_USER}@${SFTP_HOST}" "cat > code/${TARGET_REL}"
+
+  echo "Committing MU plugin to ${SITE}.${ENV}…"
+  terminus env:commit "${SITE}.${ENV}" --message='CI: add MU plugin to alias login fields' --force || true
 fi
 
-# Commit and clear cache
-log "== Committing MU plugin to ${SITE_ENV}… =="
-terminus env:commit "${SITE_ENV}" --message="CI: add MU plugin to alias login fields" --force || true
+echo "Clearing environment cache…"
+terminus env:clear-cache "${SITE}.${ENV}"
 
-log "== Clearing environment cache… =="
-terminus env:clear-cache "${SITE_ENV}"
-
-log "Behat prepare finished."
+echo "Behat prepare finished."
