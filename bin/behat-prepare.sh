@@ -1,62 +1,80 @@
 #!/usr/bin/env bash
-# Prepares a Pantheon Multidev for Behat and installs a server-rendered MU plugin
-# that exposes "username" & "password" fields for tests (no JS required).
-
 set -euo pipefail
 
-: "${TERMINUS_SITE:?TERMINUS_SITE is required}"
-: "${TERMINUS_ENV:?TERMINUS_ENV is required}"
-: "${SIMPLESAMLPHP_VERSION:=1.18.0}"
+# ------------------------------------------------------------------------------
+# Pantheon Behat environment prep
+# - Ensures Multidev exists
+# - (Optionally) checks site responds
+# - Switches to SFTP mode
+# - Writes MU plugin that aliases #user_login/#user_pass to 'username'/'password'
+#   to satisfy upstream Behat steps
+# - Uses base64-encoded payload passed as a single arg to `terminus wp ... eval`
+# ------------------------------------------------------------------------------
 
+# ------- Required env -------
+TERMINUS_SITE="${TERMINUS_SITE:?TERMINUS_SITE is required}"
+TERMINUS_ENV="${TERMINUS_ENV:?TERMINUS_ENV is required}"
+SIMPLESAMLPHP_VERSION="${SIMPLESAMLPHP_VERSION:-}"
 SITE_ENV="${TERMINUS_SITE}.${TERMINUS_ENV}"
 
-log(){ printf '== %s ==\n' "$*"; }
-note(){ printf 'Notice:  %s\n' "$*"; }
-warn(){ printf 'Warning: %s\n' "$*" >&2; }
+# ------- Logging helper -------
+log() { printf '== %s ==\n' "$*"; }
 
 log "Behat prepare"
-echo "TERMINUS_SITE=${TERMINUS_SITE}"
-echo "TERMINUS_ENV=${TERMINUS_ENV}"
-echo "SIMPLESAMLPHP_VERSION=${SIMPLESAMLPHP_VERSION}"
+log "TERMINUS_SITE=${TERMINUS_SITE}"
+log "TERMINUS_ENV=${TERMINUS_ENV}"
+[[ -n "${SIMPLESAMLPHP_VERSION}" ]] && log "SIMPLESAMLPHP_VERSION=${SIMPLESAMLPHP_VERSION}"
+
+# Make sure terminus is on PATH in GitHub runners
+export PATH="/usr/local/bin:/usr/bin:/bin${PATH:+:${PATH}}"
 
 log "== Terminus version: =="
-terminus --version || true
-echo
+terminus --version
 
+# ------- Ensure Multidev exists -------
 log "== Ensuring Multidev environment ${SITE_ENV} =="
 if ! terminus env:info "${SITE_ENV}" >/dev/null 2>&1; then
-  note "Multidev ${SITE_ENV} does not exist. Creating from dev…"
+  echo "Multidev ${SITE_ENV} does not exist. Creating from dev…"
   terminus env:create "${TERMINUS_SITE}.dev" "${TERMINUS_ENV}"
 else
-  note "Multidev ${SITE_ENV} already exists."
+  echo "Multidev ${SITE_ENV} already exists."
 fi
 
-if terminus env:view "${SITE_ENV}" --print >/dev/null 2>&1; then
-  note "OK >> $(terminus env:view "${SITE_ENV}" --print) responded"
+# ------- Basic health check (HTTP) -------
+BASE_URL="$(terminus env:view "${SITE_ENV}" --print | sed -n 's/.*URL: *//p' | tr -d '\r')"
+if [[ -n "${BASE_URL}" ]]; then
+  if curl -fsS -o /dev/null "${BASE_URL}"; then
+    log "OK >> ${BASE_URL} responded"
+  else
+    echo "Warning: ${BASE_URL} not responding yet (continuing)"
+  fi
 fi
 
+# ------- We don't rely on remote wp-cli/core being present -------
 log "== Checking if WordPress is installed on appserver… =="
-if ! terminus wp "${SITE_ENV}" -- 'core is-installed' >/dev/null 2>&1; then
-  warn "wp-cli or core not available on appserver; continuing (tests target HTTP)"
+if ! terminus wp "${SITE_ENV}" -- core version >/dev/null 2>&1; then
+  echo "wp-cli or core not available on appserver; continuing (tests target HTTP)"
 fi
 
-log "== Staging SimpleSAMLphp ${SIMPLESAMLPHP_VERSION} (if required by tests)… =="
-note "No files staged (placeholder)."
+# ------- (Optional) Stage SSP fixtures (placeholder) -------
+if [[ -n "${SIMPLESAMLPHP_VERSION}" ]]; then
+  log "== Staging SimpleSAMLphp ${SIMPLESAMLPHP_VERSION} (if required by tests)… =="
+  echo "No files staged (placeholder)."
+fi
 
+# ------- Switch to SFTP so we can write MU plugin -------
 log "== Switching ${SITE_ENV} to SFTP mode so we can write MU plugins… =="
 terminus connection:set "${SITE_ENV}" sftp || true
 
-# ---------------- MU plugin (Base64 inline payload) ----------------
+# ------- Write MU plugin via remote wp eval (base64 single-arg) -------
 log "== Writing MU plugin for Behat login field aliases… =="
 
 read -r -d '' MU_PLUGIN_PHP <<'PHP'
 <?php
 /**
  * Plugin Name: CI - Login Field Aliases (server-rendered)
- * Description: Adds hidden 'username' and 'password' inputs and maps them to core fields for Behat (no JS required).
- * Author: CI
+ * Description: Adds hidden 'username' and 'password' inputs and maps them to core fields for Behat.
  */
-
 add_action('login_form', function () {
     ?>
     <style>.ci-alias{position:absolute;left:-9999px;opacity:0;pointer-events:none;}</style>
@@ -68,13 +86,31 @@ add_action('login_form', function () {
         <label for="password">Password</label>
         <input type="password" name="password" id="password" autocomplete="current-password">
     </p>
+    <script type="text/javascript">
+      (function() {
+        function mapAlias(origSel, aliasId) {
+          var orig = document.querySelector(origSel);
+          var alias = document.getElementById(aliasId);
+          if (!orig || !alias) return;
+          var syncing = false;
+          function sync(a, b) {
+            if (syncing) return;
+            syncing = true;
+            if (b.value !== a.value) b.value = a.value;
+            syncing = false;
+          }
+          sync(orig, alias);
+          orig.addEventListener('input', function(){ sync(orig, alias); });
+          alias.addEventListener('input', function(){ sync(alias, orig); });
+        }
+        mapAlias('#user_login', 'username');
+        mapAlias('#user_pass',  'password');
+      })();
+    </script>
     <?php
 });
 
-/**
- * Copy alias fields into the keys WP expects ('log'/'pwd' or 'user_login'/'user_pass')
- * before authentication runs.
- */
+// Map POST fields server-side (works even if JS is stripped)
 add_filter('authenticate', function ($user) {
     if (empty($_POST['log']) && !empty($_POST['username'])) {
         $_POST['log'] = $_POST['username'];
@@ -88,22 +124,30 @@ add_filter('authenticate', function ($user) {
 }, 0);
 PHP
 
-# Encode once, inline to wp-cli
-B64="$(printf '%s' "${MU_PLUGIN_PHP}" | base64 -w0 || base64 <<<"${MU_PLUGIN_PHP}" | tr -d '\n')"
+# Base64 (portable between GNU/BSD)
+if base64 --help >/dev/null 2>&1; then
+  B64="$(printf '%s' "${MU_PLUGIN_PHP}" | base64 -w0 2>/dev/null || printf '%s' "${MU_PLUGIN_PHP}" | base64 | tr -d '\n')"
+else
+  # Fallback (very rare)
+  B64="$(python3 - <<'PY'
+import sys, base64
+print(base64.b64encode(sys.stdin.read().encode()).decode(), end="")
+PY
+  <<< "${MU_PLUGIN_PHP}")"
+fi
 
-# Use a single-line eval so wp-cli receives the PHP as an argument (stdin is ignored by wp eval)
-terminus wp "${SITE_ENV}" -- "eval \"\
-\$dir = ABSPATH . 'wp-content/mu-plugins'; \
-if (!is_dir(\$dir)) { mkdir(\$dir, 0775, true); } \
-\$code = base64_decode('${B64}'); \
-\$target = \$dir . '/ci-login-field-aliases.php'; \
-if (file_put_contents(\$target, \$code) === false) { \
-    fwrite(STDERR, 'Failed to write MU plugin to ' . \$target . PHP_EOL); \
-    exit(1); \
-} \
-echo 'Wrote MU plugin: ' . \$target . PHP_EOL; \
-\""
+PHP_CODE=$'\n'
+PHP_CODE+="\$d=ABSPATH.'wp-content/mu-plugins';"
+PHP_CODE+=" if(!is_dir(\$d)){mkdir(\$d,0775,true);}"
+PHP_CODE+=" \$c=base64_decode('${B64}');"
+PHP_CODE+=" \$t=\$d.'/ci-login-field-aliases.php';"
+PHP_CODE+=" if(file_put_contents(\$t,\$c)===false){fwrite(STDERR,'Failed to write MU plugin to '.\$t.PHP_EOL); exit(1);} "
+PHP_CODE+=" echo 'Wrote MU plugin: '.\$t.PHP_EOL;"
 
+# Pass as a SINGLE ARG to remote wp-cli to avoid heredoc/escaping pitfalls
+terminus wp "${SITE_ENV}" -- eval "${PHP_CODE}"
+
+# Commit and clear cache (kept quiet if already committed)
 log "== Committing MU plugin to ${SITE_ENV}… =="
 terminus env:commit "${SITE_ENV}" --message="CI: add MU plugin to alias login fields" --force || true
 
