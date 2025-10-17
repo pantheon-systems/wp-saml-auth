@@ -5,7 +5,7 @@
  * @package Wp_Saml_Auth
  */
 
-// Where the WP core test library lives (set by CI).
+// Location of the WP core test library.
 $_tests_dir = getenv( 'WP_TESTS_DIR' );
 if ( ! $_tests_dir ) {
 	$_tests_dir = '/tmp/wordpress-tests-lib';
@@ -21,20 +21,27 @@ define(
 require_once $_tests_dir . '/includes/functions.php';
 
 /**
- * Manually load the plugin being tested.
- *
- * IMPORTANT: This uses the original, repo-provided SimpleSAML test double
- * `class-simplesaml-auth-simple.php` that the tests were written for.
+ * Manually load the plugin being tested and force the SimpleSAML shim.
  */
 function _manually_load_plugin() {
-	$root         = dirname( __DIR__, 2 ); // repository root
-	$tests_dir    = __DIR__;
-	$shim_legacy  = $tests_dir . '/class-simplesaml-auth-simple.php';
+	$repo_root     = dirname( __DIR__, 2 ); // repository root
+	$tests_dir     = __DIR__;
+	$shim_legacy   = $tests_dir . '/class-simplesaml-auth-simple.php';
 
-	// Tell the plugin to use the legacy SimpleSAML shim the tests expect.
+	// Newer plugin code path: use 'wp_saml_auth_autoload'.
+	add_filter(
+		'wp_saml_auth_autoload',
+		static function () use ( $shim_legacy ) {
+			return $shim_legacy;
+		},
+		10,
+		0
+	);
+
+	// Back-compat path used by older code/tests.
 	add_filter(
 		'wp_saml_auth_option',
-		static function( $value, $option_name ) use ( $shim_legacy ) {
+		static function ( $value, $option_name ) use ( $shim_legacy ) {
 			if ( 'simplesamlphp_autoload' === $option_name ) {
 				return $shim_legacy;
 			}
@@ -44,9 +51,9 @@ function _manually_load_plugin() {
 		2
 	);
 
-	// Load plugin and CLI harness.
-	require $root . '/wp-saml-auth.php';
-	require $root . '/inc/class-wp-saml-auth-cli.php';
+	// Load plugin and test helpers.
+	require $repo_root . '/wp-saml-auth.php';
+	require $repo_root . '/inc/class-wp-saml-auth-cli.php';
 	require $tests_dir . '/class-wp-saml-auth-test-cli.php';
 }
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
