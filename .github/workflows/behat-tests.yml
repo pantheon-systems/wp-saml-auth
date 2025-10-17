@@ -14,14 +14,15 @@ jobs:
       fail-fast: false
       matrix:
         php: ['7.4', '8.0', '8.1', '8.2', '8.3', '8.4']
-
     env:
       DB_HOST: 127.0.0.1
       DB_USER: root
       DB_PASSWORD: root
       DB_NAME: wp_test_${{ matrix.php }}
+      # These are defaults; bootstrap will align them to WP develop layout.
       WP_CORE_DIR: /tmp/wordpress/
       WP_TESTS_DIR: /tmp/wordpress-tests-lib
+      # We'll install Yoast polyfills at /tmp/phpunit-deps
       WP_TESTS_PHPUNIT_POLYFILLS_PATH: /tmp/phpunit-deps
       COMPOSER_NO_INTERACTION: 1
       COMPOSER_NO_AUDIT: 1
@@ -37,7 +38,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          tools: composer:v2
+          tools: composer:v2, svn
           coverage: none
 
       - name: Start MySQL
@@ -45,7 +46,7 @@ jobs:
           sudo systemctl start mysql
           mysql -uroot -proot -e "DROP DATABASE IF EXISTS \`${DB_NAME}\`; CREATE DATABASE \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
-      - name: Install Composer deps (compat mode for 7.4/8.0)
+      - name: Install Composer deps (compat for 7.4/8.0)
         run: |
           PHPV=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
           if [ "$PHPV" = "7.4" ] || [ "$PHPV" = "8.0" ]; then
@@ -54,7 +55,7 @@ jobs:
             composer install --no-progress --no-interaction
           fi
 
-      - name: Ensure PHPUnit Polyfills
+      - name: Ensure PHPUnit Polyfills (Yoast)
         run: |
           if [ ! -d /tmp/phpunit-deps ]; then
             composer create-project --no-dev --no-interaction yoast/phpunit-polyfills:^2 /tmp/phpunit-deps
@@ -95,6 +96,7 @@ jobs:
         ssp: ['1.18.0', '2.0.0', '2.4.0']
 
     env:
+      TERMINUS_SITE: wp-saml-auth
       SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
       WORDPRESS_ADMIN_USERNAME: pantheon
       WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
@@ -111,17 +113,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Export TERMINUS_SITE from secrets/vars
-        shell: bash
-        run: |
-          # No gating; just assign from the first populated source.
-          TS="${{ secrets.TERMINUS_SITE }}"
-          [ -z "$TS" ] && TS="${{ secrets.PANTHEON_SITE }}"
-          [ -z "$TS" ] && TS="${{ vars.TERMINUS_SITE }}"
-          [ -z "$TS" ] && TS="${{ vars.PANTHEON_SITE }}"
-          echo "TERMINUS_SITE=$TS" >> "$GITHUB_ENV"
-          echo "Using TERMINUS_SITE=$TS"
-
       - name: Setup PHP 8.2 for Terminus & Behat
         uses: shivammathur/setup-php@v2
         with:
@@ -134,15 +125,15 @@ jobs:
 
       - name: Compute Pantheon Multidev name (no dots, <=11 chars)
         run: |
-          VER="${SIMPLESAMLPHP_VERSION//./}"           # "1.18.0" -> "1180"
+          VER="${SIMPLESAMLPHP_VERSION//./}"     # e.g. 1.18.0 -> 1180
           SUFFIX=$(printf "%04d" $(( GITHUB_RUN_NUMBER % 10000 )) )
-          BASE="ci${VER}"                              # "ci1180"
-          BASE="${BASE:0:7}"                           # cap so BASE+SUFFIX <= 11
-          TERMINUS_ENV="${BASE}${SUFFIX}"              # e.g. "ci11800042"
+          BASE="ci${VER}"                         # e.g. ci1180
+          BASE="${BASE:0:7}"                      # keep <= 11 total with suffix
+          TERMINUS_ENV="${BASE}${SUFFIX}"         # e.g. ci11800042
           echo "TERMINUS_ENV=${TERMINUS_ENV}" | tee -a "$GITHUB_ENV"
-          echo "Computed env: $TERMINUS_ENV"
+          echo "PANTHEON_SITE_URL=${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io" | tee -a "$GITHUB_ENV"
 
-      - name: Install Terminus
+      - name: Install Terminus (official action)
         uses: pantheon-systems/terminus-github-actions@v1
         with:
           pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
@@ -150,11 +141,8 @@ jobs:
       - name: Verify Terminus & fallback to PHAR if needed
         run: |
           set -e
-          if ! command -v terminus >/dev/null 2>&1; then
-            echo "Terminus not on PATH"; exit 1
-          fi
           if ! terminus --version >/dev/null 2>&1; then
-            echo "Terminus action install failed; retrying manual install..."
+            echo "Action install failed; retry manual..."
             TMP=/tmp/terminus.phar
             curl -fsSL https://github.com/pantheon-systems/terminus/releases/download/4.1.0/terminus.phar -o "$TMP"
             chmod +x "$TMP"
@@ -171,9 +159,6 @@ jobs:
         run: chmod +x bin/behat-prepare.sh || true
 
       - name: Prepare Multidev + SimpleSAMLphp + plugin
-        env:
-          # ensure exported value is present in this step too
-          TERMINUS_SITE: ${{ env.TERMINUS_SITE }}
         run: bin/behat-prepare.sh
 
       - name: Run Behat
