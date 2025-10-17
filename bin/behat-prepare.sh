@@ -67,23 +67,71 @@ PHP
 terminus connection:set "$TERMINUS_SITE.$TERMINUS_ENV" sftp
 
 # Create MU plugin that forces classic login form (disables SAML auto-redirect)
+# Put env in SFTP mode to write files
+terminus connection:set "$TERMINUS_SITE.$TERMINUS_ENV" sftp
+
+# Write an MU plugin that adds alias inputs "username"/"password" mirroring "log"/"pwd"
 terminus wp "$TERMINUS_SITE.$TERMINUS_ENV" -- eval '
 $dir = ABSPATH . "wp-content/mu-plugins";
 if (!is_dir($dir)) { mkdir($dir, 0775, true); }
-$code = <<<'PHP'
+$code = <<'"PHP"'
 <?php
 /**
- * Plugin Name: CI - Force Classic Login Form
- * Description: Keeps wp-saml-auth from auto-redirecting during Behat so fields are present.
+ * Plugin Name: CI - Login Field Aliases
+ * Description: Adds username/password aliases on the WP login form for Behat steps.
  */
-add_filter("wp_saml_auth_auto_redirect", "__return_false", 99);
-add_filter("wp_saml_auth_force", "__return_false", 99);
-add_filter("wp_saml_auth_show_password_fields", "__return_true", 99);
+
+add_action("login_form", function () {
+    ?>
+    <script type="text/javascript">
+        (function() {
+            function ensureAlias(originalSelector, aliasId, aliasName) {
+                var orig = document.querySelector(originalSelector);
+                if (!orig) return;
+
+                // If alias already exists, keep it synced
+                var alias = document.getElementById(aliasId);
+                if (!alias) {
+                    alias = document.createElement("input");
+                    alias.type = orig.type || "text";
+                    alias.id = aliasId;
+                    alias.name = aliasName;
+                    alias.autocomplete = orig.autocomplete || "on";
+                    alias.className = orig.className || "";
+                    alias.style.position = "absolute";
+                    alias.style.opacity = "0";
+                    alias.style.pointerEvents = "none";
+                    alias.tabIndex = -1;
+                    orig.parentNode.appendChild(alias);
+                }
+
+                // Keep values in sync both ways
+                var syncing = false;
+                function sync(a, b) {
+                    if (syncing) return;
+                    syncing = true;
+                    if (b.value !== a.value) b.value = a.value;
+                    syncing = false;
+                }
+                orig.addEventListener("input", function(){ sync(orig, alias); });
+                alias.addEventListener("input", function(){ sync(alias, orig); });
+
+                // Initialize once
+                sync(orig, alias);
+            }
+
+            // WP core fields -> aliases expected by tests
+            ensureAlias("#user_login", "username", "username");
+            ensureAlias("#user_pass",  "password", "password");
+        })();
+    </script>
+    <?php
+});
 PHP;
-file_put_contents($dir . "/ci-force-login-form.php", $code);
-echo "MU plugin written to {$dir}/ci-force-login-form.php\n";
+file_put_contents($dir . "/ci-login-field-aliases.php", $code);
+echo "Wrote MU plugin: {$dir}/ci-login-field-aliases.php\n";
 '
 
-# Commit filesystem change into the env
-terminus env:commit "$TERMINUS_SITE.$TERMINUS_ENV" --message="CI: add MU plugin to expose login fields for Behat" --force
+# Commit and clear caches so it’s live
+terminus env:commit "$TERMINUS_SITE.$TERMINUS_ENV" --message="CI: add MU plugin to alias login fields" --force
 terminus env:clear-cache "$TERMINUS_SITE.$TERMINUS_ENV"

@@ -77,10 +77,24 @@ jobs:
 
       - name: Run PHPUnit (PHP 7.4)
         if: ${{ matrix.php == '7.4' }}
+        env:
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASSWORD: root
+          DB_NAME: ${{ matrix.db_name }}
+          WP_TESTS_DIR: /tmp/wordpress-tests-lib
+          WP_CORE_DIR: /tmp/wordpress/
         run: ./phpunit.phar
 
       - name: Run PHPUnit (PHP 8.1+)
         if: ${{ matrix.php != '7.4' }}
+        env:
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASSWORD: root
+          DB_NAME: ${{ matrix.db_name }}
+          WP_TESTS_DIR: /tmp/wordpress-tests-lib
+          WP_CORE_DIR: /tmp/wordpress/
         run: |
           if [ -x vendor/bin/phpunit ]; then vendor/bin/phpunit; else phpunit; fi
 

@@ -46,6 +46,7 @@ if ! wp --path="${WP_CORE_DIR}" core is-installed >/dev/null 2>&1; then
 fi
 
 # ---- WP tests library ----
+# ---- WP tests library (deterministic path) ----
 echo "Preparing WP tests lib in ${WP_TESTS_DIR}..."
 rm -rf "${WP_TESTS_DIR}"
 mkdir -p "${WP_TESTS_DIR}"
@@ -60,15 +61,15 @@ if ! svn -q checkout "${BASE_TAG}/tests/phpunit" "${WP_TESTS_DIR}"; then
   svn -q checkout "${BASE_TRUNK}/tests/phpunit" "${WP_TESTS_DIR}"
 fi
 
-# Always fetch wp-tests-config-sample.php from repo root (it is NOT inside tests/phpunit)
+# config sample is stored at repo root, not under tests/phpunit
 if ! svn -q export "${BASE_TAG}/wp-tests-config-sample.php" "${WP_TESTS_DIR}/wp-tests-config-sample.php"; then
   echo "Tag did not have wp-tests-config-sample.php, trying trunk..."
   svn -q export "${BASE_TRUNK}/wp-tests-config-sample.php" "${WP_TESTS_DIR}/wp-tests-config-sample.php"
 fi
 
-if [[ ! -f "${WP_TESTS_DIR}/wp-tests-config-sample.php" ]]; then
-  echo "ERROR: Could not obtain wp-tests-config-sample.php from tag or trunk."
-  ls -la "${WP_TESTS_DIR}" || true
+if [[ ! -f "${WP_TESTS_DIR}/includes/functions.php" ]]; then
+  echo "ERROR: tests lib is missing includes/functions.php"
+  find "${WP_TESTS_DIR}" -maxdepth 2 -type f -name functions.php | sed 's/^/ -> /'
   exit 1
 fi
 
@@ -77,7 +78,9 @@ sed -i "s/youremptytestdbnamehere/${DB_NAME}/" "${WP_TESTS_DIR}/wp-tests-config.
 sed -i "s/yourusernamehere/${DB_USER}/" "${WP_TESTS_DIR}/wp-tests-config.php"
 sed -i "s/yourpasswordhere/${DB_PASSWORD}/" "${WP_TESTS_DIR}/wp-tests-config.php"
 sed -i "s|localhost|${DB_HOST}|" "${WP_TESTS_DIR}/wp-tests-config.php"
-# Point ABSPATH to our downloaded core
 sed -i "s|/path/to/wordpress/|${WP_CORE_DIR}/|" "${WP_TESTS_DIR}/wp-tests-config.php"
+
+echo "WP tests lib ready at ${WP_TESTS_DIR}"
+ls -l "${WP_TESTS_DIR}/includes/functions.php" || true
 
 echo "/bin files are up to date"
