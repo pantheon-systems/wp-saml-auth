@@ -1,99 +1,113 @@
 #!/usr/bin/env bash
+# Sets up WordPress core and the WordPress tests library for local PHPUnit runs.
+
 set -euo pipefail
 
-# -------- Config (env overridable) --------
+# Required env (provided by CI)
+: "${WP_CORE_DIR:?WP_CORE_DIR is required}"          # e.g. /tmp/wordpress/
+: "${WP_TESTS_DIR:?WP_TESTS_DIR is required}"        # e.g. /tmp/wordpress-tests-lib
 : "${DB_NAME:?DB_NAME is required}"
 : "${DB_USER:?DB_USER is required}"
 : "${DB_PASSWORD:?DB_PASSWORD is required}"
-: "${DB_HOST:=127.0.0.1}"
+: "${DB_HOST:?DB_HOST is required}"
 
-: "${WP_CORE_DIR:=/tmp/wordpress}"          # must end WITHOUT trailing slash (we normalize below)
-: "${WP_TESTS_DIR:=/tmp/wordpress-tests-lib}"
+# Defaults
+WP_VERSION="${WP_VERSION:-latest}"
 
-# -------- Helpers --------
-normpath() { python3 - <<'PY' "$1"
-import os,sys; print(os.path.normpath(sys.argv[1]))
-PY
-}
-WP_CORE_DIR="$(normpath "${WP_CORE_DIR}")"
-WP_TESTS_DIR="$(normpath "${WP_TESTS_DIR}")"
+log(){ printf '== %s ==\n' "$*"; }
 
-say() { echo "::group::$1"; }
-doneg() { echo "::endgroup::"; }
-
-# -------- Ensure tools we need --------
-say "Ensuring dependencies..."
+log "Ensuring dependencies..."
 sudo apt-get update -qq
-sudo apt-get install -y -qq subversion unzip > /dev/null
-doneg
+sudo apt-get install -y -qq unzip subversion >/dev/null
 
-# -------- Fetch WordPress core once, idempotently --------
-say "Downloading WordPress core into ${WP_CORE_DIR}..."
-if [[ -f "${WP_CORE_DIR}/wp-includes/version.php" ]]; then
-  echo "WordPress already present; skipping download."
+# ---------------- WordPress core ----------------
+# Always start clean to avoid "move to a subdir of itself" errors
+log "Downloading WordPress core into ${WP_CORE_DIR}..."
+rm -rf "${WP_CORE_DIR}"
+mkdir -p "${WP_CORE_DIR}"
+
+# Determine the exact version (optional, but useful for logs)
+if [[ "${WP_VERSION}" == "latest" ]]; then
+  ZIP_URL="https://wordpress.org/latest.zip"
 else
-  tmpdir="$(mktemp -d)"
-  curl -sSL https://wordpress.org/latest.zip -o "${tmpdir}/wp.zip"
-  unzip -q "${tmpdir}/wp.zip" -d "${tmpdir}"
-  rm -rf "${WP_CORE_DIR}"
-  mkdir -p "${WP_CORE_DIR%/*}"
-  # Move the extracted 'wordpress' folder atomically into WP_CORE_DIR
-  mv "${tmpdir}/wordpress" "${WP_CORE_DIR}"
-  rm -rf "${tmpdir}"
+  ZIP_URL="https://wordpress.org/wordpress-${WP_VERSION}.zip"
 fi
-WP_VERSION="$(php -r "include '${WP_CORE_DIR}/wp-includes/version.php'; echo \$wp_version;")"
-echo "WP_VERSION=${WP_VERSION}"
-doneg
 
-# -------- Fetch the tests library (tagged to core version if possible) --------
-say "Preparing WP tests lib in ${WP_TESTS_DIR} (WP ${WP_VERSION})"
+TMPDIR="$(mktemp -d)"
+curl -fsSL "${ZIP_URL}" -o "${TMPDIR}/wp.zip"
+unzip -q "${TMPDIR}/wp.zip" -d "${TMPDIR}"
+# The zip expands to "${TMPDIR}/wordpress"
+mv "${TMPDIR}/wordpress"/* "${WP_CORE_DIR}/"
+rm -rf "${TMPDIR}"
+
+# Get runtime WP version (for logging)
+WP_VER_IN_CORE="$(php -r "include '${WP_CORE_DIR%/}/wp-includes/version.php'; echo \$wp_version;")" || WP_VER_IN_CORE="${WP_VERSION}"
+log "  WP_VERSION=${WP_VER_IN_CORE}"
+
+# ---------------- WP tests lib ----------------
+log "Preparing WP tests lib in ${WP_TESTS_DIR} (WP ${WP_VER_IN_CORE})"
 rm -rf "${WP_TESTS_DIR}"
 mkdir -p "${WP_TESTS_DIR}"
-if command -v svn >/dev/null 2>&1; then
-  set +e
-  svn co -q "https://develop.svn.wordpress.org/tags/${WP_VERSION}/tests/phpunit" "${WP_TESTS_DIR}" 2>/dev/null
-  rc=$?
-  set -e
-  if [[ $rc -ne 0 ]]; then
-    echo "Tag checkout failed; using trunk tests/phpunit…"
-    svn co -q "https://develop.svn.wordpress.org/trunk/tests/phpunit" "${WP_TESTS_DIR}"
-  fi
+
+# Prefer a tag that matches core, fall back to trunk
+SVN_BASE="https://develop.svn.wordpress.org"
+if svn ls "${SVN_BASE}/tags/${WP_VER_IN_CORE}/tests/phpunit" >/dev/null 2>&1; then
+  SVN_PATH="${SVN_BASE}/tags/${WP_VER_IN_CORE}/tests/phpunit"
 else
-  echo "svn not found; cannot fetch tests from develop.svn.wordpress.org"
-  exit 127
+  echo "Tag not found; using trunk tests/phpunit…"
+  SVN_PATH="${SVN_BASE}/trunk/tests/phpunit"
 fi
-doneg
 
-# -------- Create wp-tests-config.php --------
-say "Creating wp-tests-config.php"
-sample_cfg="${WP_TESTS_DIR}/wp-tests-config-sample.php"
-cfg="${WP_TESTS_DIR}/wp-tests-config.php"
+# Export the whole tests/phpunit dir so we get wp-tests-config-sample.php
+svn export -q "${SVN_PATH}" "${WP_TESTS_DIR}"
 
-cp "${sample_cfg}" "${cfg}"
+# ---------------- wp-tests-config.php ----------------
+log "Creating wp-tests-config.php"
+CONFIG_SAMPLE="${WP_TESTS_DIR}/wp-tests-config-sample.php"
+CONFIG_DEST="${WP_TESTS_DIR}/wp-tests-config.php"
 
-# Replace constants
+# Some older snapshots may miss the sample; generate if needed.
+if [[ ! -f "${CONFIG_SAMPLE}" ]]; then
+  cat > "${CONFIG_SAMPLE}" <<'PHP'
+<?php
+/* Path to the WordPress codebase you'd like to test. Add a trailing slash. */
+define( 'ABSPATH', getenv('WP_CORE_DIR') . '/' );
+
+/* Database settings */
+define( 'DB_NAME',     getenv('DB_NAME') );
+define( 'DB_USER',     getenv('DB_USER') );
+define( 'DB_PASSWORD', getenv('DB_PASSWORD') );
+define( 'DB_HOST',     getenv('DB_HOST') );
+define( 'DB_CHARSET',  'utf8' );
+define( 'DB_COLLATE',  '' );
+
+/* Authentication Unique Keys and Salts. */
+define( 'AUTH_KEY',         'put your unique phrase here' );
+define( 'SECURE_AUTH_KEY',  'put your unique phrase here' );
+define( 'LOGGED_IN_KEY',    'put your unique phrase here' );
+define( 'NONCE_KEY',        'put your unique phrase here' );
+define( 'AUTH_SALT',        'put your unique phrase here' );
+define( 'SECURE_AUTH_SALT', 'put your unique phrase here' );
+define( 'LOGGED_IN_SALT',   'put your unique phrase here' );
+define( 'NONCE_SALT',       'put your unique phrase here' );
+
+$table_prefix = 'wptests_';
+define( 'WP_DEBUG', true );
+PHP
+fi
+
+cp "${CONFIG_SAMPLE}" "${CONFIG_DEST}"
+
+# Replace values in config (keep this simple/safe)
 php -r '
-$cfg = file_get_contents(getenv("CFG"));
-$repl = [
-  "/define\\(\\s*\\x27DB_NAME\\x27\\s*,\\s*\\x27.*?\\x27\\s*\\);/" => "define( '\''DB_NAME'\'', '\''".getenv("DB_NAME")."'\'' );",
-  "/define\\(\\s*\\x27DB_USER\\x27\\s*,\\s*\\x27.*?\\x27\\s*\\);/" => "define( '\''DB_USER'\'', '\''".getenv("DB_USER")."'\'' );",
-  "/define\\(\\s*\\x27DB_PASSWORD\\x27\\s*,\\s*\\x27.*?\\x27\\s*\\);/" => "define( '\''DB_PASSWORD'\'', '\''".getenv("DB_PASSWORD")."'\'' );",
-  "/define\\(\\s*\\x27DB_HOST\\x27\\s*,\\s*\\x27.*?\\x27\\s*\\);/" => "define( '\''DB_HOST'\'', '\''".getenv("DB_HOST")."'\'' );",
-  "/define\\(\\s*\\x27DB_CHARSET\\x27\\s*,\\s*\\x27.*?\\x27\\s*\\);/" => "define( '\''DB_CHARSET'\'', '\''utf8'\'');",
-];
-$cfg = preg_replace(array_keys($repl), array_values($repl), $cfg);
-$cfg = preg_replace("/define\\(\\s*\\x27ABSPATH\\x27.*?;\\s*/s", "", $cfg); // ensure we set ABSPATH ourselves
-$cfg .= "\n/** Path to the WordPress codebase under test. */\n";
-$cfg .= "define( 'ABSPATH', rtrim(getenv('WP_CORE_DIR'), '/').'/');\n";
-file_put_contents(getenv("CFG"), $cfg);
-' CFG="${cfg}"
+$cfg = getenv("WP_TESTS_DIR") . "/wp-tests-config.php";
+$c = file_get_contents($cfg);
+$c = preg_replace("/define\(\s*'\''DB_NAME'\''\s*,\s*.*?\);/", "define( '\''DB_NAME'\'', getenv('\''DB_NAME'\''));", $c);
+$c = preg_replace("/define\(\s*'\''DB_USER'\''\s*,\s*.*?\);/", "define( '\''DB_USER'\'', getenv('\''DB_USER'\''));", $c);
+$c = preg_replace("/define\(\s*'\''DB_PASSWORD'\''\s*,\s*.*?\);/", "define( '\''DB_PASSWORD'\'', getenv('\''DB_PASSWORD'\''));", $c);
+$c = preg_replace("/define\(\s*'\''DB_HOST'\''\s*,\s*.*?\);/", "define( '\''DB_HOST'\'', getenv('\''DB_HOST'\''));", $c);
+$c = preg_replace("/define\(\s*'\''ABSPATH'\''\s*,\s*.*?\);/", "define( '\''ABSPATH'\'', rtrim(getenv('\''WP_CORE_DIR'\''), '\''/'\'') . '\''/'\'' );", $c);
+file_put_contents($cfg, $c);
+'
 
-echo "Wrote ${cfg}"
-doneg
-
-# -------- Create DB if needed --------
-say "Creating test database ${DB_NAME} (if not exists)…"
-mysqladmin --host="${DB_HOST}" --user="${DB_USER}" --password="${DB_PASSWORD}" create "${DB_NAME}" 2>/dev/null || true
-doneg
-
-echo "PHPUnit bootstrap finished."
+log "Done."
