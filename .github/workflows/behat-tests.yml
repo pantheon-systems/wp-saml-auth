@@ -1,39 +1,49 @@
 name: Behat and PHPUnit
 
 on:
+  push:
+    branches: [ main, master ]
   pull_request:
+    branches: [ "**" ]
 
 jobs:
   phpunit:
-    name: PHPUnit (PHP ${{ matrix.php }})
-    runs-on: ubuntu-latest
+    name: PHPUnit (PHP ${{ matrix.php-versions }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    continue-on-error: ${{ matrix.experimental == true }}
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wp_test
+        ports: [ "3306:3306" ]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
     strategy:
       fail-fast: false
       matrix:
-        php: ['7.4', '8.1', '8.2', '8.3', '8.4']
+        php-versions: [ '7.4', '8.0', '8.1', '8.2', '8.3', '8.4' ]
         include:
-          - php: '7.4'
-            db_name: wp_test_7_4
-            phpunit_phar_url: https://phar.phpunit.de/phpunit-9.6.19.phar
-          - php: '8.1'
-            db_name: wp_test_8_1
-          - php: '8.2'
-            db_name: wp_test_8_2
-          - php: '8.3'
-            db_name: wp_test_8_3
-          - php: '8.4'
-            db_name: wp_test_8_4
-    services:
-      mysql:
-        image: mysql:5.7
-        env:
-          MYSQL_ROOT_PASSWORD: root
-        ports: ['3306:3306']
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
-          --health-interval=5s
-          --health-timeout=5s
-          --health-retries=20
+          - php-versions: '8.4'
+            experimental: true
+
+    env:
+      COMPOSER_PROCESS_TIMEOUT: 0
+      COMPOSER_NO_INTERACTION: 1
+      COMPOSER_NO_AUDIT: 1
+      DB_HOST: 127.0.0.1
+      DB_USER: root
+      DB_PASSWORD: root
+      DB_NAME: wp_test_${{ matrix.php-versions }}
+      WP_TESTS_DIR: /tmp/wordpress-tests-lib
+      WP_CORE_DIR: /tmp/wordpress/
 
     steps:
       - name: Checkout repository
@@ -41,166 +51,115 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up PHP ${{ matrix.php }}
+      - name: Setup PHP ${{ matrix.php-versions }}
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php }}
-          tools: composer, wp-cli, svn
+          php-version: ${{ matrix.php-versions }}
           coverage: none
+          tools: composer:v2
+          extensions: mysqli
 
-      - name: Ensure bin scripts are executable
-        run: chmod +x bin/*.sh
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: |
+            vendor
+            ~/.composer/cache
+          key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-
 
-      - name: Install dependencies (PHP 7.4)
-        if: ${{ matrix.php == '7.4' }}
-        run: composer install --no-dev --no-progress --prefer-dist
+      - name: Install Composer dependencies
+        run: composer install --no-progress --no-interaction
 
-      - name: Install dependencies (PHP 8.1+)
-        if: ${{ matrix.php != '7.4' }}
-        run: composer install --no-progress --prefer-dist
+      - name: Make CI scripts executable
+        run: chmod +x bin/phpunit-bootstrap.sh || true
 
-      - name: PHPUnit bootstrap
-        env:
-          DB_HOST: 127.0.0.1
-          DB_USER: root
-          DB_PASSWORD: root
-          DB_NAME: ${{ matrix.db_name }}
-          WP_TESTS_DIR: /tmp/wordpress-tests-lib
-          WP_CORE_DIR: /tmp/wordpress/
+      - name: Bootstrap WP test environment
         run: bin/phpunit-bootstrap.sh
 
-      - name: Download PHPUnit PHAR (PHP 7.4)
-        if: ${{ matrix.php == '7.4' }}
-        run: |
-          curl -fsSL "${{ matrix.phpunit_phar_url }}" -o phpunit.phar
-          chmod +x phpunit.phar
-
-      - name: Run PHPUnit (PHP 7.4)
-        if: ${{ matrix.php == '7.4' }}
+      - name: Run PHPUnit
         env:
-          DB_HOST: 127.0.0.1
-          DB_USER: root
-          DB_PASSWORD: root
-          DB_NAME: ${{ matrix.db_name }}
-          WP_TESTS_DIR: /tmp/wordpress-tests-lib
-          WP_CORE_DIR: /tmp/wordpress/
-        run: ./phpunit.phar
-
-      - name: Run PHPUnit (PHP 8.1+)
-        if: ${{ matrix.php != '7.4' }}
-        env:
-          DB_HOST: 127.0.0.1
-          DB_USER: root
-          DB_PASSWORD: root
-          DB_NAME: ${{ matrix.db_name }}
-          WP_TESTS_DIR: /tmp/wordpress-tests-lib
-          WP_CORE_DIR: /tmp/wordpress/
+          XDEBUG_MODE: off
         run: |
-          if [ -x vendor/bin/phpunit ]; then vendor/bin/phpunit; else phpunit; fi
+          if [ -x vendor/bin/phpunit ]; then
+            vendor/bin/phpunit
+          else
+            PHPV=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
+            if [ "$PHPV" = "8.4" ]; then
+              curl -fsSL https://phar.phpunit.de/phpunit-10.phar -o phpunit.phar
+            else
+              curl -fsSL https://phar.phpunit.de/phpunit-9.phar -o phpunit.phar
+            fi
+            php ./phpunit.phar
+          fi
 
   behat:
     name: Behat (SSP ${{ matrix.ssp }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        ssp: ['1.18.0', '2.0.0', '2.4.0']
+        ssp: [ '1.18.0', '2.0.0', '2.4.0' ]
+
+    env:
+      COMPOSER_PROCESS_TIMEOUT: 0
+      COMPOSER_NO_INTERACTION: 1
+      COMPOSER_NO_AUDIT: 1
+      TERMINUS_SITE: ${{ secrets.PANTHEON_SITE }}
+      TERMINUS_ENV: ci${{ matrix.ssp && replace(matrix.ssp, '.', '') }}${{ github.run_number }}${{ github.run_attempt }}
+      WORDPRESS_ADMIN_USERNAME: pantheon
+      WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
+      WORDPRESS_ADMIN_PASSWORD: pantheon
+      WP_TESTS_DIR: /tmp/wordpress-tests-lib
+      WP_CORE_DIR: /tmp/wordpress/
+      SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+
+      - name: Setup PHP (for Behat tooling)
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: |
+            vendor
+            ~/.composer/cache
+          key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-
+
+      - name: Install Composer dependencies
+        run: composer install --no-progress --no-interaction
 
       - name: Install Terminus
         uses: pantheon-systems/terminus-github-actions@v1
         with:
           pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
 
-      - name: Set up PHP for Behat
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.3'
-          tools: composer
-          coverage: none
-
-      - name: Composer install (with dev)
-        env:
-          COMPOSER_PROCESS_TIMEOUT: 0
-          COMPOSER_NO_INTERACTION: 1
-          COMPOSER_NO_AUDIT: 1
-        run: composer install --no-progress --prefer-dist
-
-      - name: Ensure bin scripts are executable
-        run: chmod +x bin/*.sh
-
-      - name: Compute Multidev name
-        id: compute_env
-        shell: bash
-        run: |
-          set -euo pipefail
-          SSP_DIGITS="$(echo '${{ matrix.ssp }}' | tr -cd '0-9' | cut -c1-3)"
-          SHORT_SHA="$(echo '${{ github.sha }}' | cut -c1-4)"
-          RN="$(printf '%02d' $(( ${{ github.run_number }} % 100 )))"
-          ENV_NAME="ci${SSP_DIGITS}${SHORT_SHA}${RN}"
-          echo "env=${ENV_NAME}" >> "$GITHUB_OUTPUT"
-          echo "TERMINUS_ENV=${ENV_NAME}" >> "$GITHUB_ENV"
-          echo "Using Multidev: ${ENV_NAME}"
-
-      - name: Detect private key presence
-        id: has_key
-        shell: bash
-        run: |
-          if [ -n "${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}" ]; then
-            echo "present=1" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=0" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Load SSH key for Pantheon appserver (secret)
-        if: ${{ steps.has_key.outputs.present == '1' }}
+      - name: Start ssh-agent and add key (optional)
+        if: ${{ secrets.PANTHEON_SSH_PRIVATE_KEY != '' }}
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
+          ssh-private-key: ${{ secrets.PANTHEON_SSH_PRIVATE_KEY }}
 
-      - name: Create ephemeral SSH key and add to Pantheon
-        if: ${{ steps.has_key.outputs.present == '0' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519 -C "github-actions@${GITHUB_REPOSITORY}"
-          eval "$(ssh-agent -s)"
-          ssh-add ~/.ssh/id_ed25519
-          terminus --version
-          terminus ssh-key:add ~/.ssh/id_ed25519.pub --yes
-          terminus auth:whoami || true
+      - name: Make CI scripts executable
+        run: chmod +x bin/behat-prepare.sh || true
 
-      - name: Behat prepare (create/wipe env, install WP, stage SSP bundle)
-        env:
-          TERMINUS_SITE: wp-saml-auth
-          TERMINUS_ENV: ${{ steps.compute_env.outputs.env }}
-          SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
-          WORDPRESS_ADMIN_USERNAME: pantheon
-          WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
-          WORDPRESS_ADMIN_PASSWORD: pantheon
-          WP_TESTS_DIR: /tmp/wordpress-tests-lib
-          WP_CORE_DIR: /tmp/wordpress/
+      - name: Prepare Pantheon multidev + MU plugin
         run: bin/behat-prepare.sh
 
-      - name: Run Behat
+      - name: Run Behat suite
         env:
-          TERMINUS_SITE: wp-saml-auth
-          TERMINUS_ENV: ${{ steps.compute_env.outputs.env }}
-          SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
-        run: |
-          export XDEBUG_MODE=off
-          export BEHAT_PARAMS='{"extensions":{"Behat\\MinkExtension":{"base_url":"http://${{ steps.compute_env.outputs.env }}-wp-saml-auth.pantheonsite.io"}}}'
-          if [ -x vendor/bin/behat ]; then vendor/bin/behat --strict; else ./vendor/bin/behat --strict; fi
-
-      - name: Behat cleanup
-        if: always()
-        env:
-          TERMINUS_SITE: wp-saml-auth
-          TERMINUS_ENV: ${{ steps.compute_env.outputs.env }}
-        run: bin/behat-cleanup.sh
+          XDEBUG_MODE: off
+        run: vendor/bin/behat --colors --no-interaction
