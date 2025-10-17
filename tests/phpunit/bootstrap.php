@@ -124,3 +124,27 @@ require $_tests_dir . '/includes/bootstrap.php';
 add_filter( 'wp_saml_auth_autoload', function () {
     return __DIR__ . '/simplesamlphp-stubs/autoload.php';
 }, 1 );
+
+/**
+ * PHPUnit defaults the test suite expects at runtime.
+ * Use per-option filters so individual tests can still override.
+ */
+
+// Do NOT allow classic WP username/password logins by default.
+add_filter( 'wp_saml_auth_permit_wp_login', '__return_false', 5 );
+
+// Do NOT call SLO by default.
+add_filter( 'wp_saml_auth_allow_slo', '__return_false', 5 );
+
+// ENABLE auto-provisioning by default so tests like
+// "missing attribute" and "custom role" run their intended branches.
+// Individual tests that need it OFF can still override with higher priority.
+add_filter( 'wp_saml_auth_option_auto_provision', function( $val ) {
+    return true;
+}, 5 );
+
+// Ensure sane attribute mappings used across tests.
+add_filter( 'wp_saml_auth_option_user_login_attribute', function( $val ) { return 'uid'; }, 5 );
+add_filter( 'wp_saml_auth_option_user_email_attribute', function( $val ) { return 'mail'; }, 5 );
+add_filter( 'wp_saml_auth_option_user_role_attribute',  function( $val ) { return 'eduPersonAffiliation'; }, 5 );
+add_filter( 'wp_saml_auth_option_default_role',         function( $val ) { return 'subscriber'; }, 5 );
