@@ -1,82 +1,85 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Env (already provided in workflow):
-# DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
-# WP_TESTS_DIR (/tmp/wordpress-tests-lib)
-# WP_CORE_DIR  (/tmp/wordpress)
-# WP_TESTS_PHPUNIT_POLYFILLS_PATH (set in workflow step)
+# ------- Inputs / defaults -------
+: "${DB_HOST:=127.0.0.1}"
+: "${DB_USER:=root}"
+: "${DB_PASSWORD:=root}"
+: "${DB_NAME:=wp_test}"
+: "${WP_VERSION:=6.8.3}"
+: "${WP_CORE_DIR:=/tmp/wordpress}"
+: "${WP_TESTS_DIR:=/tmp/wordpress-tests-lib}"
+: "${WP_DEBUG:=1}"
 
-WP_VERSION="${WP_VERSION:-6.8.3}"
-WP_TESTS_DIR="${WP_TESTS_DIR:-/tmp/wordpress-tests-lib}"
-WP_CORE_DIR="${WP_CORE_DIR:-/tmp/wordpress}"
-POLYFILLS_DIR="${WP_TESTS_PHPUNIT_POLYFILLS_PATH:-}"
+# Required by the WP test suite
+export WP_PHP_BINARY="${WP_PHP_BINARY:-"$(command -v php)"}"
 
 echo "== Ensuring dependencies... =="
-sudo apt-get update -y -o=Dpkg::Use-Pty=0
-sudo apt-get install -y -o=Dpkg::Use-Pty=0 unzip subversion > /dev/null
 
-echo "== Downloading WordPress core into ${WP_CORE_DIR}... =="
-echo "==   WP_VERSION=${WP_VERSION} =="
+# Clean up partial/invalid installs only (don’t nuke good caches)
+ensure_clean_dir() {
+  local path="$1"
+  local marker="$2"
+  if [ -d "$path" ] && [ ! -f "$path/$marker" ]; then
+    rm -rf "$path"
+  fi
+}
 
-# Clean slate to avoid 'mv: cannot move ... to a subdirectory of itself'
-rm -rf "${WP_CORE_DIR}" "${WP_CORE_DIR}-download" "${WP_TESTS_DIR}"
-mkdir -p "${WP_CORE_DIR}-download"
-curl -fsSL "https://wordpress.org/wordpress-${WP_VERSION}.tar.gz" -o "${WP_CORE_DIR}-download/wordpress.tar.gz"
-tar -xzf "${WP_CORE_DIR}-download/wordpress.tar.gz" -C "${WP_CORE_DIR}-download"
-# Move the extracted 'wordpress' folder to WP_CORE_DIR
-mv "${WP_CORE_DIR}-download/wordpress" "${WP_CORE_DIR}"
-rm -rf "${WP_CORE_DIR}-download"
-
-echo "== Preparing WP tests lib in ${WP_TESTS_DIR} (WP ${WP_VERSION}) =="
-
-# Pull the matching tests from develop.svn.wordpress.org
-svn --version >/dev/null 2>&1 || { echo "svn is required"; exit 1; }
-
-# Some WP point releases may not exist in tags; fallback to trunk if tag is missing
-if svn ls "https://develop.svn.wordpress.org/tags/${WP_VERSION}/" >/dev/null 2>&1; then
-  WP_TESTS_SVN="https://develop.svn.wordpress.org/tags/${WP_VERSION}/"
-else
-  echo "Tag ${WP_VERSION} not found in develop.svn.wordpress.org; using trunk tests."
-  WP_TESTS_SVN="https://develop.svn.wordpress.org/trunk/"
+# 1) WordPress core -----------------------------------------------------------
+ensure_clean_dir "$WP_CORE_DIR" ".wp-installed.ok"
+if [ ! -f "$WP_CORE_DIR/.wp-installed.ok" ]; then
+  echo "== Downloading WordPress core into $WP_CORE_DIR... =="
+  tmpcore="$(mktemp -d)"
+  curl -fsSL "https://wordpress.org/wordpress-${WP_VERSION}.tar.gz" -o "${tmpcore}/wp.tgz"
+  mkdir -p "$WP_CORE_DIR"
+  tar -xzf "${tmpcore}/wp.tgz" -C "${tmpcore}"
+  # Extracted into ${tmpcore}/wordpress — move atomically
+  rsync -a --delete "${tmpcore}/wordpress/" "$WP_CORE_DIR/"
+  touch "$WP_CORE_DIR/.wp-installed.ok"
+  rm -rf "$tmpcore"
+  echo "==   WP_VERSION=${WP_VERSION} =="
 fi
 
-svn export --quiet "${WP_TESTS_SVN}tests/phpunit" "${WP_TESTS_DIR}/tests/phpunit"
-svn export --quiet "${WP_TESTS_SVN}src" "${WP_TESTS_DIR}/src"
-svn export --quiet "${WP_TESTS_SVN}wp-tests-config-sample.php" "${WP_TESTS_DIR}/wp-tests-config-sample.php"
+# 2) WP tests library ---------------------------------------------------------
+ensure_clean_dir "$WP_TESTS_DIR" ".wp-tests.ok"
+if [ ! -f "$WP_TESTS_DIR/.wp-tests.ok" ]; then
+  echo "== Preparing WP tests lib in $WP_TESTS_DIR (WP ${WP_VERSION}) =="
+  mkdir -p "$WP_TESTS_DIR"
 
-echo "== Creating wp-tests-config.php =="
+  # Pull test suite from develop.svn.wordpress.org
+  #   Includes: includes/, data/, etc.
+  svn export --quiet "https://develop.svn.wordpress.org/tags/${WP_VERSION}/tests/phpunit" "$WP_TESTS_DIR"
 
-: "${DB_HOST:?DB_HOST required}"
-: "${DB_USER:?DB_USER required}"
-: "${DB_PASSWORD:?DB_PASSWORD required}"
-: "${DB_NAME:?DB_NAME required}"
+  # We also need the sample config file (outside tests/phpunit)
+  curl -fsSL "https://develop.svn.wordpress.org/tags/${WP_VERSION}/wp-tests-config-sample.php" \
+    -o "$WP_TESTS_DIR/wp-tests-config-sample.php"
 
-WP_TESTS_CONFIG="${WP_TESTS_DIR}/wp-tests-config.php"
-cp "${WP_TESTS_DIR}/wp-tests-config-sample.php" "${WP_TESTS_CONFIG}"
+  # Create wp-tests-config.php from scratch (avoids “cannot stat” issues)
+  cat > "$WP_TESTS_DIR/wp-tests-config.php" <<PHP
+<?php
+// ** MySQL settings ** //
+define( 'DB_NAME',     '${DB_NAME}' );
+define( 'DB_USER',     '${DB_USER}' );
+define( 'DB_PASSWORD', '${DB_PASSWORD}' );
+define( 'DB_HOST',     '${DB_HOST}' );
+define( 'DB_CHARSET',  'utf8' );
+define( 'DB_COLLATE',  '' );
 
-# Set required constants
-PHP_BIN="$(command -v php)"
-sed -i "s/youremptytestdbnamehere/${DB_NAME}/" "${WP_TESTS_CONFIG}"
-sed -i "s/yourusernamehere/${DB_USER}/" "${WP_TESTS_CONFIG}"
-sed -i "s/yourpasswordhere/${DB_PASSWORD}/" "${WP_TESTS_CONFIG}"
-sed -i "s/localhost/${DB_HOST}/" "${WP_TESTS_CONFIG}"
+// WP test suite required constants
+define( 'WP_TESTS_DOMAIN', 'example.org' );
+define( 'WP_TESTS_EMAIL',  'admin@example.org' );
+define( 'WP_TESTS_TITLE',  'Test Blog' );
+define( 'WP_PHP_BINARY',   '${WP_PHP_BINARY}' );
 
-# Extra constants WP test suite expects (avoid 'not defined' errors)
-{
-  echo "define( 'WP_TESTS_DOMAIN', 'example.org' );"
-  echo "define( 'WP_TESTS_EMAIL', 'admin@example.org' );"
-  echo "define( 'WP_TESTS_TITLE', 'Test Blog' );"
-  echo "define( 'WP_PHP_BINARY', '${PHP_BIN}' );"
-} >> "${WP_TESTS_CONFIG}"
+// Misc
+\$table_prefix = 'wptests_';
+define( 'WP_DEBUG', ${WP_DEBUG} );
 
-# Polyfills path if we installed them in a temp vendor dir
-if [ -n "${POLYFILLS_DIR}" ] && [ -d "${POLYFILLS_DIR}" ]; then
-  {
-    echo "if ( ! defined( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH' ) ) {"
-    echo "  define( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH', '${POLYFILLS_DIR}' );"
-    echo "}"
-  } >> "${WP_TESTS_CONFIG}"
+// Path to the WordPress codebase under test.
+define( 'ABSPATH', '${WP_CORE_DIR}/' );
+PHP
+
+  touch "$WP_TESTS_DIR/.wp-tests.ok"
 fi
 
-echo "== Done bootstrapping WP test lib =="
+echo "== Done PHPUnit bootstrap =="

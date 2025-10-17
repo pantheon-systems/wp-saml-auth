@@ -10,39 +10,23 @@ jobs:
   phpunit:
     name: PHPUnit (PHP ${{ matrix.php }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
         php: [ '7.4', '8.0', '8.1', '8.2', '8.3', '8.4' ]
-        include:
-          - php: '8.4'
-            experimental: true
-    continue-on-error: ${{ matrix.experimental == true }}
-
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: wp_test
-        ports: [ "3306:3306" ]
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
 
     env:
-      COMPOSER_PROCESS_TIMEOUT: 0
-      COMPOSER_NO_INTERACTION: 1
-      COMPOSER_NO_AUDIT: 1
       DB_HOST: 127.0.0.1
       DB_USER: root
       DB_PASSWORD: root
       DB_NAME: wp_test_${{ matrix.php }}
-      WP_TESTS_DIR: /tmp/wordpress-tests-lib
       WP_CORE_DIR: /tmp/wordpress/
+      WP_TESTS_DIR: /tmp/wordpress-tests-lib
+      WP_TESTS_PHPUNIT_POLYFILLS_PATH: /tmp/phpunit-deps/vendor/yoast/phpunit-polyfills
+      COMPOSER_NO_INTERACTION: 1
+      COMPOSER_NO_AUDIT: 1
+      COMPOSER_PROCESS_TIMEOUT: 0
 
     steps:
       - name: Checkout repository
@@ -50,51 +34,45 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup PHP ${{ matrix.php }}
+      - name: Set up PHP ${{ matrix.php }}
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
           tools: composer:v2
           coverage: none
-          extensions: mysqli
 
-      - name: Composer cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            vendor
-            ~/.composer/cache
-          key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
-          restore-keys: |
-            composer-${{ runner.os }}-
-
-      # IMPORTANT:
-      # - On PHP < 8.1, do NOT install dev deps from your lock (they require PHP >= 8.1).
-      # - We install only prod deps, then pull Yoast Polyfills into a separate temp vendor dir.
-      - name: Install Composer dependencies (prod) + polyfills
-        shell: bash
+      - name: Start MySQL
         run: |
-          set -euo pipefail
+          sudo systemctl start mysql
+          mysql -uroot -proot -e "DROP DATABASE IF EXISTS \`${DB_NAME}\`; CREATE DATABASE \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+      # Avoid PHP >=8.1-only dev deps on 7.4/8.0, but still get autoload for the plugin.
+      - name: Install Composer deps (compat mode on older PHP)
+        run: |
           PHPV=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
+          if [ "$PHPV" = "7.4" ] || [ "$PHPV" = "8.0" ]; then
+            composer install --no-progress --no-interaction --no-dev
+          else
+            composer install --no-progress --no-interaction
+          fi
 
-          # Always install prod deps from your lock.
-          composer install --no-progress --no-interaction --no-dev
+      # Install the Yoast polyfills into a separate throwaway dir – independent of repo lock
+      - name: Ensure PHPUnit Polyfills
+        run: |
+          if [ ! -d /tmp/phpunit-deps/vendor/yoast/phpunit-polyfills ]; then
+            composer create-project --no-dev --no-interaction yoast/phpunit-polyfills:^2 /tmp/phpunit-deps
+          fi
+          test -f /tmp/phpunit-deps/vendor/yoast/phpunit-polyfills/phpunitpolyfills-autoload.php
 
-          # For tests, we need Yoast PHPUnit Polyfills everywhere.
-          # Install it into a separate working dir that won't conflict with your lock.
-          mkdir -p /tmp/phpunit-deps
-          composer init --no-interaction --name tmp/phpunit-deps --working-dir=/tmp/phpunit-deps >/dev/null 2>&1
-          composer config platform.php "$PHPV" --working-dir=/tmp/phpunit-deps
-          composer require --no-progress --no-interaction --working-dir=/tmp/phpunit-deps yoast/phpunit-polyfills:^2
+      - name: Make bootstrap executable
+        run: chmod +x bin/phpunit-bootstrap.sh
 
-          echo "WP_TESTS_PHPUNIT_POLYFILLS_PATH=/tmp/phpunit-deps/vendor/yoast/phpunit-polyfills" >> $GITHUB_ENV
-
-      - name: Make CI scripts executable
-        run: chmod +x bin/phpunit-bootstrap.sh || true
-
-      - name: Bootstrap WP test environment
+      - name: Bootstrap WordPress test suite
+        env:
+          WP_VERSION: 6.8.3
         run: bin/phpunit-bootstrap.sh
 
+      # Prefer project PHPUnit if present; otherwise fetch suitable phar
       - name: Run PHPUnit
         env:
           XDEBUG_MODE: off
@@ -102,7 +80,6 @@ jobs:
           if [ -x vendor/bin/phpunit ]; then
             vendor/bin/phpunit
           else
-            # Fallback to phar per runtime for PHP 8.4, otherwise 9.x is fine.
             PHPV=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
             if [ "$PHPV" = "8.4" ]; then
               curl -fsSL https://phar.phpunit.de/phpunit-10.phar -o phpunit.phar
@@ -119,22 +96,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ssp: [ '1.18.0', '2.0.0', '2.4.0' ]
+        ssp: ['1.18.0', '2.0.0', '2.4.0']
 
     env:
-      TERMINUS_SITE: wp-saml-auth        # <-- set to your site name
-      TERMINUS_ENV: ci${{ matrix.ssp }}${{ github.run_number }}${{ github.run_attempt }}
+      # plain env (not secrets)
+      TERMINUS_SITE: wp-saml-auth
       SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
-
-      # WP creds for the test user (kept as env — not secrets)
       WORDPRESS_ADMIN_USERNAME: pantheon
       WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
       WORDPRESS_ADMIN_PASSWORD: pantheon
-
-      # Generic CI env
-      COMPOSER_PROCESS_TIMEOUT: 0
       COMPOSER_NO_INTERACTION: 1
       COMPOSER_NO_AUDIT: 1
+      COMPOSER_PROCESS_TIMEOUT: 0
       WP_TESTS_DIR: /tmp/wordpress-tests-lib
       WP_CORE_DIR: /tmp/wordpress/
 
@@ -144,7 +117,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      # PHP 8.2 so Terminus 4 works (the action downloads v4.x)
+      # Terminus 4 requires PHP 8.2+
       - name: Setup PHP 8.2
         uses: shivammathur/setup-php@v2
         with:
@@ -152,30 +125,32 @@ jobs:
           tools: composer:v2
           coverage: none
 
-      - name: Composer cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            vendor
-            ~/.composer/cache
-          key: composer-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
-          restore-keys: |
-            composer-${{ runner.os }}-
-
-      - name: Install Composer dependencies
-        run: composer install --no-progress --no-interaction
+      # Compute a valid Multidev name:
+      #   - remove dots
+      #   - prefix "ci"
+      #   - truncate to 11 chars by taking version digits and last 4 of run number
+      - name: Compute Pantheon Multidev name
+        run: |
+          VER="${SIMPLESAMLPHP_VERSION//./}"        # e.g. 1180 -> 1.18.0
+          SUFFIX=$(printf "%04d" $(( GITHUB_RUN_NUMBER % 10000 )) )
+          # base "ci" + version digits (max 7) + 4 digit suffix => <= 11 chars
+          BASE="ci${VER}"
+          BASE="${BASE:0:7}"
+          TERMINUS_ENV="${BASE}${SUFFIX}"
+          echo "TERMINUS_ENV=${TERMINUS_ENV}" | tee -a "$GITHUB_ENV"
+          echo "Computed env: $TERMINUS_ENV"
 
       - name: Install Terminus
         uses: pantheon-systems/terminus-github-actions@v1
         with:
           pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
 
-      - name: Start ssh-agent and add key (for SFTP upload)
+      - name: Start ssh-agent and add key (for SFTP)
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
 
-      - name: Make Behat script executable
+      - name: Make prepare script executable
         run: chmod +x bin/behat-prepare.sh || true
 
       - name: Prepare Multidev + SimpleSAMLphp + plugin
@@ -185,3 +160,4 @@ jobs:
         env:
           XDEBUG_MODE: off
         run: vendor/bin/behat --colors --no-interaction
+
