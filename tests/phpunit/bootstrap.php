@@ -16,22 +16,8 @@ define( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH', __DIR__ . '/../../vendor/yoast/phpuni
 require_once $_tests_dir . '/includes/functions.php';
 
 /**
- * Manually load the plugin being tested.
- */
-function _manually_load_plugin() {
-    $root = dirname( dirname( dirname( __FILE__ ) ) );
-    require $root . '/wp-saml-auth.php';
-    require $root . '/inc/class-wp-saml-auth-cli.php';
-    require __DIR__ . '/class-wp-saml-auth-test-cli.php';
-
-    // Force our unit-test defaults EARLY so tests (priority 10+) can override them.
-    add_filter( 'wp_saml_auth_option', '_wp_saml_auth_filter_option', 1, 2 );
-}
-tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
-
-/**
  * Unit-test baseline options.
- * NOTE: We set explicit values regardless of existing defaults so tests behave deterministically.
+ * NOTE: These are early defaults so tests (priority 10+) can override.
  */
 function _wp_saml_auth_filter_option( $value, $option_name ) {
     switch ( $option_name ) {
@@ -66,6 +52,21 @@ function _wp_saml_auth_filter_option( $value, $option_name ) {
 }
 
 /**
+ * Manually load the plugin being tested.
+ */
+function _manually_load_plugin() {
+    $root = dirname( dirname( dirname( __FILE__ ) ) );
+
+    // IMPORTANT: Install our defaults BEFORE the plugin loads so it sees them.
+    add_filter( 'wp_saml_auth_option', '_wp_saml_auth_filter_option', 1, 2 );
+
+    require $root . '/wp-saml-auth.php';
+    require $root . '/inc/class-wp-saml-auth-cli.php';
+    require __DIR__ . '/class-wp-saml-auth-test-cli.php';
+}
+tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
+
+/**
  * Log in a user by setting authentication cookies (short-circuited for tests).
  */
 function wp_set_auth_cookie( $user_id, $remember = false, $secure = '', $token = '' ) {
@@ -83,7 +84,7 @@ function wp_logout() {
 // Start up the WP testing environment.
 require $_tests_dir . '/includes/bootstrap.php';
 
-// Force the plugin’s autoloader resolution to our stubs.
+// Force the plugin’s autoloader resolution to our stubs (belt & suspenders).
 add_filter( 'wp_saml_auth_autoload', function () {
     return __DIR__ . '/simplesamlphp-stubs/autoload.php';
 } );
