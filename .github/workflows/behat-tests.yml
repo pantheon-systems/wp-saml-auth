@@ -46,34 +46,32 @@ jobs:
           coverage: none
           tools: composer:v2
 
-      - name: Install extras (svn, mysqli, wp-cli)
+      - name: Install extras (svn, mariadb-client, wp-cli)
         run: |
           sudo apt-get update
           sudo apt-get install -y subversion mariadb-client
-          echo "Downloading WP-CLI phar"
           curl -fsSL -o wp-cli.phar https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
           chmod +x wp-cli.phar
           sudo mv wp-cli.phar /usr/local/bin/wp
-          php -v
 
-      - name: Create test DB
-        run: |
-          mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS wp_test_${{ matrix.php }};"
-          # Also create the numeric-only variant for safety (not strictly needed now)
-          mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS wp_test_${{ matrix.php//./ }};"
-
-      - name: Install Composer deps (root)
-        run: composer install --no-progress --no-interaction
-
-      # Compute and export per-PHP temp paths so they never collide
+      # Compute and export per-PHP variables ONCE; use env everywhere
       - name: Compute PHP vars
         run: |
           PHPV="${{ matrix.php }}"
+          PHPV_NUM="${PHPV//./}"
           echo "PHPV=$PHPV" >> $GITHUB_ENV
-          echo "DB_NAME=wp_test_${PHPV//./}" >> $GITHUB_ENV
-          echo "WP_CORE_DIR=/tmp/wp-${PHPV//./}/wordpress" >> $GITHUB_ENV
-          echo "WP_TESTS_DIR=/tmp/wp-${PHPV//./}/wordpress-tests-lib" >> $GITHUB_ENV
+          echo "PHPV_NUM=$PHPV_NUM" >> $GITHUB_ENV
+          echo "DB_NAME=wp_test_${PHPV_NUM}" >> $GITHUB_ENV
+          echo "WP_CORE_DIR=/tmp/wp-${PHPV_NUM}/wordpress" >> $GITHUB_ENV
+          echo "WP_TESTS_DIR=/tmp/wp-${PHPV_NUM}/wordpress-tests-lib" >> $GITHUB_ENV
           echo "WP_VERSION=6.8.3" >> $GITHUB_ENV
+
+      - name: Create test DB
+        run: |
+          mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
+
+      - name: Install Composer deps (root)
+        run: composer install --no-progress --no-interaction
 
       - name: Clean WP test paths (exact)
         run: |
@@ -141,7 +139,7 @@ jobs:
           tools: composer:v2
           coverage: none
 
-      # Required by your instruction (persist until changed): official Terminus action
+      # Persisted per your instruction
       - name: Install Terminus
         uses: pantheon-systems/terminus-github-actions@v1
         with:
@@ -153,17 +151,15 @@ jobs:
           ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
           log-public-key: true
 
-      # Match CircleCI behavior: disable strict host checking instead of keyscanning legacy hosts
       - name: Configure SSH (no strict host key checking)
         run: |
           mkdir -p ~/.ssh
           printf "Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile=/dev/null\n" > ~/.ssh/config
 
-      # Set static site id (as in CircleCI)
+      # As in CircleCI: hard-set site id
       - name: Set Pantheon site id
         run: echo "TERMINUS_SITE=wp-saml-auth" >> $GITHUB_ENV
 
-      # Validate required secrets without using expressions that reference secrets directly in `if:`
       - name: Validate required secrets
         run: |
           MISS=0
@@ -224,7 +220,6 @@ jobs:
 
       - name: Run Behat
         env:
-          # Force Mink's base_url away from localhost to the Pantheon URL
           BEHAT_PARAMS: >-
             {"extensions":{"Behat\\MinkExtension":{"base_url":"https://${{ env.PANTHEON_SITE_URL }}"}}}
           PANTHEON_SITE_URL: ${{ env.PANTHEON_SITE_URL }}
