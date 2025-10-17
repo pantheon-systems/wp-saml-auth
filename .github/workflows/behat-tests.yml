@@ -22,7 +22,6 @@ jobs:
       DB_NAME: wp_test_${{ matrix.php }}
       WP_CORE_DIR: /tmp/wordpress/
       WP_TESTS_DIR: /tmp/wordpress-tests-lib
-      # Yoast Polyfills is installed as a *project root* here, not under vendor/.
       WP_TESTS_PHPUNIT_POLYFILLS_PATH: /tmp/phpunit-deps
       COMPOSER_NO_INTERACTION: 1
       COMPOSER_NO_AUDIT: 1
@@ -96,7 +95,6 @@ jobs:
         ssp: ['1.18.0', '2.0.0', '2.4.0']
 
     env:
-      TERMINUS_SITE: ${{ secrets.PANTHEON_SITE }}
       SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
       WORDPRESS_ADMIN_USERNAME: pantheon
       WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
@@ -113,6 +111,17 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Export TERMINUS_SITE from secrets/vars
+        shell: bash
+        run: |
+          # No gating; just assign from the first populated source.
+          TS="${{ secrets.TERMINUS_SITE }}"
+          [ -z "$TS" ] && TS="${{ secrets.PANTHEON_SITE }}"
+          [ -z "$TS" ] && TS="${{ vars.TERMINUS_SITE }}"
+          [ -z "$TS" ] && TS="${{ vars.PANTHEON_SITE }}"
+          echo "TERMINUS_SITE=$TS" >> "$GITHUB_ENV"
+          echo "Using TERMINUS_SITE=$TS"
+
       - name: Setup PHP 8.2 for Terminus & Behat
         uses: shivammathur/setup-php@v2
         with:
@@ -125,10 +134,10 @@ jobs:
 
       - name: Compute Pantheon Multidev name (no dots, <=11 chars)
         run: |
-          VER="${SIMPLESAMLPHP_VERSION//./}"           # e.g. "1.18.0" -> "1180"
+          VER="${SIMPLESAMLPHP_VERSION//./}"           # "1.18.0" -> "1180"
           SUFFIX=$(printf "%04d" $(( GITHUB_RUN_NUMBER % 10000 )) )
-          BASE="ci${VER}"                              # e.g. "ci1180"
-          BASE="${BASE:0:7}"                           # hard cap base to keep <= 11 total
+          BASE="ci${VER}"                              # "ci1180"
+          BASE="${BASE:0:7}"                           # cap so BASE+SUFFIX <= 11
           TERMINUS_ENV="${BASE}${SUFFIX}"              # e.g. "ci11800042"
           echo "TERMINUS_ENV=${TERMINUS_ENV}" | tee -a "$GITHUB_ENV"
           echo "Computed env: $TERMINUS_ENV"
@@ -162,6 +171,9 @@ jobs:
         run: chmod +x bin/behat-prepare.sh || true
 
       - name: Prepare Multidev + SimpleSAMLphp + plugin
+        env:
+          # ensure exported value is present in this step too
+          TERMINUS_SITE: ${{ env.TERMINUS_SITE }}
         run: bin/behat-prepare.sh
 
       - name: Run Behat

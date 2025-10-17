@@ -7,7 +7,6 @@
 # such that it can be run a second time if a step fails.
 ###
 
-# If Terminus is unauthenticated, skip provisioning (CI may be running only unit tests)
 TERMINUS_USER_ID=$(terminus auth:whoami --field=id 2>&1)
 if [[ ! $TERMINUS_USER_ID =~ ^[A-Za-z0-9-]{36}$ ]]; then
   echo "Terminus unauthenticated; assuming unauthenticated build"
@@ -21,7 +20,6 @@ if [ -z "$TERMINUS_SITE" ] || [ -z "$TERMINUS_ENV" ]; then
   exit 1
 fi
 
-# Define once & use everywhere
 SITE_ENV="$TERMINUS_SITE.$TERMINUS_ENV"
 
 ###
@@ -62,59 +60,61 @@ git clone -b "$TERMINUS_ENV" "$PANTHEON_GIT_URL" "$PREPARE_DIR"
 ###
 echo "Creating a child theme called $TERMINUS_SITE"
 rm -rf "${PREPARE_DIR}/wp-content/themes/${TERMINUS_SITE}"
-mkdir -p "$PREPARE_DIR/wp-content/themes/$TERMINUS_SITE"
-cp "$BASH_DIR/fixtures/functions.php"  "$PREPARE_DIR/wp-content/themes/$TERMINUS_SITE/functions.php"
-cp "$BASH_DIR/fixtures/style.css"      "$PREPARE_DIR/wp-content/themes/$TERMINUS_SITE/style.css"
+mkdir "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"
+cp "$BASH_DIR"/fixtures/functions.php  "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"/functions.php
+cp "$BASH_DIR"/fixtures/style.css      "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"/style.css
 
 echo "Adding WP Native PHP Sessions to the environment"
-rm -rf "$PREPARE_DIR/wp-content/plugins/wp-native-php-sessions"
-wget -O "$PREPARE_DIR/wp-native-php-sessions.zip" https://downloads.wordpress.org/plugin/wp-native-php-sessions.zip
-unzip "$PREPARE_DIR/wp-native-php-sessions.zip" -d "$PREPARE_DIR"
-mv "$PREPARE_DIR/wp-native-php-sessions" "$PREPARE_DIR/wp-content/plugins/"
-rm "$PREPARE_DIR/wp-native-php-sessions.zip"
+rm -rf "$PREPARE_DIR"/wp-content/plugins/wp-native-php-sessions
+wget -O "$PREPARE_DIR"/wp-native-php-sessions.zip https://downloads.wordpress.org/plugin/wp-native-php-sessions.zip
+unzip "$PREPARE_DIR"/wp-native-php-sessions.zip -d "$PREPARE_DIR"
+mv "$PREPARE_DIR"/wp-native-php-sessions "$PREPARE_DIR"/wp-content/plugins/
+rm "$PREPARE_DIR"/wp-native-php-sessions.zip
 
 ###
 # Add the copy of this plugin itself to the environment
 ###
 echo "Copying WP SAML Auth into WordPress"
-cd "$BASH_DIR/.."
-rsync -av --exclude='node_modules/' --exclude='simplesamlphp/' --exclude='tests/' ./* "$PREPARE_DIR/wp-content/plugins/wp-saml-auth"
-rm -rf "$PREPARE_DIR/wp-content/plugins/wp-saml-auth/.git"
+cd "$BASH_DIR"/..
+rsync -av --exclude='node_modules/' --exclude='simplesamlphp/' --exclude='tests/' ./* "$PREPARE_DIR"/wp-content/plugins/wp-saml-auth
+rm -rf "$PREPARE_DIR"/wp-content/plugins/wp-saml-auth/.git
 
 # Add extra tests if we're running 2.0.0
 if [ "$SIMPLESAMLPHP_VERSION" == '2.0.0' ]; then
   WORKING_DIR="/home/tester/pantheon-systems/wp-saml-auth"
   if [ ! -d "$WORKING_DIR" ]; then
-    echo "WORKING_DIR ($WORKING_DIR) does not exist"; exit 1
+    echo "WORKING_DIR ($WORKING_DIR) does not exist"
+    exit 1
   fi
-  if [ ! -f "$BASH_DIR/fixtures/1-adminnotice.feature" ]; then
-    echo "$BASH_DIR/fixtures/1-adminnotice.feature does not exist"; exit 1
+  if [ ! -f "$BASH_DIR"/fixtures/1-adminnotice.feature ]; then
+    echo "$BASH_DIR/fixtures/1-adminnotice.feature does not exist"
+    exit 1
   fi
   if [ ! -d "$WORKING_DIR/tests/behat" ]; then
-    echo "$WORKING_DIR/tests/behat does not exist"; exit 1
+    echo "$WORKING_DIR/tests/behat does not exist"
+    exit 1
   fi
   if [ ! -f "$WORKING_DIR/tests/behat/0-login.feature" ]; then
-    echo "$WORKING_DIR/tests/behat/0-login.feature does not exist"; exit 1
+    echo "$WORKING_DIR/tests/behat/0-login.feature does not exist"
+    exit 1
   fi
   echo "Copying 1-adminnotice.feature to local Behat tests directory (${WORKING_DIR}/tests/behat/)"
-  cp "$BASH_DIR/fixtures/1-adminnotice.feature" "$WORKING_DIR/tests/behat/"
+  cp "$BASH_DIR"/fixtures/1-adminnotice.feature "$WORKING_DIR"/tests/behat/
 fi
 
 ###
-# Add SimpleSAMLphp to the environment (installed under private/, symlinked/replicated to public)
+# Add SimpleSAMLphp to the environment
 ###
 echo "Setting up SimpleSAMLphp $SIMPLESAMLPHP_VERSION"
-rm -rf "$PREPARE_DIR/private"
-mkdir -p "$PREPARE_DIR/private"
-wget "$SIMPLESAMLPHP_DOWNLOAD_URL" -O "$PREPARE_DIR/simplesamplphp-latest.tar.gz" || wget "$SIMPLESAMLPHP_DOWNLOAD_URL" -O "$PREPARE_DIR/simplesamlphp-latest.tar.gz"
-tar -zxvf "$PREPARE_DIR"/simplesamlphp-latest.tar.gz -C "$PREPARE_DIR/private"
-ORIG_SIMPLESAMLPHP_DIR=$(ls "$PREPARE_DIR/private")
+rm -rf "$PREPARE_DIR"/private
+mkdir "$PREPARE_DIR"/private
+wget "$SIMPLESAMLPHP_DOWNLOAD_URL" -o /dev/null -O "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
+tar -zxvf "$PREPARE_DIR"/simplesamlphp-latest.tar.gz -C "$PREPARE_DIR"/private
+ORIG_SIMPLESAMLPHP_DIR=$(ls "$PREPARE_DIR"/private)
 mv "$PREPARE_DIR/private/$ORIG_SIMPLESAMLPHP_DIR" "$PREPARE_DIR/private/simplesamlphp"
-rm "$PREPARE_DIR/simplesamlp*latest.tar.gz" 2>/dev/null || true
+rm "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
 
-###
-# Configure SimpleSAMLphp for the environment
-###
+# Configure SimpleSAMLphp
 cat > "$PREPARE_DIR/private/simplesamlphp/config/authsources.php" <<EOF
 <?php
 \$config = [];
@@ -138,13 +138,9 @@ cat > "$PREPARE_DIR/private/simplesamlphp/config/authsources.php" <<EOF
     ],
 ];
 
-// Prevent global attributes from being auto-injected
 foreach (\$config['example-userpass'] as \$key => &\$user) {
     if (!is_array(\$user)) continue;
-    \$user = array_intersect_key(
-        \$user,
-        array_flip(['uid', 'mail', 'eduPersonAffiliation'])
-    );
+    \$user = array_intersect_key(\$user, array_flip(['uid', 'mail', 'eduPersonAffiliation']));
 }
 \$config['admin'] = [ 'exampleauth:UserPass' ];
 \$config['default'] = &\$config['example-userpass'];
@@ -152,38 +148,36 @@ foreach (\$config['example-userpass'] as \$key => &\$user) {
 return \$config;
 EOF
 
-cp "$BASH_DIR/fixtures/config.php"         "$PREPARE_DIR/private/simplesamlphp/config/config.php"
-cp "$BASH_DIR/fixtures/config-prepare.php" "$PREPARE_DIR/wp-content/mu-plugins/config-prepare.php"
-cp "$BASH_DIR/fixtures/saml20-sp-remote.php"  "$PREPARE_DIR/private/simplesamlphp/metadata/saml20-sp-remote.php"
-cp "$BASH_DIR/fixtures/saml20-idp-hosted.php" "$PREPARE_DIR/private/simplesamlphp/metadata/saml20-idp-hosted.php"
-cp "$BASH_DIR/fixtures/shib13-idp-hosted.php" "$PREPARE_DIR/private/simplesamlphp/metadata/shib13-idp-hosted.php"
-cp "$BASH_DIR/fixtures/shib13-sp-remote.php"  "$PREPARE_DIR/private/simplesamlphp/metadata/shib13-sp-remote.php"
+cp "$BASH_DIR"/fixtures/config.php              "$PREPARE_DIR"/private/simplesamlphp/config/config.php
+cp "$BASH_DIR"/fixtures/config-prepare.php      "$PREPARE_DIR"/wp-content/mu-plugins/config-prepare.php
+cp "$BASH_DIR"/fixtures/saml20-sp-remote.php    "$PREPARE_DIR"/private/simplesamlphp/metadata/saml20-sp-remote.php
+cp "$BASH_DIR"/fixtures/saml20-idp-hosted.php   "$PREPARE_DIR"/private/simplesamlphp/metadata/saml20-idp-hosted.php
+cp "$BASH_DIR"/fixtures/shib13-idp-hosted.php   "$PREPARE_DIR"/private/simplesamlphp/metadata/shib13-idp-hosted.php
+cp "$BASH_DIR"/fixtures/shib13-sp-remote.php    "$PREPARE_DIR"/private/simplesamlphp/metadata/shib13-sp-remote.php
 
-touch "$PREPARE_DIR/private/simplesamlphp/modules/exampleauth/enable"
+touch "$PREPARE_DIR"/private/simplesamlphp/modules/exampleauth/enable
 
-# Self-signed cert for encryption
 openssl req -newkey rsa:2048 -new -x509 -days 3652 -nodes \
-  -out "$PREPARE_DIR/private/simplesamlphp/cert/saml.crt" \
-  -keyout "$PREPARE_DIR/private/simplesamlphp/cert/saml.pem" -batch
+  -out "$PREPARE_DIR"/private/simplesamlphp/cert/saml.crt \
+  -keyout "$PREPARE_DIR"/private/simplesamlphp/cert/saml.pem -batch
 
 TWIG_TEMPLATE_PATH="$PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.twig"
 echo "Operating on: $TWIG_TEMPLATE_PATH"
-sed -i -- 's/id="submit_button"/id="submit"/g' "$TWIG_TEMPLATE_PATH" || true
-sed -i -- 's/>Login</>Submit</g' "$TWIG_TEMPLATE_PATH" || true
+sed -i  -- 's/id="submit_button"/id="submit"/g' "$TWIG_TEMPLATE_PATH" || true
+sed -i  -- 's/>Login</>Submit</g' "$TWIG_TEMPLATE_PATH" || true
 
 JS_FILE_PATH="$PREPARE_DIR/private/simplesamlphp/modules/core/public/assets/js/loginuserpass.js"
 sed -i -- 's/getElementById("submit_button")/getElementById("submit")/g' "$JS_FILE_PATH" || true
 sed -i -- 's/button.disabled = true;//g' "$JS_FILE_PATH" || true
 
-composer install --no-dev --working-dir="$PREPARE_DIR/private/simplesamlphp" --ignore-platform-req=ext-ldap
+composer install --no-dev --working-dir="$PREPARE_DIR"/private/simplesamlphp --ignore-platform-req=ext-ldap
 
-# Copy SimpleSAMLphp to a public /simplesaml directory
+# Copy SimpleSAMLphp into public /simplesaml
 cd "$PREPARE_DIR"
-mkdir -p "$PREPARE_DIR/simplesaml"
-cp -r "$PREPARE_DIR/private/simplesamlphp/public/"*   "$PREPARE_DIR/simplesaml/"
+mkdir -p "$PREPARE_DIR"/simplesaml
+cp -r "$PREPARE_DIR/private/simplesamlphp/public/"* "$PREPARE_DIR/simplesaml"
 cp -r "$PREPARE_DIR/private/simplesamlphp/"{vendor,src,modules,config,templates,cert,metadata,routing,attributemap,lib} "$PREPARE_DIR/simplesaml/"
 
-# Fix include path
 sed -i "s|dirname(__FILE__, 2) . '/src/_autoload.php'|__DIR__ . '/src/_autoload.php'|" "$PREPARE_DIR/simplesaml/_include.php"
 
 ###
@@ -195,7 +189,6 @@ git -C "$PREPARE_DIR" config user.name "Pantheon"
 git -C "$PREPARE_DIR" commit -m "Include SimpleSAMLphp and its configuration files" || true
 git -C "$PREPARE_DIR" push
 
-# Sometimes Pantheon takes a little time to refresh the filesystem
 terminus build:workflow:wait "$SITE_ENV"
 
 ###
@@ -203,7 +196,7 @@ terminus build:workflow:wait "$SITE_ENV"
 ###
 {
   terminus wp "$SITE_ENV" -- core install \
-    --title="${TERMINUS_ENV}-${TERMINUS_SITE}" \
+    --title="$TERMINUS_ENV"-"$TERMINUS_SITE" \
     --url="$PANTHEON_SITE_URL" \
     --admin_user="$WORDPRESS_ADMIN_USERNAME" \
     --admin_email="$WORDPRESS_ADMIN_EMAIL" \
