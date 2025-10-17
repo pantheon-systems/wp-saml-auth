@@ -2,8 +2,7 @@
 /**
  * Minimal SimpleSAMLphp stubs for unit tests.
  *
- * The plugin calls into \SimpleSAML\Auth\Simple. We emulate just enough behavior
- * and make it controllable via WP filters so individual tests can override values.
+ * The plugin calls \SimpleSAML\Auth\Simple. We emulate enough to be deterministic.
  */
 
 namespace SimpleSAML\Auth;
@@ -12,57 +11,62 @@ class Simple {
 	/** @var bool */
 	private $authenticated = false;
 
-	/** @var array<string, array<int,string>> */
+	/**
+	 * Attributes returned by IdP.
+	 * The default user is "student" to match tests that expect an auto-provisioned user 'student'.
+	 * Individual tests can override via the 'wp_saml_auth_test_attributes' filter.
+	 *
+	 * @var array<string, array<int,string>>
+	 */
 	private $attributes = [
-		'uid'                    => ['employee'],
-		'mail'                   => ['test-em@example.com'],
-		'eduPersonAffiliation'   => ['employee'],
+		'uid'                  => ['student'],
+		'mail'                 => ['test-student@example.com'],
+		'eduPersonAffiliation' => ['student'],
 	];
 
 	/**
-	 * @param string|null $source Ignored in tests, but accepted for signature parity.
+	 * @param string|null $source Ignored (kept for signature compatibility).
 	 */
 	public function __construct( $source = null ) {
-		// Allow tests to set initial state via filters.
+		// Start unauthenticated; the plugin typically calls requireAuth() on SAML flows.
 		$this->authenticated = (bool) \apply_filters( 'wp_saml_auth_test_is_authenticated', false );
 
-		$attrs = \apply_filters( 'wp_saml_auth_test_attributes', [] );
-		if ( \is_array( $attrs ) && $attrs ) {
+		$attrs = \apply_filters( 'wp_saml_auth_test_attributes', null );
+		if ( \is_array( $attrs ) ) {
+			// IMPORTANT: do NOT merge with defaults; tests that remove an attribute must fail.
 			$this->attributes = $this->normalize_attributes( $attrs );
 		}
 	}
 
 	/**
-	 * Used by the plugin to gate flows. Tests default to "not authenticated".
+	 * Whether user is authenticated with the IdP.
 	 */
 	public function isAuthenticated() {
 		return (bool) \apply_filters( 'wp_saml_auth_test_is_authenticated', $this->authenticated );
 	}
 
 	/**
-	 * Tests can force authentication while running a scenario.
+	 * Force authentication (what the plugin expects when starting SAML login).
 	 */
 	public function requireAuth( array $params = [] ) {
 		$this->authenticated = true;
-		// Also allow tests to flip the filter mid-flight if they need to.
-		if ( \has_filter( 'wp_saml_auth_test_is_authenticated' ) ) {
-			// No-op: filter value wins.
-		}
 	}
 
 	/**
-	 * Return SAML attributes in the expected array-of-arrays format.
+	 * Return SAML attributes as array-of-arrays.
 	 *
 	 * @return array<string, array<int,string>>
 	 */
 	public function getAttributes() {
-		$attrs = \apply_filters( 'wp_saml_auth_test_attributes', $this->attributes );
-		return $this->normalize_attributes( $attrs );
+		$maybe = \apply_filters( 'wp_saml_auth_test_attributes', null );
+		if ( \is_array( $maybe ) ) {
+			return $this->normalize_attributes( $maybe );
+		}
+		return $this->attributes;
 	}
 
 	/**
-	 * The plugin may call logout(); record that it happened for tests that assert it,
-	 * but return null/falsey.
+	 * Record that logout was called (tests can assert via action), return null.
 	 */
 	public function logout( array $params = [] ) {
 		\do_action( 'wp_saml_auth_test_logout_called', $params );
@@ -70,23 +74,16 @@ class Simple {
 	}
 
 	/**
-	 * Simple helper to ensure attributes have the correct shape.
+	 * Ensure attributes have correct shape (array<string, array<int,string>>).
 	 *
-	 * @param mixed $attrs
+	 * @param array<string, mixed> $attrs
 	 * @return array<string, array<int,string>>
 	 */
 	private function normalize_attributes( $attrs ) {
 		$out = [];
-		if ( ! \is_array( $attrs ) ) {
-			return $this->attributes;
-		}
 		foreach ( $attrs as $k => $v ) {
-			if ( \is_array( $v ) ) {
-				$out[ $k ] = array_values( $v );
-			} else {
-				$out[ $k ] = [ (string) $v ];
-			}
+			$out[ $k ] = \is_array( $v ) ? array_values( $v ) : [ (string) $v ];
 		}
-		return $out + $this->attributes;
+		return $out;
 	}
 }
