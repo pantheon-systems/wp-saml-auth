@@ -21,14 +21,14 @@ require_once $_tests_dir . '/includes/functions.php';
  */
 function _wp_saml_auth_baseline_attributes() {
     return array(
-        'uid'                   => array( 'student' ),
-        'mail'                  => array( 'student@example.org' ),
-        'eduPersonAffiliation'  => array( 'student' ),
+        'uid'                  => array( 'student' ),
+        'mail'                 => array( 'student@example.org' ),
+        'eduPersonAffiliation' => array( 'student' ),
     );
 }
 
 /**
- * Option defaults for tests. Keep conservative (tests override as needed).
+ * Option defaults for tests. Keep conservative; tests override as needed.
  */
 function _wp_saml_auth_filter_option( $value, $option_name ) {
     switch ( $option_name ) {
@@ -36,6 +36,7 @@ function _wp_saml_auth_filter_option( $value, $option_name ) {
             // Always use our stubs in unit tests.
             return __DIR__ . '/simplesamlphp-stubs/autoload.php';
 
+        // Attribute mapping defaults.
         case 'user_login_attribute':
             return 'uid';
         case 'user_email_attribute':
@@ -43,12 +44,14 @@ function _wp_saml_auth_filter_option( $value, $option_name ) {
         case 'user_role_attribute':
             return 'eduPersonAffiliation';
 
+        // WordPress role default for provisioning.
         case 'default_role':
             return 'subscriber';
 
-        // Let tests opt-in explicitly.
+        // Crucial: enable auto-provision by default so “missing attribute” tests
+        // actually evaluate the missing key path instead of short-circuiting.
         case 'auto_provision':
-            return false;
+            return true;
 
         default:
             return $value;
@@ -69,7 +72,9 @@ function _manually_load_plugin() {
     //    Tests can still override at default (10) or later priority.
     add_filter( 'wp_saml_auth_permit_wp_login', '__return_false', 1 );
     add_filter( 'wp_saml_auth_permit_user_login', '__return_false', 1 );
-    add_filter( 'wp_saml_auth_auto_provision', '__return_false', 1 );
+
+    // For unit tests we want provisioning to run unless a test disables it.
+    add_filter( 'wp_saml_auth_auto_provision', '__return_true', 1 );
 
     // 3) Always provide a baseline attribute set unless a test overrides it.
     add_filter( 'wp_saml_auth_attributes', function( $attrs ) {
@@ -81,7 +86,7 @@ function _manually_load_plugin() {
         return $baseline;
     }, 1 );
 
-    // 4) Prevent real SLO side-effects in unit tests.
+    // 4) Prevent real SLO side-effects in unit tests; the stub honors this.
     add_filter( 'wp_saml_auth_allow_slo', '__return_false', 1 );
 
     // Load plugin & CLI.
