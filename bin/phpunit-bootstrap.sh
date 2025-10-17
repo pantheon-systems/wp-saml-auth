@@ -1,5 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
+# ---- Config (with sane defaults) ----
+DB_HOST="${DB_HOST:-127.0.0.1}"
+DB_USER="${DB_USER:-root}"
+DB_PASSWORD="${DB_PASSWORD:-root}"
+DB_NAME="${DB_NAME:-wp_test}"
+WP_TESTS_DIR="${WP_TESTS_DIR:-/tmp/wordpress-tests-lib}"
+WP_CORE_DIR="${WP_CORE_DIR:-/tmp/wordpress}"
+
+# Make the temp paths unique per job to avoid collisions across matrix runs.
+# (Keeps your env overrides if you set them in the workflow.)
+if [[ -n "${GITHUB_RUN_ID:-}" && -n "${GITHUB_JOB:-}" ]]; then
+  WP_TESTS_DIR="${WP_TESTS_DIR}-${GITHUB_RUN_ID}-${GITHUB_JOB}"
+  WP_CORE_DIR="${WP_CORE_DIR}-${GITHUB_RUN_ID}-${GITHUB_JOB}"
+fi
+
+# ---- Ensure tools present ----
 if ! command -v svn >/dev/null 2>&1; then
   if command -v apt-get >/dev/null 2>&1; then
     echo "svn not found; installing..."
@@ -11,93 +28,42 @@ if ! command -v svn >/dev/null 2>&1; then
   fi
 fi
 
-# --- Inputs (with defaults) ---
-DB_NAME="${DB_NAME:-wordpress_test}"
-DB_USER="${DB_USER:-root}"
-DB_PASSWORD="${DB_PASSWORD:-root}"
-DB_HOST="${DB_HOST:-127.0.0.1}"
-WP_CORE_DIR="${WP_CORE_DIR:-/tmp/wordpress}"
-WP_TESTS_DIR="${WP_TESTS_DIR:-/tmp/wordpress-tests-lib}"
-WP_VERSION="${WP_VERSION:-latest}"  # 'latest' or a version like '6.8.3'
+# ---- DB ----
+echo "Creating database ${DB_NAME}..."
+mysql -h"${DB_HOST}" -u"${DB_USER}" -p"${DB_PASSWORD}" -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`"
 
-echo "/bin files are up to date"
-echo "Installing local tests into /tmp"
+# ---- WP core ----
+echo "Preparing WP core in ${WP_CORE_DIR}..."
+rm -rf "${WP_CORE_DIR}"
+mkdir -p "${WP_CORE_DIR}"
 
-# Ensure tools
-command -v svn >/dev/null 2>&1 || { echo "svn is required"; exit 1; }
+wp core download --path="${WP_CORE_DIR}" --skip-content --version=latest --force
+WP_VERSION="$(wp --path="${WP_CORE_DIR}" core version)"
+echo "Resolved WP version: ${WP_VERSION}"
 
-# --- Install WordPress core (SVN export from tags or trunk) ---
-if [[ ! -f "${WP_CORE_DIR}/wp-settings.php" ]]; then
-  echo "Using WordPress version: ${WP_VERSION}"
-  mkdir -p "${WP_CORE_DIR}"
-  if [[ "${WP_VERSION}" == "latest" ]]; then
-    # Fetch latest tag # from WordPress core SVN tags HEAD
-    LATEST_TAG="$(svn ls https://core.svn.wordpress.org/tags/ | grep -E '^[0-9]+\.[0-9]+(\.[0-9]+)?/?$' | tr -d / | sort -V | tail -n1)"
-    echo "Resolved latest WP tag: ${LATEST_TAG}"
-    svn export --quiet "https://core.svn.wordpress.org/tags/${LATEST_TAG}/" "${WP_CORE_DIR}"
-  else
-    svn export --quiet "https://core.svn.wordpress.org/tags/${WP_VERSION}/" "${WP_CORE_DIR}"
-  fi
+# Minimal single-site install so CLI can resolve paths; harmless for unit tests.
+if ! wp --path="${WP_CORE_DIR}" core is-installed >/dev/null 2>&1; then
+  wp core config --path="${WP_CORE_DIR}" --dbname="${DB_NAME}" --dbuser="${DB_USER}" --dbpass="${DB_PASSWORD}" --dbhost="${DB_HOST}" --skip-check
+  wp core install --path="${WP_CORE_DIR}" --url="http://example.com" --title="Test" --admin_user=admin --admin_password=admin --admin_email=test@example.com || true
 fi
 
-# --- Create a throwaway single-site install (for convenience in some tests) ---
-if [[ ! -f "${WP_CORE_DIR}/wp-config.php" ]]; then
-  echo "Setting up WP ${WP_VERSION}"
-  wp core config --path="${WP_CORE_DIR}" --dbname="${DB_NAME}" --dbuser="${DB_USER}" --dbpass="${DB_PASSWORD}" --dbhost="${DB_HOST}" --skip-check --force
-  wp db create --path="${WP_CORE_DIR}" || true
-  wp core install --path="${WP_CORE_DIR}" --url="http://example.com" --title="Test" --admin_user="admin" --admin_password="password" --admin_email="admin@example.com" --skip-email || true
-fi
+# ---- WP tests library ----
+echo "Preparing WP tests lib in ${WP_TESTS_DIR}..."
+rm -rf "${WP_TESTS_DIR}"
+mkdir -p "${WP_TESTS_DIR}"
 
-# --- Install WordPress test suite (from develop.svn) ---
-if [[ ! -d "${WP_TESTS_DIR}" ]]; then
-  echo "Installing WordPress test suite"
-  mkdir -p "${WP_TESTS_DIR}"
-  if [[ "${WP_VERSION}" == "latest" ]]; then
-    # Match the same latest tag we used for core.
-    TESTS_TAG="$(svn ls https://develop.svn.wordpress.org/tags/ | grep -E '^[0-9]+\.[0-9]+(\.[0-9]+)?/?$' | tr -d / | sort -V | tail -n1)"
-    echo "Resolved latest WP tests tag: ${TESTS_TAG}"
-    svn export --quiet "https://develop.svn.wordpress.org/tags/${TESTS_TAG}/tests/phpunit" "${WP_TESTS_DIR}"
-  else
-    svn export --quiet "https://develop.svn.wordpress.org/tags/${WP_VERSION}/tests/phpunit" "${WP_TESTS_DIR}"
-  fi
-fi
+# Pull tests matching the resolved WP version so wp-tests-config-sample.php exists
+svn -q checkout "https://develop.svn.wordpress.org/tags/${WP_VERSION}/tests/phpunit/" "${WP_TESTS_DIR}"
 
-# --- Yoast PHPUnit Polyfills (needed esp. for PHP 7.4) ---
-POLY_DIR="/tmp/phpunit-polyfills"
-if [[ ! -d "${POLY_DIR}" ]]; then
-  echo "Fetching Yoast PHPUnit Polyfills into ${POLY_DIR}"
-  mkdir -p "${POLY_DIR}"
-  # Shallow git clone to avoid Composer requirement
-  git clone --depth=1 https://github.com/Yoast/PHPUnit-Polyfills.git "${POLY_DIR}"
-fi
-
-# --- Create wp-tests-config.php if missing (the sample may not exist on some revisions) ---
-CONFIG_PATH="${WP_TESTS_DIR}/wp-tests-config.php"
-if [[ ! -f "${CONFIG_PATH}" ]]; then
-  echo "Creating ${CONFIG_PATH}"
-  cat > "${CONFIG_PATH}" <<PHP
-<?php
-// Autogenerated by bin/phpunit-bootstrap.sh
-define( 'DB_NAME',     '${DB_NAME}' );
-define( 'DB_USER',     '${DB_USER}' );
-define( 'DB_PASSWORD', '${DB_PASSWORD}' );
-define( 'DB_HOST',     '${DB_HOST}' );
-define( 'DB_CHARSET',  'utf8' );
-define( 'DB_COLLATE',  '' );
-
-// Path to the WordPress codebase under test.
-define( 'ABSPATH', '${WP_CORE_DIR}' );
-
-// IMPORTANT for WP test suite (esp. PHP 7.4 without composer dev deps):
-define( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH', '${POLY_DIR}' );
-
-// Test suite flags:
-define( 'WP_DEBUG', true );
-define( 'WP_ALLOW_MULTISITE', false );
-
-// Define as needed by your plugin.
-$table_prefix = 'wp_';
-PHP
+# Create wp-tests-config.php if missing
+if [[ ! -f "${WP_TESTS_DIR}/wp-tests-config.php" ]]; then
+  cp "${WP_TESTS_DIR}/wp-tests-config-sample.php" "${WP_TESTS_DIR}/wp-tests-config.php"
+  sed -i "s/youremptytestdbnamehere/${DB_NAME}/" "${WP_TESTS_DIR}/wp-tests-config.php"
+  sed -i "s/yourusernamehere/${DB_USER}/" "${WP_TESTS_DIR}/wp-tests-config.php"
+  sed -i "s/yourpasswordhere/${DB_PASSWORD}/" "${WP_TESTS_DIR}/wp-tests-config.php"
+  sed -i "s|localhost|${DB_HOST}|" "${WP_TESTS_DIR}/wp-tests-config.php"
+  # Point ABSPATH to our freshly-downloaded core
+  sed -i "s|/path/to/wordpress/|${WP_CORE_DIR}/|" "${WP_TESTS_DIR}/wp-tests-config.php"
 fi
 
 echo "/bin files are up to date"

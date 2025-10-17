@@ -110,6 +110,13 @@ jobs:
           tools: composer
           coverage: none
 
+      - name: Composer install (with dev)
+        env:
+          COMPOSER_PROCESS_TIMEOUT: 0
+          COMPOSER_NO_INTERACTION: 1
+          COMPOSER_NO_AUDIT: 1
+        run: composer install --no-progress --prefer-dist
+
       - name: Ensure bin scripts are executable
         run: chmod +x bin/*.sh
 
