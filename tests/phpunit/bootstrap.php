@@ -17,11 +17,6 @@ define(
 	__DIR__ . '/../../vendor/yoast/phpunit-polyfills/phpunitpolyfills-autoload.php'
 );
 
-// Path helpers
-$ROOT = dirname( dirname( dirname( __FILE__ ) ) );            // repo root
-$STUBS_AUTOLOAD = __DIR__ . '/simplesamlphp-stubs/autoload.php';
-$LEGACY_SHIM     = __DIR__ . '/class-simplesaml-auth-simple.php';
-
 // Give access to tests_add_filter()
 require_once $_tests_dir . '/includes/functions.php';
 
@@ -31,30 +26,34 @@ require_once $_tests_dir . '/includes/functions.php';
  * sees a working autoloader and never touches real SimpleSAMLphp.
  */
 function _manually_load_plugin() {
-	global $ROOT, $STUBS_AUTOLOAD, $LEGACY_SHIM;
+	// Resolve all paths relative to this file to avoid globals & CI cwd quirks.
+	$root           = dirname( __DIR__, 2 ); // repo root (…/wp-saml-auth)
+	$stubs_autoload = __DIR__ . '/simplesamlphp-stubs/autoload.php';
+	$legacy_shim    = __DIR__ . '/class-simplesaml-auth-simple.php';
 
 	// 1) Hard-require the stubs so classes exist even if options/filters aren’t read yet.
-	if ( file_exists( $STUBS_AUTOLOAD ) ) {
-		require_once $STUBS_AUTOLOAD;
+	if ( is_string( $stubs_autoload ) && $stubs_autoload !== '' && file_exists( $stubs_autoload ) ) {
+		require_once $stubs_autoload;
 	}
 
 	// 2) Make both configuration paths point at our stubs.
-	add_filter( 'wp_saml_auth_autoload', function () use ( $STUBS_AUTOLOAD ) {
-		return $STUBS_AUTOLOAD;
+	add_filter( 'wp_saml_auth_autoload', function () use ( $stubs_autoload ) {
+		return $stubs_autoload;
 	}, 1 );
 
-	add_filter( 'wp_saml_auth_option', function( $value, $option_name ) use ( $STUBS_AUTOLOAD, $LEGACY_SHIM ) {
-		switch ( $option_name ) {
-			case 'simplesamlphp_autoload':
-				// Prefer stubs, fall back to the legacy shim (kept for older tests).
-				return file_exists( $STUBS_AUTOLOAD ) ? $STUBS_AUTOLOAD : $LEGACY_SHIM;
+	add_filter( 'wp_saml_auth_option', function( $value, $option_name ) use ( $stubs_autoload, $legacy_shim ) {
+		if ( 'simplesamlphp_autoload' === $option_name ) {
+			// Prefer stubs, fall back to the legacy shim (kept for older tests).
+			return ( is_string( $stubs_autoload ) && file_exists( $stubs_autoload ) )
+				? $stubs_autoload
+				: $legacy_shim;
 		}
 		return $value;
 	}, 1, 2 );
 
-	// 3) Load the plugin and its CLI test harness.
-	require $ROOT . '/wp-saml-auth.php';
-	require $ROOT . '/inc/class-wp-saml-auth-cli.php';
+	// 3) Load the plugin and its CLI test harness from the repo root.
+	require $root . '/wp-saml-auth.php';
+	require $root . '/inc/class-wp-saml-auth-cli.php';
 	require __DIR__ . '/class-wp-saml-auth-test-cli.php';
 }
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
