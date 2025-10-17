@@ -14,15 +14,17 @@ WP_TESTS_DIR="${WP_DEVELOP_DIR}/tests/phpunit"
 
 echo "== Ensuring dependencies... =="
 
+# Ensure clean slate for svn export
 rm -rf "${WP_DEVELOP_DIR}"
-mkdir -p "${WP_DEVELOP_DIR}"
 
 echo "== Fetching WordPress develop tag ${WP_VERSION} =="
 if ! command -v svn >/dev/null 2>&1; then
   echo "svn not available"
   exit 1
 fi
-svn export --quiet "https://develop.svn.wordpress.org/tags/${WP_VERSION}/" "${WP_DEVELOP_DIR}/"
+
+# Export directly into the target dir (svn will create it); --force handles re-runs
+svn export --quiet --force "https://develop.svn.wordpress.org/tags/${WP_VERSION}/" "${WP_DEVELOP_DIR}"
 
 # Back-compat symlinks for any code still referencing these older paths.
 ln -sfn "${WP_CORE_DIR}" /tmp/wordpress

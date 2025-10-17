@@ -1,24 +1,23 @@
-name: Behat and PHPUnit
+name: PHPUnit & Behat
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   pull_request:
+    branches: [ '**' ]
 
 jobs:
   phpunit:
     name: PHPUnit (PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
-    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
-        php: ['7.4', '8.0', '8.1', '8.2', '8.3', '8.4']
+        php: [ '7.4', '8.0', '8.1', '8.2', '8.3', '8.4' ]
     env:
       DB_HOST: 127.0.0.1
       DB_USER: root
       DB_PASSWORD: root
-      DB_NAME: wp_test_${{ matrix.php }}
       WP_CORE_DIR: /tmp/wordpress/
       WP_TESTS_DIR: /tmp/wordpress-tests-lib
       WP_TESTS_PHPUNIT_POLYFILLS_PATH: /tmp/phpunit-deps
@@ -32,49 +31,42 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up PHP ${{ matrix.php }}
+      - name: Setup PHP ${{ matrix.php }}
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          tools: composer:v2
           coverage: none
-
-      - name: Install system packages (svn, unzip)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y subversion unzip
+          tools: composer
+          extensions: mysqli
 
       - name: Start MySQL
         run: |
           sudo systemctl start mysql
-          mysql -uroot -proot -e "DROP DATABASE IF EXISTS \`${DB_NAME}\`; CREATE DATABASE \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+          mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS wp_test_${{ matrix.php//./ }} DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
-      - name: Install Composer deps (avoid dev for 7.4/8.0)
-        run: |
-          PHPV=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
-          if [ "$PHPV" = "7.4" ] || [ "$PHPV" = "8.0" ]; then
-            composer install --no-progress --no-interaction --no-dev
-          else
-            composer install --no-progress --no-interaction
-          fi
+      - name: Install Subversion (for WP tests checkout)
+        run: sudo apt-get update && sudo apt-get install -y subversion
 
-      - name: Ensure PHPUnit Polyfills (Yoast)
+      - name: Composer install (project)
+        run: composer install --no-progress --no-interaction
+
+      - name: Prepare PHPUnit deps (Yoast Polyfills to /tmp/phpunit-deps)
         run: |
-          if [ ! -d /tmp/phpunit-deps ]; then
+          if [ ! -d /tmp/phpunit-deps/vendor/yoast/phpunit-polyfills ]; then
             composer create-project --no-dev --no-interaction yoast/phpunit-polyfills:^2 /tmp/phpunit-deps
           fi
-          test -f /tmp/phpunit-deps/phpunitpolyfills-autoload.php
+          test -f /tmp/phpunit-deps/vendor/yoast/phpunit-polyfills/phpunitpolyfills-autoload.php
 
-      - name: Make PHPUnit bootstrap executable
-        run: chmod +x bin/phpunit-bootstrap.sh
-
-      - name: Bootstrap WordPress test suite
+      - name: Bootstrap WordPress test lib & core
         env:
+          DB_NAME: wp_test_${{ matrix.php//./ }}
           WP_VERSION: 6.8.3
-        run: bin/phpunit-bootstrap.sh
+        run: |
+          bash bin/phpunit-bootstrap.sh
 
       - name: Run PHPUnit
         env:
+          DB_NAME: wp_test_${{ matrix.php//./ }}
           XDEBUG_MODE: off
         run: |
           if [ -x vendor/bin/phpunit ]; then
@@ -92,23 +84,19 @@ jobs:
   behat:
     name: Behat (SSP ${{ matrix.ssp }})
     runs-on: ubuntu-latest
-    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        ssp: ['1.18.0', '2.0.0', '2.4.0']
-
+        ssp: ['1.18.0','2.0.0','2.4.0']
     env:
-      TERMINUS_SITE: wp-saml-auth
-      SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
-      WORDPRESS_ADMIN_USERNAME: pantheon
-      WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
-      WORDPRESS_ADMIN_PASSWORD: pantheon
       COMPOSER_NO_INTERACTION: 1
       COMPOSER_NO_AUDIT: 1
       COMPOSER_PROCESS_TIMEOUT: 0
-      WP_TESTS_DIR: /tmp/wordpress-tests-lib
       WP_CORE_DIR: /tmp/wordpress/
+      WP_TESTS_DIR: /tmp/wordpress-tests-lib
+      WORDPRESS_ADMIN_USERNAME: pantheon
+      WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
+      WORDPRESS_ADMIN_PASSWORD: pantheon
 
     steps:
       - name: Checkout repository
@@ -116,43 +104,90 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup PHP 8.2 for Terminus & Behat
+      # Terminus v4 requires PHP ≥ 8.2. Use a job-local PHP runtime just for CLI.
+      - name: Setup PHP 8.2 (for Terminus CLI)
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
-          tools: composer:v2
           coverage: none
+          tools: composer
 
-      - name: Install Composer deps (dev)
-        run: composer install --no-progress --no-interaction
-
-      - name: Compute Pantheon Multidev name (no dots, <=11 chars)
-        run: |
-          VER="${SIMPLESAMLPHP_VERSION//./}"       # eg 1.18.0 -> 1180
-          SUFFIX=$(printf "%04d" $(( GITHUB_RUN_NUMBER % 10000 )) )
-          BASE="ci${VER}"                           # eg ci1180
-          BASE="${BASE:0:7}"                        # leave room for suffix
-          TERMINUS_ENV="${BASE}${SUFFIX}"           # eg ci11800042
-          echo "TERMINUS_ENV=${TERMINUS_ENV}" | tee -a "$GITHUB_ENV"
-          echo "PANTHEON_SITE_URL=${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io" | tee -a "$GITHUB_ENV"
-
-      - name: Install Terminus (official action)
+      - name: Install Terminus
         uses: pantheon-systems/terminus-github-actions@v1
         with:
           pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
 
-      - name: Start ssh-agent and add key (SFTP)
+      - name: Configure SSH for Pantheon
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
+          ssh-private-key: |
+            ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
+        # Preload Pantheon codeserver host key to avoid host key prompts
+      - name: Add Pantheon host keys
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p 2222 codeserver.dev.*.drush.in >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -p 2222 codeserver.live.*.drush.in >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -p 2222 codeserver.test.*.drush.in >> ~/.ssh/known_hosts 2>/dev/null || true
 
-      - name: Make prepare script executable
-        run: chmod +x bin/behat-prepare.sh
+      - name: Set Pantheon environment variables
+        env:
+          SSP: ${{ matrix.ssp }}
+          TERMINUS_SITE_SECRET: ${{ secrets.PANTHEON_SITE }}
+        run: |
+          set -e
+          if [ -z "$TERMINUS_SITE_SECRET" ]; then
+            echo "PANTHEON_SITE secret is missing"; exit 1;
+          fi
+          export TERMINUS_SITE="$TERMINUS_SITE_SECRET"
+          # Build a <=10 char, dns-safe env: ci + digits-only of ssp + 4-digit run suffix
+          ssp_num="${SSP//./}"
+          suffix=$(printf "%04d" $(( GITHUB_RUN_NUMBER % 10000 )) )
+          env_id="ci${ssp_num}${suffix}"
+          TERMINUS_ENV="${env_id:0:10}"
+          echo "TERMINUS_SITE=$TERMINUS_SITE" >> $GITHUB_ENV
+          echo "TERMINUS_ENV=$TERMINUS_ENV" >> $GITHUB_ENV
+          echo "SIMPLESAMLPHP_VERSION=$SSP" >> $GITHUB_ENV
+          echo "PANTHEON_SITE_URL=${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io" >> $GITHUB_ENV
+          echo "Using env: $TERMINUS_SITE.$TERMINUS_ENV"
 
-      - name: Prepare Multidev + SimpleSAMLphp + plugin
-        run: bin/behat-prepare.sh
+      - name: Composer install (for Behat)
+        run: composer install --no-progress --no-interaction
 
+      # Use the right prepare script per SSP version:
+      - name: Prepare Pantheon env (SSP 1.18.0)
+        if: matrix.ssp == '1.18.0'
+        env:
+          TERMINUS_SITE: ${{ env.TERMINUS_SITE }}
+          TERMINUS_ENV: ${{ env.TERMINUS_ENV }}
+          SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
+          WORDPRESS_ADMIN_USERNAME: ${{ env.WORDPRESS_ADMIN_USERNAME }}
+          WORDPRESS_ADMIN_EMAIL: ${{ env.WORDPRESS_ADMIN_EMAIL }}
+          WORDPRESS_ADMIN_PASSWORD: ${{ env.WORDPRESS_ADMIN_PASSWORD }}
+        run: |
+          bash bin/1.18/behat-prepare.sh
+
+      - name: Prepare Pantheon env (SSP 2.x)
+        if: matrix.ssp != '1.18.0'
+        env:
+          TERMINUS_SITE: ${{ env.TERMINUS_SITE }}
+          TERMINUS_ENV: ${{ env.TERMINUS_ENV }}
+          SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
+          WORDPRESS_ADMIN_USERNAME: ${{ env.WORDPRESS_ADMIN_USERNAME }}
+          WORDPRESS_ADMIN_EMAIL: ${{ env.WORDPRESS_ADMIN_EMAIL }}
+          WORDPRESS_ADMIN_PASSWORD: ${{ env.WORDPRESS_ADMIN_PASSWORD }}
+        run: |
+          bash bin/behat-prepare.sh
+
+      # Behat needs BASE URL; contexts read PANTHEON_SITE_URL from env
       - name: Run Behat
         env:
+          TERMINUS_SITE: ${{ env.TERMINUS_SITE }}
+          TERMINUS_ENV: ${{ env.TERMINUS_ENV }}
+          SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
+          PANTHEON_SITE_URL: ${{ env.PANTHEON_SITE_URL }}
           XDEBUG_MODE: off
-        run: vendor/bin/behat --colors --no-interaction
+          BEHAT_PARAMS: >-
+            {"extensions":{"Behat\\MinkExtension":{"base_url":"https://${{ env.PANTHEON_SITE_URL }}"}}}
+        run: |
+          vendor/bin/behat --colors --no-interaction
