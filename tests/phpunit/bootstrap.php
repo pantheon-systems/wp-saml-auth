@@ -41,12 +41,11 @@ tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
  * Defaults aligned to unit tests.
  */
 function _wp_saml_auth_filter_option( $value, $option_name ) {
-    // Only provide a default if nothing has set a value yet.
     $has_value = ! is_null( $value );
 
     switch ( $option_name ) {
         case 'simplesamlphp_autoload':
-            // Always point to the stubs.
+            // Always point to the stubs (or constant if provided).
             if ( defined( 'WP_SAML_AUTH_AUTOLOAD' ) ) {
                 $value = WP_SAML_AUTH_AUTOLOAD;
             } else {
@@ -57,13 +56,13 @@ function _wp_saml_auth_filter_option( $value, $option_name ) {
         case 'permit_wp_login':
         case 'permit_user_login':
             if ( ! $has_value ) {
-                $value = false; // Local user/pass not permitted by default.
+                $value = false; // local user/pass disabled by default
             }
             break;
 
         case 'auto_provision':
             if ( ! $has_value ) {
-                $value = true; // Will only matter if SAML is authenticated.
+                $value = false; // IMPORTANT: default OFF so tests can turn it on explicitly
             }
             break;
 
@@ -95,6 +94,7 @@ function _wp_saml_auth_filter_option( $value, $option_name ) {
     return $value;
 }
 
+
 // Start WP test environment.
 require $_tests_dir . '/includes/bootstrap.php';
 
@@ -124,3 +124,17 @@ if ( ! function_exists( 'wp_logout' ) ) {
 		return false;
 	}
 }
+
+/**
+ * Helper to switch the stubbed IdP persona inside a test:
+ * do_action('wp_saml_auth_test_use_employee');
+ */
+add_action( 'wp_saml_auth_test_use_employee', function () {
+    add_filter( 'wp_saml_auth_test_attributes', function () {
+        return [
+            'uid'                  => ['employee'],
+            'mail'                 => ['test-em@example.com'],
+            'eduPersonAffiliation' => ['employee'],
+        ];
+    } );
+} );

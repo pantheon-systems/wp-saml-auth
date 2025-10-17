@@ -2,15 +2,15 @@
 namespace SimpleSAML\Auth;
 
 /**
- * Very small SimpleSAMLphp stub used by unit tests.
- * Defaults to "NOT authenticated".
+ * Minimal SimpleSAMLphp stub for unit tests.
+ * - Unauthenticated by default
+ * - Attributes default to a "student" user
+ * - Only triggers logout hook if this request actually started auth
  */
 class Simple {
-    private $authenticated = false; // <-- default unauthenticated
+    private $authenticated = false;
+    private $auth_started_this_request = false;
 
-    /**
-     * Default attributes (only used if a test authenticates and does not override).
-     */
     private $attributes = [
         'uid'                  => ['student'],
         'mail'                 => ['test-student@example.com'],
@@ -18,11 +18,13 @@ class Simple {
     ];
 
     public function __construct( $source = null ) {
-        // Allow tests to override via filters, but do NOT force a default here.
+        // Let tests force auth state/attributes via filters.
         $auth = \apply_filters( 'wp_saml_auth_test_is_authenticated', null );
         if ( $auth !== null ) {
             $this->authenticated = (bool) $auth;
+            $this->auth_started_this_request = (bool) $auth;
         }
+
         $attrs = \apply_filters( 'wp_saml_auth_test_attributes', null );
         if ( \is_array( $attrs ) ) {
             $this->attributes = $this->normalize_attributes( $attrs );
@@ -30,16 +32,23 @@ class Simple {
     }
 
     public function isAuthenticated() {
-        $maybe = \apply_filters( 'wp_saml_auth_test_is_authenticated', null );
-        return $maybe !== null ? (bool) $maybe : $this->authenticated;
+        $forced = \apply_filters( 'wp_saml_auth_test_is_authenticated', null );
+        return $forced !== null ? (bool) $forced : $this->authenticated;
     }
 
     /**
-     * Simulate IdP auth requirement. For unit tests we only flip to true
-     * when explicitly asked to (e.g., a test or filter says so).
+     * Simulate IdP auth requirement.
+     * - Flip to authenticated
+     * - Refresh attributes if a test provided them via the filter
      */
     public function requireAuth( array $params = [] ) {
         $this->authenticated = true;
+        $this->auth_started_this_request = true;
+
+        $attrs = \apply_filters( 'wp_saml_auth_test_attributes', null );
+        if ( \is_array( $attrs ) ) {
+            $this->attributes = $this->normalize_attributes( $attrs );
+        }
     }
 
     public function getAttributes() {
@@ -51,11 +60,11 @@ class Simple {
     }
 
     /**
-     * Only fire the logout hook if we are actually authenticated.
-     * The logout test expects "no call" when not authenticated.
+     * Only signal a SAML logout if a SAML session was actually started
+     * during this request. This avoids cross-test bleed.
      */
     public function logout( array $params = [] ) {
-        if ( $this->isAuthenticated() ) {
+        if ( $this->isAuthenticated() && $this->auth_started_this_request ) {
             \do_action( 'wp_saml_auth_test_logout_called', $params );
         }
         return null;
@@ -69,3 +78,4 @@ class Simple {
         return $out;
     }
 }
+
