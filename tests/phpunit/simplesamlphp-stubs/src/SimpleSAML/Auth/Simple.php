@@ -1,78 +1,42 @@
 <?php
 namespace SimpleSAML\Auth;
 
-/**
- * Test stub for SimpleSAML\Auth\Simple used by unit tests.
- */
 class Simple {
-    /** @var bool */
     private static $authenticated = true;
-
-    /** @var array<string, array<int, string>> */
     private static $attributes = [
-        'uid'                    => ['student'],
-        'mail'                   => ['student@example.org'],
-        'eduPersonAffiliation'   => ['student'],
+        'uid'                  => ['student'],
+        'mail'                 => ['student@example.org'],
+        'eduPersonAffiliation' => ['student'],
     ];
-
-    /** @var bool */
     private static $logoutCalled = false;
 
-    /** @var string */
-    private $spEntityId;
+    public function __construct(string $spEntityId) {}
 
-    public function __construct(string $spEntityId) {
-        $this->spEntityId = $spEntityId;
-    }
-
-    /** Hooks the same way as real SimpleSAML. */
     public function isAuthenticated(): bool {
         return self::$authenticated;
     }
 
-    /** The plugin sometimes calls requireAuth(); make it a no-op if already “authenticated”. */
+    // CHANGE: make this a *true* no-op. Do not mutate authenticated state here.
     public function requireAuth(): void {
-        // In our tests, we just assume the IdP flow completed when authenticated is true.
-        if (!self::$authenticated) {
-            self::$authenticated = true;
-        }
+        // no-op in tests
     }
 
-    /**
-     * Return SAML attributes in the same structure as SimpleSAML:
-     *   [ 'attrName' => ['value1', 'value2'] ]
-     */
     public function getAttributes(): array {
         return self::$attributes;
     }
 
     public function logout(?string $returnTo = null): void {
-        self::$logoutCalled = true;
-        // Do nothing else in tests.
+        // Only record SLO if we’re explicitly allowing it via env (default off).
+        if ( getenv('WP_SAML_STUB_ALLOW_SLO') === '1' ) {
+            self::$logoutCalled = true;
+        }
+        // Otherwise a no-op.
     }
 
-    public function login(array $params = []): void {
-        // noop in tests
-    }
-
-    // --- Utilities the tests (or bootstrap) can manipulate via filters if needed.
-
-    /** @internal for tests */
-    public static function _setAuthenticated(bool $state): void {
-        self::$authenticated = $state;
-    }
-
-    /** @internal for tests */
-    public static function _setAttributes(array $attributes): void {
-        self::$attributes = $attributes;
-    }
-
-    /** @internal for tests */
-    public static function _getLogoutCalled(): bool {
-        return self::$logoutCalled;
-    }
-
-    /** @internal for tests */
+    // --- helpers used by tests if needed
+    public static function _setAuthenticated(bool $state): void { self::$authenticated = $state; }
+    public static function _setAttributes(array $attributes): void { self::$attributes = $attributes; }
+    public static function _getLogoutCalled(): bool { return self::$logoutCalled; }
     public static function _reset(): void {
         self::$authenticated = true;
         self::$attributes = [

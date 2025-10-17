@@ -27,26 +27,34 @@ function _wp_saml_auth_baseline_attributes() {
     );
 }
 
+// Was: add_filter( 'wp_saml_auth_option', '_wp_saml_auth_filter_option', 10, 2 );
+add_filter( 'wp_saml_auth_option', '_wp_saml_auth_filter_option', 1, 2 );
+
 /**
  * Option defaults for tests. Keep minimal to avoid pinning values
  * that individual tests want to override.
  */
 
 function _wp_saml_auth_filter_option( $value, $option_name ) {
+    // If a test already provided a value, keep it.
+    if ( null !== $value ) {
+        return $value;
+    }
+
     switch ( $option_name ) {
-        // IMPORTANT: point to the stub autoloader we created above.
         case 'simplesamlphp_autoload':
+            // Ensure this matches your stub path.
             return dirname( __FILE__ ) . '/simplesamlphp-stubs/autoload.php';
 
-        // Default behaviors the tests expect:
+        // Default behavior the tests expect (and can override):
         case 'permit_wp_login':
-            return false;
-
-        case 'allow_slo':
-            return false;
+            return false; // Username/password logins not permitted by default.
 
         case 'auto_provision':
-            return true;
+            return false; // DO NOT auto-provision users by default.
+
+        case 'allow_slo':
+            return false; // Don’t call IdP SLO by default.
 
         case 'user_login_attribute':
             return 'uid';
@@ -60,6 +68,7 @@ function _wp_saml_auth_filter_option( $value, $option_name ) {
         case 'default_role':
             return 'subscriber';
     }
+
     return $value;
 }
 
@@ -110,6 +119,8 @@ function wp_logout() {
     wp_set_current_user( 0 );
     do_action( 'wp_logout' );
 }
+
+putenv('WP_SAML_STUB_ALLOW_SLO=0');
 
 // Start up the WP testing environment.
 require $_tests_dir . '/includes/bootstrap.php';
