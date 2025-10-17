@@ -28,8 +28,8 @@ function _wp_saml_auth_baseline_attributes() {
 }
 
 /**
- * Option defaults for tests. Keep them aligned with plugin defaults.
- * Individual tests will override as needed.
+ * Option defaults for tests. Keep minimal to avoid pinning values
+ * that individual tests want to override.
  */
 function _wp_saml_auth_filter_option( $value, $option_name ) {
     switch ( $option_name ) {
@@ -37,7 +37,7 @@ function _wp_saml_auth_filter_option( $value, $option_name ) {
             // Always use our stubs in unit tests.
             return __DIR__ . '/simplesamlphp-stubs/autoload.php';
 
-        // Attribute mapping defaults.
+        // Attribute mapping defaults (safe, stable across tests).
         case 'user_login_attribute':
             return 'uid';
         case 'user_email_attribute':
@@ -45,18 +45,12 @@ function _wp_saml_auth_filter_option( $value, $option_name ) {
         case 'user_role_attribute':
             return 'eduPersonAffiliation';
 
-        // WordPress role default for provisioning.
+        // Default role for provisioning.
         case 'default_role':
             return 'subscriber';
 
-        // Plugin default: auto-provision is disabled unless a test enables it.
-        case 'auto_provision':
-            return false;
-
-        // Plugin default: do not attempt SLO during logout.
-        case 'allow_slo':
-            return false;
-
+        // IMPORTANT:
+        // Do NOT hard-set 'auto_provision' or 'allow_slo' here so tests can toggle them.
         default:
             return $value;
     }
@@ -81,8 +75,10 @@ function _manually_load_plugin() {
         return $baseline;
     }, 1 );
 
-    // IMPORTANT: don't force-permit or force-deny WP login here.
-    // Let each test pick the behavior it wants via filters inside the test.
+    // Express expected DEFAULT behaviors via runtime filters at LOW priority,
+    // so tests can still override with the normal/default priority.
+    add_filter( 'wp_saml_auth_permit_wp_login', '__return_false', 1 ); // default: user/pass login NOT permitted
+    add_filter( 'wp_saml_auth_allow_slo', '__return_false', 1 );      // default: SLO NOT called
 
     // Load plugin & CLI.
     require $root . '/wp-saml-auth.php';
