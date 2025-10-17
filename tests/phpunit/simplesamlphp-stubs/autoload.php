@@ -1,18 +1,15 @@
 <?php
 /**
- * Minimal PSR-4-ish autoloader for SimpleSAML classes used in tests.
+ * Minimal PSR-4 autoloader for the SimpleSAMLphp stubs used in unit tests.
  */
-spl_autoload_register(function ($class) {
-    // Only handle SimpleSAML classes.
-    if (strpos($class, 'SimpleSAML\\') !== 0) {
+spl_autoload_register( function ( $class ) {
+    $prefix = 'SimpleSAML\\';
+    if ( strpos( $class, $prefix ) !== 0 ) {
         return;
     }
-
-    $base = __DIR__ . '/src/';
-    $relative = str_replace('\\', '/', $class) . '.php';
-    $file = $base . $relative;
-
-    if (file_exists($file)) {
-        require $file;
+    $relative = substr( $class, strlen( $prefix ) );           // e.g. "Auth\Simple"
+    $path     = __DIR__ . '/SimpleSAML/' . str_replace('\\', '/', $relative) . '.php';
+    if ( file_exists( $path ) ) {
+        require $path;
     }
-});
+} );
