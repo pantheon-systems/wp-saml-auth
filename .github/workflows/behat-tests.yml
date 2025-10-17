@@ -26,10 +26,9 @@ jobs:
       COMPOSER_PROCESS_TIMEOUT: 0
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
+        with: { fetch-depth: 0 }
 
       - name: Setup PHP ${{ matrix.php }}
         uses: shivammathur/setup-php@v2
@@ -41,29 +40,21 @@ jobs:
 
       - name: Compute DB name from PHP version
         run: |
-          v="${{ matrix.php }}"
-          v="${v//./}"
+          v="${{ matrix.php }}"; v="${v//./}"
           echo "DB_NAME=wp_test_${v}" >> "$GITHUB_ENV"
 
-      - name: Start MySQL and create DB
+      - name: Start MySQL & create DB
         run: |
           sudo systemctl start mysql
           mysql -uroot -proot -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME} DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
-      - name: Install Subversion (for WP tests checkout)
+      - name: Install Subversion (for WP tests)
         run: sudo apt-get update && sudo apt-get install -y subversion
 
-      - name: Composer install (project)
-        run: composer install --no-progress --no-interaction
+      - name: Composer install (no dev for PHPUnit matrix)
+        run: composer install --no-progress --no-interaction --no-dev
 
-      - name: Prepare PHPUnit deps (Yoast Polyfills to /tmp/phpunit-deps)
-        run: |
-          if [ ! -d /tmp/phpunit-deps/vendor/yoast/phpunit-polyfills ]; then
-            composer create-project --no-dev --no-interaction yoast/phpunit-polyfills:^2 /tmp/phpunit-deps
-          fi
-          test -f /tmp/phpunit-deps/vendor/yoast/phpunit-polyfills/phpunitpolyfills-autoload.php
-
-      - name: Clean previous WP test workdirs (svn re-runs)
+      - name: Ensure clean temp dirs (svn re-runs)
         run: |
           rm -rf /tmp/wp-develop /tmp/wordpress-tests-lib || true
 
@@ -72,9 +63,18 @@ jobs:
           WP_VERSION: 6.8.3
         run: bash bin/phpunit-bootstrap.sh
 
+      - name: Install Yoast PHPUnit Polyfills into /tmp/phpunit-deps
+        run: |
+          mkdir -p /tmp/phpunit-deps
+          if [ ! -d /tmp/phpunit-deps/vendor/yoast/phpunit-polyfills ]; then
+            # Composer sometimes returns non-zero due to suggest/post-scripts.
+            composer create-project --no-dev --no-interaction yoast/phpunit-polyfills:^2 /tmp/phpunit-deps || true
+          fi
+          ls -l /tmp/phpunit-deps/vendor/yoast/phpunit-polyfills || true
+          test -f /tmp/phpunit-deps/vendor/yoast/phpunit-polyfills/phpunitpolyfills-autoload.php
+
       - name: Run PHPUnit
-        env:
-          XDEBUG_MODE: off
+        env: { XDEBUG_MODE: off }
         run: |
           if [ -x vendor/bin/phpunit ]; then
             vendor/bin/phpunit
@@ -106,13 +106,12 @@ jobs:
       WORDPRESS_ADMIN_PASSWORD: pantheon
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
+        with: { fetch-depth: 0 }
 
-      # Terminus v4 requires PHP ≥ 8.2
-      - name: Setup PHP 8.2 (for Terminus CLI)
+      # Terminus CLI (needs PHP ≥ 8.2)
+      - name: Setup PHP 8.2
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
@@ -124,7 +123,7 @@ jobs:
         with:
           pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
 
-      - name: Configure SSH for Pantheon
+      - name: SSH agent for Pantheon
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: |
@@ -137,15 +136,12 @@ jobs:
           ssh-keyscan -p 2222 codeserver.test.*.drush.in >> ~/.ssh/known_hosts 2>/dev/null || true
           ssh-keyscan -p 2222 codeserver.live.*.drush.in >> ~/.ssh/known_hosts 2>/dev/null || true
 
-      - name: Set Pantheon environment variables
+      - name: Set Pantheon env vars
         env:
           SSP: ${{ matrix.ssp }}
           TERMINUS_SITE_SECRET: ${{ secrets.PANTHEON_SITE }}
         run: |
-          set -e
-          if [ -z "$TERMINUS_SITE_SECRET" ]; then
-            echo "PANTHEON_SITE secret is missing"; exit 1;
-          fi
+          # Per your request: no existence check, assume secret is present.
           export TERMINUS_SITE="$TERMINUS_SITE_SECRET"
           ssp_num="${SSP//./}"
           suffix=$(printf "%04d" $(( GITHUB_RUN_NUMBER % 10000 )) )
@@ -155,13 +151,12 @@ jobs:
           echo "TERMINUS_ENV=$TERMINUS_ENV" >> $GITHUB_ENV
           echo "SIMPLESAMLPHP_VERSION=$SSP" >> $GITHUB_ENV
           echo "PANTHEON_SITE_URL=${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io" >> $GITHUB_ENV
-          echo "Using env: $TERMINUS_SITE.$TERMINUS_ENV -> https://${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io"
 
-      - name: Composer install (for Behat)
+      - name: Composer install for Behat (dev ok; runs on PHP 8.2)
         run: composer install --no-progress --no-interaction
 
       # === Prepare env per SSP line ===
-      - name: Prepare Pantheon env (SSP 1.18.0 via bin/1.18/)
+      - name: Prepare Pantheon env (SSP 1.18 via bin/1.18/)
         if: matrix.ssp == '1.18.0'
         env:
           TERMINUS_SITE: ${{ env.TERMINUS_SITE }}
@@ -172,5 +167,36 @@ jobs:
           WORDPRESS_ADMIN_PASSWORD: ${{ env.WORDPRESS_ADMIN_PASSWORD }}
         run: |
           bash bin/1.18/behat-prepare.sh || true
-          # Older scripts may use build:workflow:wait; ensure we still wait.
-          terminus workflow:wait "${TERMINUS_SITE}.${TERMINUS_ENV}" || tr
+          terminus workflow:wait "${TERMINUS_SITE}.${TERMINUS_ENV}" || true
+
+      - name: Prepare Pantheon env (SSP 2.x via bin/)
+        if: matrix.ssp != '1.18.0'
+        env:
+          TERMINUS_SITE: ${{ env.TERMINUS_SITE }}
+          TERMINUS_ENV: ${{ env.TERMINUS_ENV }}
+          SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
+          WORDPRESS_ADMIN_USERNAME: ${{ env.WORDPRESS_ADMIN_USERNAME }}
+          WORDPRESS_ADMIN_EMAIL: ${{ env.WORDPRESS_ADMIN_EMAIL }}
+          WORDPRESS_ADMIN_PASSWORD: ${{ env.WORDPRESS_ADMIN_PASSWORD }}
+        run: |
+          bash bin/behat-prepare.sh || true
+          terminus workflow:wait "${TERMINUS_SITE}.${TERMINUS_ENV}" || true
+
+      - name: Force base_url for Behat (Pantheon, not localhost)
+        run: |
+          cat > behat.local.yml <<YML
+          default:
+            extensions:
+              Behat\MinkExtension:
+                base_url: "https://${{ env.PANTHEON_SITE_URL }}"
+          YML
+          cat behat.local.yml
+
+      - name: Run Behat
+        env:
+          TERMINUS_SITE: ${{ env.TERMINUS_SITE }}
+          TERMINUS_ENV: ${{ env.TERMINUS_ENV }}
+          SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
+          PANTHEON_SITE_URL: ${{ env.PANTHEON_SITE_URL }}
+          XDEBUG_MODE: off
+        run: vendor/bin/behat --colors --no-interaction
