@@ -22,23 +22,65 @@ if ! terminus env:info "${TERMINUS_SITE}.${TERMINUS_ENV}" >/dev/null 2>&1; then
 fi
 
 # Ensure SFTP mode to allow file ops during setup
-retry terminus connection:set "${TERMINUS_SITE}.${TERMINUS_ENV}" sftp
+# Ensure SFTP mode (so we can write files)
+terminus connection:set "$TERMINUS_SITE.$TERMINUS_ENV" sftp || true
 
-# Clear caches just in case
-retry terminus env:clear-cache "${TERMINUS_SITE}.${TERMINUS_ENV}" --yes
+# Write a small MU plugin that mirrors #user_login/#user_pass to alias fields "username"/"password"
+terminus wp "$TERMINUS_SITE.$TERMINUS_ENV" -- eval '
+$dir = ABSPATH . "wp-content/mu-plugins";
+if (!is_dir($dir)) { mkdir($dir, 0775, true); }
 
-# Install WP (idempotent)
-terminus wp "${TERMINUS_SITE}.${TERMINUS_ENV}" -- core is-installed || \
-terminus wp "${TERMINUS_SITE}.${TERMINUS_ENV}" -- core install \
-  --url="${BASE_URL}" --title="Behat Env ${TERMINUS_ENV}" \
-  --admin_user="${WORDPRESS_ADMIN_USERNAME}" \
-  --admin_password="${WORDPRESS_ADMIN_PASSWORD}" \
-  --admin_email="${WORDPRESS_ADMIN_EMAIL}"
+$code = <<<'PHP'
+<?php
+/**
+ * Plugin Name: CI - Login Field Aliases
+ * Description: Adds username/password aliases on the WP login form for Behat steps.
+ */
+add_action("login_form", function () {
+    ?>
+    <script type="text/javascript">
+        (function() {
+            function ensureAlias(originalSelector, aliasId, aliasName) {
+                var orig = document.querySelector(originalSelector);
+                if (!orig) return;
+                var alias = document.getElementById(aliasId);
+                if (!alias) {
+                    alias = document.createElement("input");
+                    alias.type = orig.type || "text";
+                    alias.id = aliasId;
+                    alias.name = aliasName;
+                    alias.autocomplete = orig.autocomplete || "on";
+                    alias.style.position = "absolute";
+                    alias.style.opacity = "0";
+                    alias.style.pointerEvents = "none";
+                    alias.tabIndex = -1;
+                    orig.parentNode.appendChild(alias);
+                }
+                var syncing = false;
+                function sync(a, b) {
+                    if (syncing) return;
+                    syncing = true;
+                    if (b.value !== a.value) b.value = a.value;
+                    syncing = false;
+                }
+                orig.addEventListener("input", function(){ sync(orig, alias); });
+                alias.addEventListener("input", function(){ sync(alias, orig); });
+                sync(orig, alias);
+            }
+            ensureAlias("#user_login", "username", "username");
+            ensureAlias("#user_pass",  "password", "password");
+        })();
+    </script>
+    <?php
+});
+PHP;
 
-# Activate our plugin
-retry terminus wp "${TERMINUS_SITE}.${TERMINUS_ENV}" -- plugin activate wp-saml-auth || true
+file_put_contents($dir . "/ci-login-field-aliases.php", $code);
+echo "Wrote MU plugin: {$dir}/ci-login-field-aliases.php\n";
+'
 
-# (Optional) place any SimpleSAMLphp fixtures depending on SIMPLESAMLPHP_VERSION here.
-echo "Using SimpleSAMLphp version: ${SIMPLESAMLPHP_VERSION}"
+# Commit & clear cache so it goes live
+terminus env:commit "$TERMINUS_SITE.$TERMINUS_ENV" --message="CI: add MU plugin to alias login fields" --force
+terminus env:clear-cache "$TERMINUS_SITE.$TERMINUS_ENV"
 
 echo "Behat environment prepared at ${BASE_URL}"
