@@ -2,65 +2,84 @@
 namespace SimpleSAML\Auth;
 
 /**
- * Extremely small test double of SimpleSAML\Auth\Simple
- * to satisfy wp-saml-auth unit tests with predictable behavior.
+ * Test stub for SimpleSAML\Auth\Simple used by unit tests.
  */
-class Simple
-{
-    /** @var string */
-    protected $source;
+class Simple {
+    /** @var bool */
+    private static $authenticated = true;
 
-    /** @var array */
-    protected $attributes;
+    /** @var array<string, array<int, string>> */
+    private static $attributes = [
+        'uid'                    => ['student'],
+        'mail'                   => ['student@example.org'],
+        'eduPersonAffiliation'   => ['student'],
+    ];
 
     /** @var bool */
-    protected $authenticated = true;
+    private static $logoutCalled = false;
 
-    public function __construct($source)
-    {
-        $this->source = (string) $source;
+    /** @var string */
+    private $spEntityId;
 
-        // Default identity is "student" unless explicitly changed via a runtime global.
-        // Tests that want "employee" can set $GLOBALS['WP_SAML_AUTH_TEST_IDENTITY'] = 'employee'.
-        $who = isset($GLOBALS['WP_SAML_AUTH_TEST_IDENTITY']) ? (string) $GLOBALS['WP_SAML_AUTH_TEST_IDENTITY'] : 'student';
-
-        // Canonical attribute set the plugin expects.
-        // - uid                => login/username
-        // - mail               => email
-        // - givenName / sn     => first/last name
-        // - eduPersonAffiliation for role-ish checks
-        $this->attributes = [
-            'uid'                   => [$who],
-            'mail'                  => [$who === 'employee' ? 'test-em@example.com' : 'test-student@example.com'],
-            'givenName'             => [$who === 'employee' ? 'Acme' : 'Pantheon'],
-            'sn'                    => [$who === 'employee' ? 'Employee' : 'Student'],
-            'eduPersonAffiliation'  => [$who], // simple echo; tests only check presence/values
-        ];
+    public function __construct(string $spEntityId) {
+        $this->spEntityId = $spEntityId;
     }
 
-    public function isAuthenticated()
-    {
-        return $this->authenticated;
+    /** Hooks the same way as real SimpleSAML. */
+    public function isAuthenticated(): bool {
+        return self::$authenticated;
     }
 
-    public function requireAuth(array $params = [])
-    {
-        // No-op in tests; we always consider the session authenticated.
-        $this->authenticated = true;
-    }
-
-    public function getAttributes()
-    {
-        return $this->attributes;
-    }
-
-    public function logout($params = null)
-    {
-        // Make this a no-op by default because your failing test expects "not called".
-        // If a test needs to detect it, it can flip a global first:
-        //   $GLOBALS['WP_SAML_AUTH_CAPTURE_LOGOUT'] = true;
-        if (!empty($GLOBALS['WP_SAML_AUTH_CAPTURE_LOGOUT'])) {
-            $GLOBALS['WP_SAML_AUTH_LOGOUT_CALLED'] = true;
+    /** The plugin sometimes calls requireAuth(); make it a no-op if already “authenticated”. */
+    public function requireAuth(): void {
+        // In our tests, we just assume the IdP flow completed when authenticated is true.
+        if (!self::$authenticated) {
+            self::$authenticated = true;
         }
+    }
+
+    /**
+     * Return SAML attributes in the same structure as SimpleSAML:
+     *   [ 'attrName' => ['value1', 'value2'] ]
+     */
+    public function getAttributes(): array {
+        return self::$attributes;
+    }
+
+    public function logout(?string $returnTo = null): void {
+        self::$logoutCalled = true;
+        // Do nothing else in tests.
+    }
+
+    public function login(array $params = []): void {
+        // noop in tests
+    }
+
+    // --- Utilities the tests (or bootstrap) can manipulate via filters if needed.
+
+    /** @internal for tests */
+    public static function _setAuthenticated(bool $state): void {
+        self::$authenticated = $state;
+    }
+
+    /** @internal for tests */
+    public static function _setAttributes(array $attributes): void {
+        self::$attributes = $attributes;
+    }
+
+    /** @internal for tests */
+    public static function _getLogoutCalled(): bool {
+        return self::$logoutCalled;
+    }
+
+    /** @internal for tests */
+    public static function _reset(): void {
+        self::$authenticated = true;
+        self::$attributes = [
+            'uid'                  => ['student'],
+            'mail'                 => ['student@example.org'],
+            'eduPersonAffiliation' => ['student'],
+        ];
+        self::$logoutCalled = false;
     }
 }
