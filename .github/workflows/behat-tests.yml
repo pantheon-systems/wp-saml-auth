@@ -114,7 +114,6 @@ jobs:
 
   behat:
     name: Behat (SSP ${{ matrix.ssp }})
-    if: ${{ secrets.PANTHEON_SITE != '' && secrets.TERMINUS_TOKEN != '' && secrets.PANTHEON_SSH_PRIVATE_KEY != '' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     strategy:
@@ -123,12 +122,19 @@ jobs:
         ssp: [ '1.18.0', '2.0.0', '2.4.0' ]
 
     env:
+      # Map required secrets (we assume they always exist)
+      PANTHEON_SITE: ${{ secrets.PANTHEON_SITE }}
+      TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
+      SITE_OWNER_SSH_PRIVATE_KEY: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
+
+      # Common env
       COMPOSER_PROCESS_TIMEOUT: 0
       COMPOSER_NO_INTERACTION: 1
       COMPOSER_NO_AUDIT: 1
+
       TERMINUS_SITE: ${{ secrets.PANTHEON_SITE }}
-      # Raw env; sanitized inside the script (no GHA replace())
       TERMINUS_ENV: ci${{ matrix.ssp }}${{ github.run_number }}${{ github.run_attempt }}
+
       WORDPRESS_ADMIN_USERNAME: pantheon
       WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
       WORDPRESS_ADMIN_PASSWORD: pantheon
@@ -142,7 +148,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Terminus 4 requires PHP >= 8.2. Set that FIRST.
+      # Keep 8.2 so Terminus 4 runs (needs ≥ 8.2)
       - name: Setup PHP 8.2 for Terminus & Behat tooling
         uses: shivammathur/setup-php@v2
         with:
@@ -171,7 +177,7 @@ jobs:
       - name: Start ssh-agent and add key (for SFTP upload)
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ secrets.PANTHEON_SSH_PRIVATE_KEY }}
+          ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
 
       - name: Make Behat script executable
         run: chmod +x bin/behat-prepare.sh || true
@@ -183,3 +189,5 @@ jobs:
         env:
           XDEBUG_MODE: off
         run: vendor/bin/behat --colors --no-interaction
+
+
