@@ -122,25 +122,21 @@ jobs:
         ssp: [ '1.18.0', '2.0.0', '2.4.0' ]
 
     env:
-      # Map required secrets (we assume they always exist)
-      PANTHEON_SITE: ${{ secrets.PANTHEON_SITE }}
-      TERMINUS_TOKEN: ${{ secrets.TERMINUS_TOKEN }}
-      SITE_OWNER_SSH_PRIVATE_KEY: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
-
-      # Common env
-      COMPOSER_PROCESS_TIMEOUT: 0
-      COMPOSER_NO_INTERACTION: 1
-      COMPOSER_NO_AUDIT: 1
-
-      TERMINUS_SITE: ${{ secrets.PANTHEON_SITE }}
+      TERMINUS_SITE: wp-saml-auth        # <-- set to your site name
       TERMINUS_ENV: ci${{ matrix.ssp }}${{ github.run_number }}${{ github.run_attempt }}
+      SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
 
+      # WP creds for the test user (kept as env — not secrets)
       WORDPRESS_ADMIN_USERNAME: pantheon
       WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
       WORDPRESS_ADMIN_PASSWORD: pantheon
+
+      # Generic CI env
+      COMPOSER_PROCESS_TIMEOUT: 0
+      COMPOSER_NO_INTERACTION: 1
+      COMPOSER_NO_AUDIT: 1
       WP_TESTS_DIR: /tmp/wordpress-tests-lib
       WP_CORE_DIR: /tmp/wordpress/
-      SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
 
     steps:
       - name: Checkout repository
@@ -148,8 +144,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Keep 8.2 so Terminus 4 runs (needs ≥ 8.2)
-      - name: Setup PHP 8.2 for Terminus & Behat tooling
+      # PHP 8.2 so Terminus 4 works (the action downloads v4.x)
+      - name: Setup PHP 8.2
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
@@ -182,12 +178,10 @@ jobs:
       - name: Make Behat script executable
         run: chmod +x bin/behat-prepare.sh || true
 
-      - name: Prepare Multidev + MU plugin
+      - name: Prepare Multidev + SimpleSAMLphp + plugin
         run: bin/behat-prepare.sh
 
       - name: Run Behat
         env:
           XDEBUG_MODE: off
         run: vendor/bin/behat --colors --no-interaction
-
-
