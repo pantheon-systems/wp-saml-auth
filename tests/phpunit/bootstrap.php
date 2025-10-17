@@ -31,13 +31,14 @@ function _wp_saml_auth_baseline_attributes() {
  * Option defaults for tests. Keep minimal to avoid pinning values
  * that individual tests want to override.
  */
+
 function _wp_saml_auth_filter_option( $value, $option_name ) {
     switch ( $option_name ) {
         case 'simplesamlphp_autoload':
-            // Always use our stubs in unit tests.
+            // Always use our SimpleSAMLphp stubs in unit tests.
             return __DIR__ . '/simplesamlphp-stubs/autoload.php';
 
-        // Attribute mapping defaults (safe, stable across tests).
+        // Attribute mappings (safe defaults for all tests).
         case 'user_login_attribute':
             return 'uid';
         case 'user_email_attribute':
@@ -45,12 +46,24 @@ function _wp_saml_auth_filter_option( $value, $option_name ) {
         case 'user_role_attribute':
             return 'eduPersonAffiliation';
 
-        // Default role for provisioning.
+        // Default role if/when provisioning is enabled by a specific test.
         case 'default_role':
             return 'subscriber';
 
-        // IMPORTANT:
-        // Do NOT hard-set 'auto_provision' or 'allow_slo' here so tests can toggle them.
+        // **Critical defaults to satisfy "default behavior" tests**
+        case 'permit_wp_login':
+            // By default, WP username/password login is NOT permitted.
+            return false;
+
+        case 'auto_provision':
+            // By default, DO NOT auto-provision users from SAML assertions.
+            // Tests that need provisioning will enable it explicitly.
+            return false;
+
+        case 'allow_slo':
+            // By default, do not call SP/IdP logout during wp_logout().
+            return false;
+
         default:
             return $value;
     }
