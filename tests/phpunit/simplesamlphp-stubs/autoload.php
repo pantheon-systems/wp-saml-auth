@@ -1,32 +1,19 @@
 <?php
 /**
- * Tiny SimpleSAMLphp stubs for unit tests.
- * Only the pieces exercised by the tests are implemented.
+ * Minimal autoloader for SimpleSAMLphp stubs used in unit tests.
  */
+spl_autoload_register(function ($class) {
+    $prefix = 'SimpleSAML\\';
+    $baseDir = __DIR__ . '/src/SimpleSAML/';
 
-namespace SimpleSAML\Auth;
-
-class Simple {
-    private static $authed = false;
-    private $sp;
-    public function __construct($sp) { $this->sp = $sp; }
-    public static function reset() { self::$authed = false; }
-    public function isAuthenticated() { return self::$authed; }
-    public function requireAuth(array $params = []) { self::$authed = true; }
-    public function logout($returnTo = null) { self::$authed = false; }
-    public function getAttributes() {
-        // Attributes used by the tests (mapping, role, etc.)
-        return [
-            'uid'                  => ['employee'],
-            'mail'                 => ['test-em@example.com'],
-            'eduPersonAffiliation' => ['employee'],
-        ];
+    $len = strlen($prefix);
+    if (strncmp($prefix, $class, $len) !== 0) {
+        return;
     }
-}
 
-// Optional light stubs some code paths may touch.
-namespace SimpleSAML;
-class Configuration { public static function getInstance() { return new self(); } }
-
-namespace SimpleSAML\Utils;
-class HTTP { public static function redirectTrustedURL($url) { /* no-op in unit tests */ } }
+    $relative = substr($class, $len);
+    $file = $baseDir . str_replace('\\', '/', $relative) . '.php';
+    if (is_file($file)) {
+        require $file;
+    }
+});
