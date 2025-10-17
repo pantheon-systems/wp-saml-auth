@@ -34,40 +34,45 @@ function _wp_saml_auth_baseline_attributes() {
 
 function _wp_saml_auth_filter_option( $value, $option_name ) {
     switch ( $option_name ) {
+        // Always use our stubbed SimpleSAML autoloader for PHPUnit.
         case 'simplesamlphp_autoload':
-            // Always use our SimpleSAMLphp stubs in unit tests.
-            return __DIR__ . '/simplesamlphp-stubs/autoload.php';
+            return dirname( __FILE__ ) . '/class-simplesaml-auth-simple.php';
 
-        // Attribute mappings (safe defaults for all tests).
+        /**
+         * Defaults expected by the PHPUnit tests
+         * (individual tests can still override with their own filters).
+         */
+
+        // Do NOT permit classic username/password login by default.
+        case 'permit_wp_login':
+            return false;
+
+        // Do NOT call SLO by default.
+        case 'allow_slo':
+            return false;
+
+        // Provision users by default so tests can validate attribute handling & roles.
+        case 'auto_provision':
+            return true;
+
+        // Attribute mapping used across tests.
         case 'user_login_attribute':
             return 'uid';
+
         case 'user_email_attribute':
             return 'mail';
+
         case 'user_role_attribute':
             return 'eduPersonAffiliation';
 
-        // Default role if/when provisioning is enabled by a specific test.
+        // Default role when no role attribute (or mapping) applies.
         case 'default_role':
             return 'subscriber';
-
-        // **Critical defaults to satisfy "default behavior" tests**
-        case 'permit_wp_login':
-            // By default, WP username/password login is NOT permitted.
-            return false;
-
-        case 'auto_provision':
-            // By default, DO NOT auto-provision users from SAML assertions.
-            // Tests that need provisioning will enable it explicitly.
-            return false;
-
-        case 'allow_slo':
-            // By default, do not call SP/IdP logout during wp_logout().
-            return false;
-
-        default:
-            return $value;
     }
+
+    return $value;
 }
+
 
 /**
  * Manually load the plugin being tested.
