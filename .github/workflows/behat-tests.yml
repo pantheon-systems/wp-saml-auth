@@ -46,32 +46,39 @@ jobs:
           coverage: none
           tools: composer:v2
 
+      - name: Install extras (svn, mysqli, wp-cli)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y subversion mariadb-client
+          echo "Downloading WP-CLI phar"
+          curl -fsSL -o wp-cli.phar https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+          chmod +x wp-cli.phar
+          sudo mv wp-cli.phar /usr/local/bin/wp
+          php -v
+
+      - name: Create test DB
+        run: |
+          mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS wp_test_${{ matrix.php }};"
+          # Also create the numeric-only variant for safety (not strictly needed now)
+          mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS wp_test_${{ matrix.php//./ }};"
+
+      - name: Install Composer deps (root)
+        run: composer install --no-progress --no-interaction
+
+      # Compute and export per-PHP temp paths so they never collide
       - name: Compute PHP vars
         run: |
           PHPV="${{ matrix.php }}"
           echo "PHPV=$PHPV" >> $GITHUB_ENV
           echo "DB_NAME=wp_test_${PHPV//./}" >> $GITHUB_ENV
-          # Unique temp paths per job to avoid 'already exists'
           echo "WP_CORE_DIR=/tmp/wp-${PHPV//./}/wordpress" >> $GITHUB_ENV
           echo "WP_TESTS_DIR=/tmp/wp-${PHPV//./}/wordpress-tests-lib" >> $GITHUB_ENV
           echo "WP_VERSION=6.8.3" >> $GITHUB_ENV
 
-      - name: Create test DB
+      - name: Clean WP test paths (exact)
         run: |
-          mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS $DB_NAME;"
-
-      - name: Install Subversion (svn)
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y subversion
-
-      # Avoid 7.4 dev-deps conflicts by skipping require-dev for PHPUnit job
-      - name: Install Composer deps (no dev)
-        run: composer install --no-progress --no-interaction --no-dev
-
-      - name: Clean unique WP temp dirs
-        run: |
-          sudo rm -rf "$(dirname "$WP_CORE_DIR")"
+          set -eux
+          rm -rf "$WP_CORE_DIR" "$WP_TESTS_DIR"
           mkdir -p "$(dirname "$WP_CORE_DIR")"
 
       - name: Bootstrap WP test suite
@@ -134,11 +141,29 @@ jobs:
           tools: composer:v2
           coverage: none
 
-      # Set the same static site name as CircleCI
-      - name: Set Pantheon site name (static)
+      # Required by your instruction (persist until changed): official Terminus action
+      - name: Install Terminus
+        uses: pantheon-systems/terminus-github-actions@v1
+        with:
+          pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
+
+      - name: SSH agent (Pantheon)
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
+          log-public-key: true
+
+      # Match CircleCI behavior: disable strict host checking instead of keyscanning legacy hosts
+      - name: Configure SSH (no strict host key checking)
+        run: |
+          mkdir -p ~/.ssh
+          printf "Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile=/dev/null\n" > ~/.ssh/config
+
+      # Set static site id (as in CircleCI)
+      - name: Set Pantheon site id
         run: echo "TERMINUS_SITE=wp-saml-auth" >> $GITHUB_ENV
 
-      # Validate that required secrets exist before SSH
+      # Validate required secrets without using expressions that reference secrets directly in `if:`
       - name: Validate required secrets
         run: |
           MISS=0
@@ -146,35 +171,10 @@ jobs:
           [ -z "${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}" ] && echo "::error::SITE_OWNER_SSH_PRIVATE_KEY is missing" && MISS=1
           [ $MISS -ne 0 ] && exit 1 || exit 0
 
-      # Official Terminus action (as requested)
-      - name: Install Terminus
-        uses: pantheon-systems/terminus-github-actions@v1
-        with:
-          pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
-
-      # SSH agent with the correct key name you specified
-      - name: SSH agent (Pantheon)
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
-          log-public-key: true
-
-      # Replace ssh-keyscan (DNS flakiness) with SSH config disabling host key checking for *.drush.in
-      - name: Configure SSH for Pantheon
-        run: |
-          mkdir -p ~/.ssh
-          {
-            echo "Host *.drush.in"
-            echo "  HostName %h"
-            echo "  Port 2222"
-            echo "  StrictHostKeyChecking no"
-            echo "  UserKnownHostsFile=/dev/null"
-          } >> ~/.ssh/config
-          chmod 600 ~/.ssh/config
-
       - name: Compute Pantheon env vars
         env:
           SSP: ${{ matrix.ssp }}
+          TERMINUS_SITE: ${{ env.TERMINUS_SITE }}
         run: |
           set -e
           ssp_num="${SSP//./}"
@@ -184,9 +184,9 @@ jobs:
           echo "TERMINUS_ENV=$TERMINUS_ENV" >> $GITHUB_ENV
           echo "SIMPLESAMLPHP_VERSION=$SSP" >> $GITHUB_ENV
           echo "PANTHEON_SITE_URL=${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io" >> $GITHUB_ENV
-          echo "Using env: ${TERMINUS_SITE}.${TERMINUS_ENV} -> https://${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io"
+          echo "Using env: $TERMINUS_SITE.$TERMINUS_ENV -> https://${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io"
 
-      - name: Install Composer deps (with dev)
+      - name: Install Composer deps
         run: composer install --no-progress --no-interaction
 
       - name: Prepare Pantheon environment
@@ -197,7 +197,8 @@ jobs:
         run: |
           set -eux
           if [ "${{ matrix.ssp }}" = "1.18.0" ]; then
-            bash bin/1.18/behat-prepare-1.18.sh
+            # Your 1.18-specific script path/name
+            bash bin/1.18/behat-prepare-simplesaml1.18.0.sh
           else
             bash bin/behat-prepare.sh
           fi
@@ -207,8 +208,25 @@ jobs:
           SITE_ENV="${TERMINUS_SITE}.${TERMINUS_ENV}"
           terminus workflow:wait "$SITE_ENV"
 
+      - name: Wait until site responds
+        run: |
+          set -e
+          URL="https://${PANTHEON_SITE_URL}"
+          echo "Waiting for $URL ..."
+          for i in $(seq 1 60); do
+            if curl -fsSL -o /dev/null "$URL"; then
+              echo "OK"; exit 0
+            fi
+            sleep 5
+          done
+          echo "Site never became ready: $URL"
+          exit 1
+
       - name: Run Behat
         env:
+          # Force Mink's base_url away from localhost to the Pantheon URL
+          BEHAT_PARAMS: >-
+            {"extensions":{"Behat\\MinkExtension":{"base_url":"https://${{ env.PANTHEON_SITE_URL }}"}}}
           PANTHEON_SITE_URL: ${{ env.PANTHEON_SITE_URL }}
           WORDPRESS_ADMIN_USERNAME: pantheon
           WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
