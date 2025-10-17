@@ -1,55 +1,50 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Required env:
-#   PANTHEON_SITE   (machine name)
-#   TERMINUS_ENV    (raw value; may contain dots etc. -> will sanitize below)
+# Required:
+#   TERMINUS_SITE (Pantheon site machine name) via secret PANTHEON_SITE
+#   TERMINUS_ENV  (raw; we'll sanitize)
 #   SIMPLESAMLPHP_VERSION
-#   SSH agent already running (webfactory/ssh-agent) with a key that has Pantheon access.
+#   Terminus installed; PHP >= 8.2 already set by workflow
+#   SSH agent loaded with PANTHEON_SSH_PRIVATE_KEY
 
-SITE="${PANTHEON_SITE:-${TERMINUS_SITE:-}}"
+SITE="${TERMINUS_SITE:-${PANTHEON_SITE:-}}"
 RAW_ENV="${TERMINUS_ENV:?Missing TERMINUS_ENV}"
 SSP="${SIMPLESAMLPHP_VERSION:-}"
 
 if [ -z "${SITE}" ]; then
-  echo "PANTHEON_SITE secret is required"; exit 1;
+  echo "TERMINUS_SITE / PANTHEON_SITE is empty. Set the secret PANTHEON_SITE."; exit 1
 fi
 
-# --- Sanitize multidev name to Pantheon-safe (lowercase alnum + hyphen, <= 11 chars) ---
-ENV_SANITIZED="$(printf "%s" "${RAW_ENV}" \
-  | tr '[:upper:]' '[:lower:]' \
-  | tr -cd 'a-z0-9-')"
-ENV_SANITIZED="${ENV_SANITIZED//./}"     # drop dots if any slipped through
-ENV_SANITIZED="${ENV_SANITIZED//_/}"     # drop underscores
-# Ensure it starts with a letter
-if ! [[ "${ENV_SANITIZED}" =~ ^[a-z] ]]; then
-  ENV_SANITIZED="ci${ENV_SANITIZED}"
-fi
-# Limit to 11 chars (Pantheon multidev constraint)
+# Sanitize multidev to [a-z0-9-], <= 11 chars, starts with letter
+ENV_SANITIZED="$(printf "%s" "${RAW_ENV}" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9-')"
+ENV_SANITIZED="${ENV_SANITIZED//./}"
+ENV_SANITIZED="${ENV_SANITIZED//_/}"
+[[ "${ENV_SANITIZED}" =~ ^[a-z] ]] || ENV_SANITIZED="ci${ENV_SANITIZED}"
 ENV_SANITIZED="$(echo -n "${ENV_SANITIZED}" | cut -c1-11)"
 
 echo "== Behat prepare =="
 echo "== TERMINUS_SITE=${SITE} =="
-echo "== TERMINUS_ENV(raw)=${RAW_ENV} -> (sanitized)=${ENV_SANITIZED} =="
+echo "== TERMINUS_ENV(raw)=${RAW_ENV} -> ${ENV_SANITIZED} =="
 echo "== SIMPLESAMLPHP_VERSION=${SSP} =="
 
 echo "== Terminus version: =="
 terminus --version
 
-echo "== Ensuring Multidev environment ${SITE}.${ENV_SANITIZED} =="
+echo "== Ensuring Multidev ${SITE}.${ENV_SANITIZED} =="
 if ! terminus env:info "${SITE}.${ENV_SANITIZED}" >/dev/null 2>&1; then
   terminus env:create "${SITE}.dev" "${ENV_SANITIZED}"
 else
-  echo "Multidev ${SITE}.${ENV_SANITIZED} exists."
+  echo "Multidev exists."
 fi
 
 BASE_URL="$(terminus env:view "${SITE}.${ENV_SANITIZED}" --print)"
 echo "== OK >> ${BASE_URL} responded =="
 
-echo "== Staging SimpleSAMLphp ${SSP} (if required by tests)… =="
-echo "No files staged (placeholder)."
+echo "== Staging SimpleSAMLphp ${SSP} (placeholder)… =="
+echo "No files staged."
 
-echo "== Switching ${SITE}.${ENV_SANITIZED} to SFTP mode so we can write MU plugins… =="
+echo "== Switching to SFTP to write MU plugin… =="
 terminus connection:set "${SITE}.${ENV_SANITIZED}" sftp || true
 
 echo "== Writing MU plugin for Behat login field aliases… =="
@@ -108,7 +103,7 @@ HAS_WP=$?
 set -e
 
 if [ ${HAS_WP} -eq 0 ]; then
-  echo "wp-cli detected on appserver; writing via wp eval…"
+  echo "wp-cli available; writing via wp eval…"
   MU_PLUGIN_B64="${MU_PLUGIN_B64}" terminus wp "${SITE}.${ENV_SANITIZED}" -- wp eval '
     $dir = ABSPATH . "wp-content/mu-plugins";
     if (!is_dir($dir)) { mkdir($dir, 0775, true); }

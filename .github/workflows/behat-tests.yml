@@ -11,7 +11,15 @@ jobs:
     name: PHPUnit (PHP ${{ matrix.php }})
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        php: [ '7.4', '8.0', '8.1', '8.2', '8.3', '8.4' ]
+        include:
+          - php: '8.4'
+            experimental: true
     continue-on-error: ${{ matrix.experimental == true }}
+
     services:
       mysql:
         image: mysql:8.0
@@ -24,14 +32,6 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=10
-
-    strategy:
-      fail-fast: false
-      matrix:
-        php: [ '7.4', '8.0', '8.1', '8.2', '8.3', '8.4' ]
-        include:
-          - php: '8.4'
-            experimental: true
 
     env:
       COMPOSER_PROCESS_TIMEOUT: 0
@@ -58,7 +58,7 @@ jobs:
           coverage: none
           extensions: mysqli
 
-      - name: Cache Composer
+      - name: Composer cache
         uses: actions/cache@v4
         with:
           path: |
@@ -68,12 +68,26 @@ jobs:
           restore-keys: |
             composer-${{ runner.os }}-
 
-      - name: Install Composer dependencies (incl. yoast/phpunit-polyfills)
+      # IMPORTANT:
+      # - On PHP < 8.1, do NOT install dev deps from your lock (they require PHP >= 8.1).
+      # - We install only prod deps, then pull Yoast Polyfills into a separate temp vendor dir.
+      - name: Install Composer dependencies (prod) + polyfills
+        shell: bash
         run: |
-          composer install --no-progress --no-interaction
-          if ! [ -d vendor/yoast/phpunit-polyfills ]; then
-            composer require --no-progress --no-interaction --dev yoast/phpunit-polyfills:^2
-          fi
+          set -euo pipefail
+          PHPV=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
+
+          # Always install prod deps from your lock.
+          composer install --no-progress --no-interaction --no-dev
+
+          # For tests, we need Yoast PHPUnit Polyfills everywhere.
+          # Install it into a separate working dir that won't conflict with your lock.
+          mkdir -p /tmp/phpunit-deps
+          composer init --no-interaction --name tmp/phpunit-deps --working-dir=/tmp/phpunit-deps >/dev/null 2>&1
+          composer config platform.php "$PHPV" --working-dir=/tmp/phpunit-deps
+          composer require --no-progress --no-interaction --working-dir=/tmp/phpunit-deps yoast/phpunit-polyfills:^2
+
+          echo "WP_TESTS_PHPUNIT_POLYFILLS_PATH=/tmp/phpunit-deps/vendor/yoast/phpunit-polyfills" >> $GITHUB_ENV
 
       - name: Make CI scripts executable
         run: chmod +x bin/phpunit-bootstrap.sh || true
@@ -88,6 +102,7 @@ jobs:
           if [ -x vendor/bin/phpunit ]; then
             vendor/bin/phpunit
           else
+            # Fallback to phar per runtime for PHP 8.4, otherwise 9.x is fine.
             PHPV=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
             if [ "$PHPV" = "8.4" ]; then
               curl -fsSL https://phar.phpunit.de/phpunit-10.phar -o phpunit.phar
@@ -99,6 +114,7 @@ jobs:
 
   behat:
     name: Behat (SSP ${{ matrix.ssp }})
+    if: ${{ secrets.PANTHEON_SITE != '' && secrets.TERMINUS_TOKEN != '' && secrets.PANTHEON_SSH_PRIVATE_KEY != '' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     strategy:
@@ -110,12 +126,8 @@ jobs:
       COMPOSER_PROCESS_TIMEOUT: 0
       COMPOSER_NO_INTERACTION: 1
       COMPOSER_NO_AUDIT: 1
-      # required secrets:
-      #   TERMINUS_TOKEN (Pantheon machine token)
-      #   PANTHEON_SITE  (Pantheon site machine name)
-      #   PANTHEON_SSH_PRIVATE_KEY (SSH key with Pantheon SFTP access)
       TERMINUS_SITE: ${{ secrets.PANTHEON_SITE }}
-      # raw, unsanitized value (we'll sanitize inside the script to avoid GHA expression pitfalls)
+      # Raw env; sanitized inside the script (no GHA replace())
       TERMINUS_ENV: ci${{ matrix.ssp }}${{ github.run_number }}${{ github.run_attempt }}
       WORDPRESS_ADMIN_USERNAME: pantheon
       WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
@@ -130,14 +142,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup PHP (for Behat tooling)
+      # Terminus 4 requires PHP >= 8.2. Set that FIRST.
+      - name: Setup PHP 8.2 for Terminus & Behat tooling
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.1'
-          coverage: none
+          php-version: '8.2'
           tools: composer:v2
+          coverage: none
 
-      - name: Cache Composer
+      - name: Composer cache
         uses: actions/cache@v4
         with:
           path: |
@@ -155,22 +168,18 @@ jobs:
         with:
           pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
 
-      - name: Start ssh-agent and add key (required for SFTP upload)
+      - name: Start ssh-agent and add key (for SFTP upload)
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.PANTHEON_SSH_PRIVATE_KEY }}
 
-      - name: Make CI scripts executable
+      - name: Make Behat script executable
         run: chmod +x bin/behat-prepare.sh || true
 
-      - name: Prepare Pantheon multidev + MU plugin
-        env:
-          PANTHEON_SITE: ${{ secrets.PANTHEON_SITE }}
-          TERMINUS_ENV: ${{ env.TERMINUS_ENV }}
-          SIMPLESAMLPHP_VERSION: ${{ matrix.ssp }}
+      - name: Prepare Multidev + MU plugin
         run: bin/behat-prepare.sh
 
-      - name: Run Behat suite
+      - name: Run Behat
         env:
           XDEBUG_MODE: off
         run: vendor/bin/behat --colors --no-interaction
