@@ -54,7 +54,7 @@ jobs:
           chmod +x wp-cli.phar
           sudo mv wp-cli.phar /usr/local/bin/wp
 
-      # Compute and export per-PHP variables ONCE; use env everywhere
+      # Compute per-PHP variables once
       - name: Compute PHP vars
         run: |
           PHPV="${{ matrix.php }}"
@@ -62,6 +62,7 @@ jobs:
           echo "PHPV=$PHPV" >> $GITHUB_ENV
           echo "PHPV_NUM=$PHPV_NUM" >> $GITHUB_ENV
           echo "DB_NAME=wp_test_${PHPV_NUM}" >> $GITHUB_ENV
+          echo "WP_ROOT_DIR=/tmp/wp-${PHPV_NUM}" >> $GITHUB_ENV
           echo "WP_CORE_DIR=/tmp/wp-${PHPV_NUM}/wordpress" >> $GITHUB_ENV
           echo "WP_TESTS_DIR=/tmp/wp-${PHPV_NUM}/wordpress-tests-lib" >> $GITHUB_ENV
           echo "WP_VERSION=6.8.3" >> $GITHUB_ENV
@@ -70,14 +71,21 @@ jobs:
         run: |
           mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
 
+      # ✅ PHP 7.4: install without dev to avoid >=8.1 dev deps. Others: normal install.
       - name: Install Composer deps (root)
-        run: composer install --no-progress --no-interaction
+        run: |
+          if [ "${PHPV}" = "7.4" ]; then
+            composer install --no-progress --no-interaction --no-dev
+          else
+            composer install --no-progress --no-interaction
+          fi
 
-      - name: Clean WP test paths (exact)
+      # ✅ Remove the whole per-PHP temp root to prevent svn "already exists"
+      - name: Clean per-PHP WP temp root
         run: |
           set -eux
-          rm -rf "$WP_CORE_DIR" "$WP_TESTS_DIR"
-          mkdir -p "$(dirname "$WP_CORE_DIR")"
+          rm -rf "$WP_ROOT_DIR"
+          mkdir -p "$WP_ROOT_DIR"
 
       - name: Bootstrap WP test suite
         env:
@@ -106,8 +114,8 @@ jobs:
           if [ -x vendor/bin/phpunit ]; then
             vendor/bin/phpunit
           else
-            PHPV=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
-            if [ "$PHPV" = "8.4" ]; then
+            PHPV_CUR=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
+            if [ "$PHPV_CUR" = "8.4" ]; then
               curl -fsSL https://phar.phpunit.de/phpunit-10.phar -o phpunit.phar
             else
               curl -fsSL https://phar.phpunit.de/phpunit-9.phar -o phpunit.phar
@@ -139,7 +147,7 @@ jobs:
           tools: composer:v2
           coverage: none
 
-      # Persisted per your instruction
+      # ✅ Persisted per your requirement
       - name: Install Terminus
         uses: pantheon-systems/terminus-github-actions@v1
         with:
@@ -160,13 +168,6 @@ jobs:
       - name: Set Pantheon site id
         run: echo "TERMINUS_SITE=wp-saml-auth" >> $GITHUB_ENV
 
-      - name: Validate required secrets
-        run: |
-          MISS=0
-          [ -z "${{ secrets.TERMINUS_TOKEN }}" ] && echo "::error::TERMINUS_TOKEN is missing" && MISS=1
-          [ -z "${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}" ] && echo "::error::SITE_OWNER_SSH_PRIVATE_KEY is missing" && MISS=1
-          [ $MISS -ne 0 ] && exit 1 || exit 0
-
       - name: Compute Pantheon env vars
         env:
           SSP: ${{ matrix.ssp }}
@@ -185,6 +186,7 @@ jobs:
       - name: Install Composer deps
         run: composer install --no-progress --no-interaction
 
+      # ✅ 1.18: patch the script to use the real workspace path
       - name: Prepare Pantheon environment
         env:
           WORDPRESS_ADMIN_USERNAME: pantheon
@@ -193,7 +195,13 @@ jobs:
         run: |
           set -eux
           if [ "${{ matrix.ssp }}" = "1.18.0" ]; then
-            # Your 1.18-specific script path/name
+            # Ensure the 1.18 script exists under your repo path
+            test -f bin/1.18/behat-prepare-simplesaml1.18.0.sh
+
+            # Patch the hard-coded WORKING_DIR inside the script to the current workspace
+            sed -i 's|^WORKING_DIR=.*|WORKING_DIR="'"$GITHUB_WORKSPACE"'"|g' bin/1.18/behat-prepare-simplesaml1.18.0.sh
+
+            # Run
             bash bin/1.18/behat-prepare-simplesaml1.18.0.sh
           else
             bash bin/behat-prepare.sh
