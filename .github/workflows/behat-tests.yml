@@ -113,9 +113,10 @@ jobs:
       # required secrets:
       #   TERMINUS_TOKEN (Pantheon machine token)
       #   PANTHEON_SITE  (Pantheon site machine name)
-      #   PANTHEON_SSH_PRIVATE_KEY (SSH key that has access to the site; add to Pantheon Dashboard)
+      #   PANTHEON_SSH_PRIVATE_KEY (SSH key with Pantheon SFTP access)
       TERMINUS_SITE: ${{ secrets.PANTHEON_SITE }}
-      TERMINUS_ENV: ci${{ matrix.ssp && replace(matrix.ssp, '.', '') }}${{ github.run_number }}${{ github.run_attempt }}
+      # raw, unsanitized value (we'll sanitize inside the script to avoid GHA expression pitfalls)
+      TERMINUS_ENV: ci${{ matrix.ssp }}${{ github.run_number }}${{ github.run_attempt }}
       WORDPRESS_ADMIN_USERNAME: pantheon
       WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
       WORDPRESS_ADMIN_PASSWORD: pantheon
@@ -149,7 +150,7 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-progress --no-interaction
 
-      - name: Install Terminus (official action)
+      - name: Install Terminus
         uses: pantheon-systems/terminus-github-actions@v1
         with:
           pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
