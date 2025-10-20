@@ -1,57 +1,42 @@
 <?php
-namespace SimpleSAML\Auth;
+// @codingStandardsIgnoreFile
 
 /**
- * Tiny SimpleSAMLphp stub for unit tests.
- * - Implements requireAuth() used by the plugin.
- * - Always "authenticated" unless a test manipulates via filters.
- * - Attributes come from 'wp_saml_auth_attributes' (with a safe baseline).
- * - logout() just flags that it was called; plugin logic should check the option.
+ * Helper class for simple authentication applications (test stub).
  */
-class Simple {
-    public static $last_instance = null;
-    public static $logout_called = false;
+class SimpleSAML_Auth_Simple {
 
-    private $idp;
-    private $authenticated = true;
+    /** @var string */
+    private $authSource;
 
-    public function __construct($idp = null) {
-        $this->idp = $idp;
-        self::$last_instance = $this;
+    public function __construct($authSource) {
+        $this->authSource = $authSource;
     }
 
+    /** TRUE iff a test has seeded current-user attributes */
     public function isAuthenticated() {
-        return $this->authenticated;
+        return (bool) $this->getCurrentUser();
     }
 
-    public function requireAuth(array $params = []) {
-        // In real SSP this would redirect. Here, just mark as authenticated.
-        $this->authenticated = true;
+    /** In tests, just reflect current state */
+    public function requireAuth(array $params = array()) {
+        return (bool) $this->getCurrentUser();
     }
 
-    public function login(array $params = []) {
-        $this->authenticated = true;
-    }
-
-    public function logout(array $params = []) {
-        // The plugin should check the 'allow_slo' option before calling us.
-        // If it does call us, record that it happened so tests can assert.
-        self::$logout_called = true;
-    }
-
+    /** Return the seeded attributes or empty array */
     public function getAttributes() {
-        $attrs = [
-            'uid'                  => ['student'],
-            'mail'                 => ['student@example.org'],
-            'eduPersonAffiliation' => ['student'],
-        ];
-
-        if (function_exists('apply_filters')) {
-            $maybe = apply_filters('wp_saml_auth_attributes', $attrs);
-            if (is_array($maybe) && !empty($maybe)) {
-                $attrs = $maybe;
-            }
+        if (!$this->isAuthenticated()) {
+            return array();
         }
-        return $attrs;
+        return $this->getCurrentUser();
+    }
+
+    /** Simulate logout by clearing the seed */
+    public function logout($params = null) {
+        $GLOBALS['wp_saml_auth_current_user'] = false;
+    }
+
+    private function getCurrentUser() {
+        return ! empty( $GLOBALS['wp_saml_auth_current_user'] ) ? $GLOBALS['wp_saml_auth_current_user'] : null;
     }
 }

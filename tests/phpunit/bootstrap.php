@@ -26,65 +26,30 @@ if (! defined('WP_TESTS_PHPUNIT_POLYFILLS_PATH')) {
 require_once $_tests_dir . '/includes/functions.php';
 
 /**
- * Hard-register a PSR-4 style autoloader for SimpleSAML stubs.
- * This guarantees \SimpleSAML\Auth\Simple is loadable even if the plugin
- * fails to read its option/filter.
+ * Wire SimpleSAML stubs *only*: we expose the autoload path via the plugin's
+ * filters so the plugin can load its provider. We do NOT override any other
+ * plugin options here; the tests control behaviour via their own filters.
  */
 $__simplesaml_stub_root = realpath(__DIR__ . '/simplesamlphp-stubs');
-if ($__simplesaml_stub_root) {
-    spl_autoload_register(function ($class) use ($__simplesaml_stub_root) {
-        $prefix = 'SimpleSAML\\';
-        if (strncmp($class, $prefix, strlen($prefix)) !== 0) {
-            return;
+$__simplesaml_autoload  = $__simplesaml_stub_root ? ($__simplesaml_stub_root . '/autoload.php') : null;
+
+function _wp_saml_auth_register_test_filters_minimal() {
+    $autoload = $GLOBALS['__simplesaml_autoload'] ?? null;
+
+    // Option-based loader used by the plugin at init.
+    add_filter('wp_saml_auth_option', function ($value, $option_name) use ($autoload) {
+        if ($option_name === 'simplesamlphp_autoload') {
+            return $autoload;
         }
-        $relative = substr($class, strlen($prefix)); // e.g. "Auth\Simple"
-        $file = $__simplesaml_stub_root . '/SimpleSAML/' . str_replace('\\', '/', $relative) . '.php';
-        if (is_file($file)) {
-            require $file;
-        }
+        return $value; // do not override any other option by default
+    }, 1, 2);
+
+    // Legacy direct filter used in older codepaths.
+    add_filter('wp_saml_auth_autoload', function () use ($autoload) {
+        return $autoload;
     });
 }
-
-/**
- * Provide deterministic default options for the plugin under test.
- * IMPORTANT: Always return our autoload path for 'simplesamlphp_autoload'.
- */
-function _wp_saml_auth_filter_option($value, $option_name) {
-    switch ($option_name) {
-        case 'simplesamlphp_autoload':
-            return realpath(__DIR__ . '/simplesamlphp-stubs/autoload.php');
-
-        // Defaults to keep tests deterministic; individual tests can override.
-        case 'permit_wp_login':
-            return false;
-        case 'auto_provision':
-            return false;
-        case 'allow_slo':
-            return false;
-        case 'user_login_attribute':
-            return 'uid';
-        case 'user_email_attribute':
-            return 'mail';
-        case 'user_role_attribute':
-            return 'eduPersonAffiliation';
-        case 'default_role':
-            return 'subscriber';
-    }
-    return $value;
-}
-
-/**
- * Register test filters first, then load the plugin.
- */
-function _wp_saml_auth_register_test_filters() {
-    add_filter('wp_saml_auth_option', '_wp_saml_auth_filter_option', 1, 2);
-
-    // Some codepaths query this filter directly; provide it as well.
-    add_filter('wp_saml_auth_autoload', function () {
-        return realpath(__DIR__ . '/simplesamlphp-stubs/autoload.php');
-    });
-}
-tests_add_filter('muplugins_loaded', '_wp_saml_auth_register_test_filters');
+tests_add_filter('muplugins_loaded', '_wp_saml_auth_register_test_filters_minimal');
 
 /**
  * Load the plugin and test CLI helpers.

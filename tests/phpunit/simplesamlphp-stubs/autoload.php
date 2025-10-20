@@ -1,15 +1,21 @@
 <?php
 /**
- * Minimal autoloader for our SimpleSAML stubs, used by the plugin under test.
+ * Autoloader for SimpleSAMLphp stubs used in PHPUnit.
+ * - Loads the legacy global class SimpleSAML_Auth_Simple used by the plugin.
+ * - Provides a minimal namespaced API by aliasing to the legacy class.
  */
-spl_autoload_register(function ($class) {
-    $prefix = 'SimpleSAML\\';
-    if (strncmp($class, $prefix, strlen($prefix)) !== 0) {
-        return;
+
+// Ensure the global (legacy) stub class is available.
+require_once __DIR__ . '/class-simplesaml-auth-simple.php';
+
+// Alias legacy class to the namespaced one if needed.
+if (! class_exists('SimpleSAML\\Auth\\Simple')) {
+    class_alias('SimpleSAML_Auth_Simple', 'SimpleSAML\\Auth\\Simple');
+}
+
+// Minimal namespaced Configuration stub (some codepaths may touch it).
+if (! class_exists('SimpleSAML\\Configuration')) {
+    class SimpleSAML_Configuration {
+        public static function getInstance() { return new self(); }
     }
-    $relative = substr($class, strlen($prefix));
-    $file = __DIR__ . '/SimpleSAML/' . str_replace('\\', '/', $relative) . '.php';
-    if (is_file($file)) {
-        require $file;
-    }
-});
+}
