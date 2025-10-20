@@ -13,7 +13,7 @@ set -euo pipefail
 if [[ -z "${PHPV:-}" || -z "${PHPV_NUM:-}" ]]; then
   PHPV="$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')"
   PHPV_NUM="${PHPV/./}"
-fi>
+fi
 echo "== PHP version: ${PHPV} (${PHPV_NUM}) =="
 echo "== WP_VERSION=${WP_VERSION} =="
 
@@ -131,7 +131,7 @@ if [[ -n "${WP_TESTS_PHPUNIT_POLYFILLS_PATH:-}" ]]; then
     if [[ -d "vendor/yoast/phpunit-polyfills" ]]; then
       mkdir -p "${WP_TESTS_PHPUNIT_POLYFILLS_PATH}"
       rsync -a --delete "vendor/yoast/phpunit-polyfills/" "${WP_TESTS_PHPUNIT_POLYFILLS_PATH}/"
-    } else
+    else
       tmpcp="/tmp/phpunit-polyfills-${PHPV_NUM}"
       rm -rf "${tmpcp}"
       composer create-project --no-dev --no-interaction yoast/phpunit-polyfills:^2 "${tmpcp}"
