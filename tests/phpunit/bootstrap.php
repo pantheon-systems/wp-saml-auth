@@ -33,8 +33,18 @@ require_once $_tests_dir . '/includes/functions.php';
 $__simplesaml_stub_root = realpath(__DIR__ . '/simplesamlphp-stubs');
 $__simplesaml_autoload  = $__simplesaml_stub_root ? ($__simplesaml_stub_root . '/autoload.php') : null;
 
+/* >>> FIX: make it accessible to our closures and a deterministic fallback */
+$GLOBALS['__simplesaml_autoload'] = $__simplesaml_autoload;
+
 function _wp_saml_auth_register_test_filters_minimal() {
+    // Prefer the global set above; if absent, fall back to the known path.
     $autoload = $GLOBALS['__simplesaml_autoload'] ?? null;
+    if (! $autoload) {
+        $fallback = realpath(__DIR__ . '/simplesamlphp-stubs/autoload.php');
+        if ($fallback) {
+            $autoload = $fallback;
+        }
+    }
 
     // Option-based loader used by the plugin at init.
     add_filter('wp_saml_auth_option', function ($value, $option_name) use ($autoload) {
