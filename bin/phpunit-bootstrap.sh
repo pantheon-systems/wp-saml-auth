@@ -14,12 +14,12 @@ DB_USER="${DB_USER:-root}"
 DB_PASSWORD="${DB_PASSWORD:-root}"
 : "${DB_NAME:?DB_NAME env var is required}"
 WP_VERSION="${WP_VERSION:-6.8.3}"
-WP_ROOT_DIR="${WP_ROOT_DIR:-/tmp/wp-$(php -r 'echo PHP_MAJOR_VERSION.PHP_MINOR_VERSION;')}"
+WP_ROOT_DIR="${WP_ROOT_DIR:-/tmp/wp-$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')}"
 WP_CORE_DIR="${WP_CORE_DIR:-${WP_ROOT_DIR}/wordpress}"
 WP_TESTS_DIR="${WP_TESTS_DIR:-${WP_ROOT_DIR}/wordpress-tests-lib}"
 POLYFILLS_DIR="${WP_TESTS_PHPUNIT_POLYFILLS_PATH:-/tmp/phpunit-deps}"
 
-PHPV="$(php -r 'echo PHP_MAJOR_VERSION.\".\".PHP_MINOR_VERSION;')"
+PHPV="$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')"
 echo "== PHP detected: ${PHPV} =="
 echo "== WP_VERSION:   ${WP_VERSION} =="
 echo "== WP_ROOT_DIR:  ${WP_ROOT_DIR} =="
@@ -67,7 +67,6 @@ fi
 echo "== Writing wp-tests-config.php =="
 cp "${WP_TESTS_DIR}/wp-tests-config-sample.php" "${WP_TESTS_DIR}/wp-tests-config.php"
 
-# >>> Replaced fragile `php -r` with a heredoc script (no escaping issues) <<<
 php <<'PHP'
 <?php
 $cfgFile = getenv('WP_TESTS_DIR') . '/wp-tests-config.php';
