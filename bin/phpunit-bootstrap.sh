@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
 #
-# Prepares WordPress core + test library for PHPUnit and ensures the Yoast
-# PHPUnit Polyfills are available in a stable path.
+# Prepares a WordPress develop checkout for PHPUnit in the exact layout that
+# the core test runner expects:
+#   <ROOT>/src
+#   <ROOT>/tests/phpunit
+#
+# It also ensures Yoast PHPUnit Polyfills are available (PHP 7.4–8.x).
 #
 # Inputs (env):
 #   DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
 #   WP_VERSION                        (e.g. 6.8.3)
-#   WP_CORE_DIR                       (e.g. /tmp/wordpress/)
-#   WP_TESTS_DIR                      (e.g. /tmp/wordpress-tests-lib)
-#   WP_TESTS_PHPUNIT_POLYFILLS_PATH   (e.g. /tmp/phpunit-deps)
+#   WP_CORE_DIR                       (legacy path; will be symlinked to <ROOT>/src)
+#   WP_TESTS_DIR                      (legacy path; will be symlinked to <ROOT>/tests/phpunit)
+#   WP_TESTS_PHPUNIT_POLYFILLS_PATH   (e.g. /tmp/phpunit-deps)  [optional]
 #
 # Optional (autodetected if missing):
 #   PHPV, PHPV_NUM
@@ -32,12 +36,10 @@ fi
 
 echo "== PHP version: ${PHPV} (${PHPV_NUM}) =="
 echo "== WP_VERSION=${WP_VERSION} =="
-echo "== WP_CORE_DIR=${WP_CORE_DIR} =="
-echo "== WP_TESTS_DIR=${WP_TESTS_DIR} =="
 
 # ---- Ensure system deps ------------------------------------------------------
 echo "== Ensuring dependencies (svn, rsync, unzip) =="
-if ! command -v svn >/dev/null 2>&1 || ! command -v rsync >/dev/null 2>&1 || ! command -v unzip >/dev/null 2>&1; then
+if ! command -v svn >/dev/null 2>&1 || ! command -v rsync >/devnull 2>&1 || ! command -v unzip >/dev/null 2>&1; then
   sudo apt-get update -y
   sudo apt-get install -y subversion rsync unzip
 fi
@@ -55,32 +57,48 @@ if command -v mysql >/dev/null 2>&1; then
   done
 fi
 
-# ---- Clean target directories ------------------------------------------------
-echo "== Cleaning target directories =="
-mkdir -p "${WP_CORE_DIR}" "${WP_TESTS_DIR}"
-rm -rf "${WP_CORE_DIR:?}/"* "${WP_TESTS_DIR:?}/"*
+# ---- Build a correct WP develop layout under a versioned root ----------------
+WP_ROOT_DIR="/tmp/wpdev-${PHPV_NUM}"
+WP_SRC_DIR="${WP_ROOT_DIR}/src"
+WP_TESTS_REAL="${WP_ROOT_DIR}/tests/phpunit"
 
-# ---- Fetch WordPress develop exports ----------------------------------------
-echo "== Fetching WordPress develop tag ${WP_VERSION} =="
-# Core (src)
-svn export --quiet --force "https://develop.svn.wordpress.org/tags/${WP_VERSION}/src" "${WP_CORE_DIR}"
-# Tests lib
-svn export --quiet --force "https://develop.svn.wordpress.org/tags/${WP_VERSION}/tests/phpunit" "${WP_TESTS_DIR}"
-# Sample config (note: lives in the tag root)
-svn export --quiet --force "https://develop.svn.wordpress.org/tags/${WP_VERSION}/wp-tests-config-sample.php" "${WP_TESTS_DIR}/wp-tests-config-sample.php"
+echo "== Building WordPress develop layout under ${WP_ROOT_DIR} =="
+rm -rf "${WP_ROOT_DIR}"
+mkdir -p "${WP_SRC_DIR}" "${WP_TESTS_REAL}"
 
-if [[ ! -f "${WP_TESTS_DIR}/wp-tests-config-sample.php" ]]; then
-  echo "Sample config not found in ${WP_TESTS_DIR}"
+echo "== Fetching WordPress develop tag ${WP_VERSION} (src) =="
+svn export --quiet --force "https://develop.svn.wordpress.org/tags/${WP_VERSION}/src" "${WP_SRC_DIR}"
+
+echo "== Fetching WordPress develop tag ${WP_VERSION} (tests/phpunit) =="
+svn export --quiet --force "https://develop.svn.wordpress.org/tags/${WP_VERSION}/tests/phpunit" "${WP_TESTS_REAL}"
+
+echo "== Fetching wp-tests-config-sample.php =="
+svn export --quiet --force "https://develop.svn.wordpress.org/tags/${WP_VERSION}/wp-tests-config-sample.php" "${WP_TESTS_REAL}/wp-tests-config-sample.php"
+
+if [[ ! -f "${WP_TESTS_REAL}/wp-tests-config-sample.php" ]]; then
+  echo "Sample config not found in ${WP_TESTS_REAL}"
   exit 1
 fi
 
+# ---- Create/refresh legacy compatibility symlinks ----------------------------
+# Keep your job’s legacy paths working while the runner uses the sibling layout.
+echo "== Creating compatibility symlinks =="
+rm -rf "${WP_CORE_DIR}" "${WP_TESTS_DIR}"
+mkdir -p "$(dirname "${WP_CORE_DIR}")" "$(dirname "${WP_TESTS_DIR}")"
+ln -s "${WP_SRC_DIR}"       "${WP_CORE_DIR}"
+ln -s "${WP_TESTS_REAL}"    "${WP_TESTS_DIR}"
+
 # ---- Write wp-tests-config.php with a correct ABSPATH ------------------------
-echo "== Writing wp-tests-config.php =="
-cp "${WP_TESTS_DIR}/wp-tests-config-sample.php" "${WP_TESTS_DIR}/wp-tests-config.php"
+echo "== Writing wp-tests-config.php in ${WP_TESTS_REAL} =="
+cp "${WP_TESTS_REAL}/wp-tests-config-sample.php" "${WP_TESTS_REAL}/wp-tests-config.php"
 
 php <<'PHP'
 <?php
-$cfgFile = getenv('WP_TESTS_DIR') . '/wp-tests-config.php';
+$testsDir = getenv('WP_TESTS_DIR'); // this points to the symlink we just created
+// But we want to always write into the real path to avoid any symlink oddities:
+$testsDirReal = readlink($testsDir) ?: $testsDir;
+
+$cfgFile = rtrim($testsDirReal, '/').'/wp-tests-config.php';
 $cfg     = file_get_contents($cfgFile);
 
 $replacements = [
@@ -91,8 +109,11 @@ $replacements = [
 ];
 $cfg = strtr($cfg, $replacements);
 
-/** Ensure ABSPATH points to the exported /src dir (WP_CORE_DIR) */
-$abs = rtrim(getenv('WP_CORE_DIR'), '/') . '/';
+/** Ensure ABSPATH points to the exported /src dir */
+$abs = rtrim(getenv('WP_CORE_DIR'), '/').'/';
+$abs = is_link($abs) ? readlink($abs) : $abs;
+$abs = rtrim($abs, '/').'/';
+
 if (preg_match("/define\\(\\s*'ABSPATH'\\s*,/s", $cfg)) {
     $cfg = preg_replace(
         "/define\\(\\s*'ABSPATH'\\s*,\\s*'.*?'\\s*\\);/s",
@@ -112,16 +133,13 @@ file_put_contents($cfgFile, $cfg);
 PHP
 
 # ---- Provide Yoast PHPUnit Polyfills if requested ---------------------------
-# This is needed by the WP Core tests & modern PHPUnit versions.
 if [[ -n "${WP_TESTS_PHPUNIT_POLYFILLS_PATH:-}" ]]; then
   echo "== Ensuring Yoast PHPUnit Polyfills in ${WP_TESTS_PHPUNIT_POLYFILLS_PATH} =="
   if [[ ! -d "${WP_TESTS_PHPUNIT_POLYFILLS_PATH}/vendor/yoast/phpunit-polyfills" && ! -f "${WP_TESTS_PHPUNIT_POLYFILLS_PATH}/phpunitpolyfills-autoload.php" ]]; then
-    # Prefer vendor copy if present to avoid network
     if [[ -d "vendor/yoast/phpunit-polyfills" ]]; then
       mkdir -p "${WP_TESTS_PHPUNIT_POLYFILLS_PATH}"
       rsync -a --delete "vendor/yoast/phpunit-polyfills/" "${WP_TESTS_PHPUNIT_POLYFILLS_PATH}/"
     else
-      # Isolated install that works on PHP 7.4+ and 8.x
       tmpcp="/tmp/phpunit-polyfills-${PHPV_NUM}"
       rm -rf "${tmpcp}"
       composer create-project --no-dev --no-interaction yoast/phpunit-polyfills:^2 "${tmpcp}"
@@ -130,12 +148,17 @@ if [[ -n "${WP_TESTS_PHPUNIT_POLYFILLS_PATH:-}" ]]; then
       rm -rf "${tmpcp}"
     fi
   fi
-
-  # Basic sanity check (Yoast project ships this file)
   if [[ ! -f "${WP_TESTS_PHPUNIT_POLYFILLS_PATH}/phpunitpolyfills-autoload.php" ]]; then
     echo "Yoast PHPUnit Polyfills autoloader was not found in ${WP_TESTS_PHPUNIT_POLYFILLS_PATH}"
     exit 1
   fi
 fi
+
+echo "== Layout =="
+echo "  ROOT:   ${WP_ROOT_DIR}"
+echo "  SRC:    ${WP_SRC_DIR}"
+echo "  TESTS:  ${WP_TESTS_REAL}"
+echo "  legacy WP_CORE_DIR -> $(readlink -f "${WP_CORE_DIR}")"
+echo "  legacy WP_TESTS_DIR -> $(readlink -f "${WP_TESTS_DIR}")"
 
 echo "== Bootstrap complete =="
