@@ -39,7 +39,7 @@ echo "== WP_VERSION=${WP_VERSION} =="
 echo "== Ensuring dependencies (svn, rsync, unzip) =="
 need_install=0
 command -v svn >/dev/null 2>&1 || need_install=1
-command -v rsync >/dev/null 2>&1 || need_install=1
+command -v rsync >/devnull 2>&1 || need_install=1
 command -v unzip >/dev/null 2>&1 || need_install=1
 if [[ $need_install -eq 1 ]]; then
   sudo apt-get update -y
@@ -84,9 +84,7 @@ fi
 
 # ---- Create/refresh legacy compatibility symlinks (strip trailing slashes) ---
 normalize_path() {
-  local p="$1"
-  [[ "$p" != "/" ]] && p="${p%/}"
-  printf "%s" "$p"
+  local p="$1"; [[ "$p" != "/" ]] && p="${p%/}"; printf "%s" "$p"
 }
 WP_CORE_LINK="$(normalize_path "${WP_CORE_DIR}")"
 WP_TESTS_LINK="$(normalize_path "${WP_TESTS_DIR}")"
@@ -97,7 +95,7 @@ mkdir -p "$(dirname "${WP_CORE_LINK}")" "$(dirname "${WP_TESTS_LINK}")"
 ln -s "${WP_SRC_DIR}"    "${WP_CORE_LINK}"
 ln -s "${WP_TESTS_REAL}" "${WP_TESTS_LINK}"
 
-# ---- Extra shim for tags that resolve tests/phpunit/src/wp-settings.php ------
+# ---- Some core runners expect tests/phpunit/src to exist ---------------------
 if [[ ! -e "${WP_TESTS_REAL}/src" ]]; then
   ln -s "${WP_SRC_DIR}" "${WP_TESTS_REAL}/src"
 fi
@@ -138,7 +136,6 @@ if (preg_match("/define\\(\\s*'ABSPATH'\\s*,/s", $cfg)) {
     $cfg .= "\n" . "define('ABSPATH', '" . addslashes($abs) . "');" . "\n";
 }
 
-// Keep WP_DEBUG on for tests if not already defined
 if (strpos($cfg, "WP_DEBUG") === false) {
     $cfg .= "\n" . "define('WP_DEBUG', true);" . "\n";
 }
@@ -176,43 +173,34 @@ cat > "${WP_SRC_DIR}/wp-content/mu-plugins/wp-samlauth-phpunit.php" <<'PHP'
 namespace {
 /**
  * PHPUnit-only MU plugin:
- *  - Force wp-saml-auth to use provider=internal (no SimpleSAML in unit tests)
- *  - Provide lightweight stubs for SimpleSAML classes so tests never fatal
- *    even if 'simplesamlphp' gets selected/forced by a test.
+ *  - Force wp-saml-auth to use provider=internal during unit tests
+ *  - Prevent real SimpleSAML autoloader usage
+ *  - Provide NO overrides for defaults like auto_provision / permit_wp_login,
+ *    so the plugin's own defaults apply (matches PHPUnit expectations).
  */
-
-// Ensure provider is internal as early as possible.
 if ( ! defined( 'WP_SAML_AUTH_PROVIDER' ) ) {
     define( 'WP_SAML_AUTH_PROVIDER', 'internal' );
 }
-
-// Filter override for options read via wp_saml_auth_get_option().
 add_filter(
     'wp_saml_auth_option',
     static function( $value, $option ) {
-        static $overrides = [
-            'provider'                => 'internal',
-            'permit_wp_login'         => true,
-            'auto_provision'          => true,
-            'get_user_by'             => 'email',
-            'simplesamlphp_autoload'  => '', // never try to require an autoloader
-        ];
-        if ( array_key_exists( $option, $overrides ) ) {
-            return $overrides[ $option ];
+        if ( $option === 'provider' ) {
+            return 'internal';
         }
-        return $value;
+        if ( $option === 'simplesamlphp_autoload' ) {
+            return ''; // never try to require an autoloader in unit tests
+        }
+        return $value; // keep plugin defaults for all other options
     },
     100,
     2
 );
 } // end global namespace
 
-// ---- Simple SAML stubs (used only if something forces provider=simpleSAML) --
+// ---- SimpleSAML stubs (used only if a test forces provider=simpleSAML) ------
 namespace SimpleSAML {
     class Configuration {
-        public static function getInstance() {
-            return new self();
-        }
+        public static function getInstance() { return new self(); }
     }
 }
 
@@ -223,38 +211,29 @@ namespace SimpleSAML\Auth {
 
         /** @var array<string,array<int,string>> */
         private $attrs = [
-            'mail'         => [ 'test-em@example.com' ],
-            'uid'          => [ 'employee' ],
-            'displayName'  => [ 'Employee Example' ],
-            'givenName'    => [ 'Employee' ],
+            // The PHPUnit suite expects a default "student" identity in some tests.
+            'mail'         => [ 'test-student@example.com' ],
+            'uid'          => [ 'student' ],
+            'displayName'  => [ 'Student Example' ],
+            'givenName'    => [ 'Student' ],
             'sn'           => [ 'Example' ],
         ];
 
         public function __construct( $source ) { /* ignore */ }
 
-        public function isAuthenticated() {
-            return $this->authed;
-        }
+        public function isAuthenticated() { return $this->authed; }
 
-        public function requireAuth() {
-            $this->authed = true;
-        }
+        public function requireAuth() { $this->authed = true; }
 
-        public function login( $params = [] ) {
-            $this->authed = true;
-        }
+        public function login( $params = [] ) { $this->authed = true; }
 
-        public function logout( $params = [] ) {
-            $this->authed = false;
-        }
+        public function logout( $params = [] ) { $this->authed = false; }
 
-        public function getAttributes() {
-            return $this->attrs;
-        }
+        public function getAttributes() { return $this->attrs; }
 
         public function getAuthData( $key ) {
             if ( $key === 'saml:sp:NameID' ) {
-                return [ 'Value' => 'employee' ];
+                return [ 'Value' => 'student' ];
             }
             return null;
         }
