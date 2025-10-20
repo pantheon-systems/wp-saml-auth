@@ -39,7 +39,7 @@ echo "== WP_VERSION=${WP_VERSION} =="
 
 # ---- Ensure system deps ------------------------------------------------------
 echo "== Ensuring dependencies (svn, rsync, unzip) =="
-if ! command -v svn >/dev/null 2>&1 || ! command -v rsync >/devnull 2>&1 || ! command -v unzip >/dev/null 2>&1; then
+if ! command -v svn >/dev/null 2>&1 || ! command -v rsync >/dev/null 2>&1 || ! command -v unzip >/dev/null 2>&1; then
   sudo apt-get update -y
   sudo apt-get install -y subversion rsync unzip
 fi
@@ -80,13 +80,22 @@ if [[ ! -f "${WP_TESTS_REAL}/wp-tests-config-sample.php" ]]; then
   exit 1
 fi
 
-# ---- Create/refresh legacy compatibility symlinks ----------------------------
-# Keep your job’s legacy paths working while the runner uses the sibling layout.
+# ---- Create/refresh legacy compatibility symlinks (strip trailing slashes) ---
+normalize_path() {
+  # strip a single trailing slash if present (but not root)
+  local p="$1"
+  [[ "$p" != "/" ]] && p="${p%/}"
+  printf "%s" "$p"
+}
+
+WP_CORE_LINK="$(normalize_path "${WP_CORE_DIR}")"
+WP_TESTS_LINK="$(normalize_path "${WP_TESTS_DIR}")"
+
 echo "== Creating compatibility symlinks =="
-rm -rf "${WP_CORE_DIR}" "${WP_TESTS_DIR}"
-mkdir -p "$(dirname "${WP_CORE_DIR}")" "$(dirname "${WP_TESTS_DIR}")"
-ln -s "${WP_SRC_DIR}"       "${WP_CORE_DIR}"
-ln -s "${WP_TESTS_REAL}"    "${WP_TESTS_DIR}"
+rm -rf "${WP_CORE_LINK}" "${WP_TESTS_LINK}"
+mkdir -p "$(dirname "${WP_CORE_LINK}")" "$(dirname "${WP_TESTS_LINK}")"
+ln -s "${WP_SRC_DIR}"    "${WP_CORE_LINK}"
+ln -s "${WP_TESTS_REAL}" "${WP_TESTS_LINK}"
 
 # ---- Write wp-tests-config.php with a correct ABSPATH ------------------------
 echo "== Writing wp-tests-config.php in ${WP_TESTS_REAL} =="
@@ -94,9 +103,9 @@ cp "${WP_TESTS_REAL}/wp-tests-config-sample.php" "${WP_TESTS_REAL}/wp-tests-conf
 
 php <<'PHP'
 <?php
-$testsDir = getenv('WP_TESTS_DIR'); // this points to the symlink we just created
-// But we want to always write into the real path to avoid any symlink oddities:
-$testsDirReal = readlink($testsDir) ?: $testsDir;
+$testsDir = getenv('WP_TESTS_DIR');
+$testsDir = rtrim($testsDir, '/');
+$testsDirReal = is_link($testsDir) ? readlink($testsDir) : $testsDir;
 
 $cfgFile = rtrim($testsDirReal, '/').'/wp-tests-config.php';
 $cfg     = file_get_contents($cfgFile);
@@ -109,10 +118,10 @@ $replacements = [
 ];
 $cfg = strtr($cfg, $replacements);
 
-/** Ensure ABSPATH points to the exported /src dir */
-$abs = rtrim(getenv('WP_CORE_DIR'), '/').'/';
-$abs = is_link($abs) ? readlink($abs) : $abs;
-$abs = rtrim($abs, '/').'/';
+// Ensure ABSPATH points to the exported /src dir
+$coreDir = rtrim(getenv('WP_CORE_DIR'), '/');
+$coreDirReal = is_link($coreDir) ? readlink($coreDir) : $coreDir;
+$abs = rtrim($coreDirReal, '/').'/';
 
 if (preg_match("/define\\(\\s*'ABSPATH'\\s*,/s", $cfg)) {
     $cfg = preg_replace(
@@ -124,7 +133,7 @@ if (preg_match("/define\\(\\s*'ABSPATH'\\s*,/s", $cfg)) {
     $cfg .= "\n" . "define('ABSPATH', '" . addslashes($abs) . "');" . "\n";
 }
 
-/** Keep WP_DEBUG on for tests (if not already defined) */
+// Keep WP_DEBUG on for tests if not already defined
 if (strpos($cfg, "WP_DEBUG") === false) {
     $cfg .= "\n" . "define('WP_DEBUG', true);" . "\n";
 }
@@ -158,7 +167,7 @@ echo "== Layout =="
 echo "  ROOT:   ${WP_ROOT_DIR}"
 echo "  SRC:    ${WP_SRC_DIR}"
 echo "  TESTS:  ${WP_TESTS_REAL}"
-echo "  legacy WP_CORE_DIR -> $(readlink -f "${WP_CORE_DIR}")"
-echo "  legacy WP_TESTS_DIR -> $(readlink -f "${WP_TESTS_DIR}")"
+echo "  legacy WP_CORE_DIR -> $(readlink -f "${WP_CORE_LINK}")"
+echo "  legacy WP_TESTS_DIR -> $(readlink -f "${WP_TESTS_LINK}")"
 
 echo "== Bootstrap complete =="
