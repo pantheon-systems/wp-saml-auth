@@ -13,3 +13,4 @@ bin/phpunit-test.sh
 
 # Local dev
 .idea
+.codacy
