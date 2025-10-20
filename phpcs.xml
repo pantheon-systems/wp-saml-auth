@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<ruleset name="WP SAML Auth Code Sniffs">
+    <description>WordPress coding standards and PHPCompatibility for WP SAML Auth (Codacy-compatible)</description>
+
+    <!-- Check all PHP files in directory tree by default. -->
+    <arg name="extensions" value="php"/>
+    <file>.</file>
+
+    <!-- Show sniff codes in all reports -->
+    <arg value="ps"/>
+
+    <!-- Use WordPressCS meta standards instead of the unavailable Pantheon-WP -->
+    <rule ref="WordPress-Core" />
+    <rule ref="WordPress-Extra" />
+    <rule ref="WordPress-Docs" />
+    <rule ref="PHPCompatibility" />
+
+    <!-- Fine-tune / suppressions originally intended for Pantheon-WP -->
+    <!-- Ignore Nonce verification checks for authentication requests -->
+    <rule ref="WordPress.Security.NonceVerification">
+        <exclude-pattern>*/inc/class-wp-saml-auth.php</exclude-pattern>
+    </rule>
+
+    <!-- Ignore docblock rules for WP-CLI functions in CLI file -->
+    <rule ref="Squiz.Commenting.FunctionComment">
+        <exclude name="Squiz.Commenting.FunctionComment.MissingParamTag">
+            <file>*/inc/class-wp-saml-auth-cli.php</file>
+        </exclude>
+    </rule>
+
+    <!-- Ignore file_get_contents warnings in core plugin class -->
+    <!-- (These warnings live under VIP rules which may not be present in Codacy.) -->
+    <!-- If Codacy ever adds VIPCS, you can restore the VIP-specific exclude. -->
+
+    <!-- Minimum PHP and WP versions -->
+    <config name="testVersion" value="7.4-"/>
+    <config name="minimum_supported_wp_version" value="6.4"/>
+
+    <!-- Exclude paths -->
+    <exclude-pattern>*/bin/*</exclude-pattern>
+    <exclude-pattern>*/node_modules/*</exclude-pattern>
+    <exclude-pattern>*/tests/*</exclude-pattern>
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+    <exclude-pattern>/simplesamlphp/*</exclude-pattern>
+
+    <!-- Ignore deprecation notices in the report -->
+    <ini name="error_reporting" value="E_ALL &#38; ~E_DEPRECATED" />
+</ruleset>
