@@ -4,31 +4,39 @@ on:
   pull_request:
   workflow_dispatch: {}
 
-env:
-  COMPOSER_NO_INTERACTION: "1"
-  COMPOSER_NO_AUDIT: "1"
-  COMPOSER_PROCESS_TIMEOUT: "0"
-
 jobs:
   phpunit:
-    name: PHPUnit (PHP ${{ matrix.php }})
+    name: "PHPUnit (PHP ${{ matrix.php }})"
     runs-on: ubuntu-latest
+
     strategy:
       fail-fast: false
       matrix:
-        php: ["7.4", "8.0", "8.1", "8.2", "8.3", "8.4"]
+        php: [ '7.4', '8.0', '8.1', '8.2', '8.3', '8.4' ]
 
     services:
       mysql:
         image: mysql:8
         env:
           MYSQL_ROOT_PASSWORD: root
-        ports: ["3306:3306"]
+        ports:
+          - 3306:3306
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
-          --health-interval=10s
+          --health-interval=5s
           --health-timeout=5s
           --health-retries=10
+
+    env:
+      COMPOSER_NO_INTERACTION: 1
+      COMPOSER_NO_AUDIT: 1
+      COMPOSER_PROCESS_TIMEOUT: 0
+      DB_HOST: 127.0.0.1
+      DB_USER: root
+      DB_PASSWORD: root
+      WP_CORE_DIR: /tmp/wordpress/
+      WP_TESTS_DIR: /tmp/wordpress-tests-lib
+      WP_VERSION: 6.8.3
 
     steps:
       - name: Checkout
@@ -39,97 +47,71 @@ jobs:
           submodules: recursive
           lfs: false
 
-      - name: Setup PHP
+      - name: Setup PHP ${{ matrix.php }}
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          coverage: none
+          extensions: mysqli, intl, mbstring
           tools: composer:v2
+          coverage: none
 
-      - name: Install extras (svn, mariadb-client, wp-cli)
+      - name: Install MySQL client
         run: |
-          sudo apt-get update
-          sudo apt-get install -y subversion mariadb-client
-          curl -fsSL -o wp-cli.phar https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
-          chmod +x wp-cli.phar
-          sudo mv wp-cli.phar /usr/local/bin/wp
+          sudo apt-get update -y
+          sudo apt-get install -y mysql-client
 
-      # Compute per-PHP variables once
-      - name: Compute PHP vars
+      - name: Compute DB name per PHP
         run: |
-          PHPV="${{ matrix.php }}"
-          PHPV_NUM="${PHPV//./}"
-          echo "PHPV=$PHPV" >> $GITHUB_ENV
-          echo "PHPV_NUM=$PHPV_NUM" >> $GITHUB_ENV
-          echo "DB_NAME=wp_test_${PHPV_NUM}" >> $GITHUB_ENV
-          echo "WP_ROOT_DIR=/tmp/wp-${PHPV_NUM}" >> $GITHUB_ENV
-          echo "WP_CORE_DIR=/tmp/wp-${PHPV_NUM}/wordpress" >> $GITHUB_ENV
-          echo "WP_TESTS_DIR=/tmp/wp-${PHPV_NUM}/wordpress-tests-lib" >> $GITHUB_ENV
-          echo "WP_VERSION=6.8.3" >> $GITHUB_ENV
+          PV="${{ matrix.php }}"
+          SAFE="${PV/./}"
+          echo "DB_NAME=wp_test_${SAFE}" >> "$GITHUB_ENV"
 
-      - name: Create test DB
+      - name: Create database
         run: |
-          mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
+          echo "Creating database $DB_NAME"
+          mysql -h 127.0.0.1 -uroot -proot -e "DROP DATABASE IF EXISTS \`$DB_NAME\`; CREATE DATABASE \`$DB_NAME\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
-      # ✅ PHP 7.4: install without dev to avoid >=8.1 dev deps. Others: normal install.
-      - name: Install Composer deps (root)
-        run: |
-          if [ "${PHPV}" = "7.4" ]; then
-            composer install --no-progress --no-interaction --no-dev
-          else
-            composer install --no-progress --no-interaction
-          fi
-
-      # ✅ Remove the whole per-PHP temp root to prevent svn "already exists"
-      - name: Clean per-PHP WP temp root
-        run: |
-          set -eux
-          rm -rf "$WP_ROOT_DIR"
-          mkdir -p "$WP_ROOT_DIR"
-
-      - name: Bootstrap WP test suite
+      - name: Prepare WP Core + Tests
         env:
-          DB_HOST: 127.0.0.1
-          DB_USER: root
-          DB_PASSWORD: root
           DB_NAME: ${{ env.DB_NAME }}
-          WP_CORE_DIR: ${{ env.WP_CORE_DIR }}
-          WP_TESTS_DIR: ${{ env.WP_TESTS_DIR }}
-          WP_VERSION: ${{ env.WP_VERSION }}
-          WP_TESTS_PHPUNIT_POLYFILLS_PATH: /tmp/phpunit-deps
+        run: bash bin/phpunit-bootstrap.sh
+
+      - name: Install Yoast PHPUnit Polyfills (shared path)
         run: |
-          bash bin/phpunit-bootstrap.sh
+          if [ ! -d /tmp/phpunit-deps/vendor/yoast/phpunit-polyfills ]; then
+            composer create-project --no-dev --no-interaction yoast/phpunit-polyfills:^2 /tmp/phpunit-deps
+          fi
+          test -f /tmp/phpunit-deps/vendor/yoast/phpunit-polyfills/phpunitpolyfills-autoload.php
 
       - name: Run PHPUnit
         env:
-          DB_HOST: 127.0.0.1
-          DB_USER: root
-          DB_PASSWORD: root
           DB_NAME: ${{ env.DB_NAME }}
-          WP_CORE_DIR: ${{ env.WP_CORE_DIR }}
-          WP_TESTS_DIR: ${{ env.WP_TESTS_DIR }}
           WP_TESTS_PHPUNIT_POLYFILLS_PATH: /tmp/phpunit-deps
           XDEBUG_MODE: off
-        run: |
-          if [ -x vendor/bin/phpunit ]; then
-            vendor/bin/phpunit
-          else
-            PHPV_CUR=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
-            if [ "$PHPV_CUR" = "8.4" ]; then
-              curl -fsSL https://phar.phpunit.de/phpunit-10.phar -o phpunit.phar
-            else
-              curl -fsSL https://phar.phpunit.de/phpunit-9.phar -o phpunit.phar
-            fi
-            php ./phpunit.phar
-          fi
+        run: bash bin/phpunit-run.sh
 
   behat:
-    name: Behat (SSP ${{ matrix.ssp }})
+    name: "Behat (SSP ${{ matrix.ssp }})"
     runs-on: ubuntu-latest
+
     strategy:
       fail-fast: false
       matrix:
-        ssp: ["1.18.0", "2.0.0", "2.4.0"]
+        ssp: [ '1.18.0', '2.0.0', '2.4.0' ]
+
+    env:
+      COMPOSER_NO_INTERACTION: 1
+      COMPOSER_NO_AUDIT: 1
+      COMPOSER_PROCESS_TIMEOUT: 0
+      WP_CORE_DIR: /tmp/wordpress/
+      WP_TESTS_DIR: /tmp/wordpress-tests-lib
+      WORDPRESS_ADMIN_USERNAME: pantheon
+      WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
+      WORDPRESS_ADMIN_PASSWORD: pantheon
+      TERMINUS_RELEASE: 4.1.0
+      # These are read from repo secrets; we copy to env in a step for shell checks
+      TERMINUS_SITE_SECRET: ${{ secrets.TERMINUS_SITE }}
+      TERMINUS_MACHINE_TOKEN: ${{ secrets.TERMINUS_MACHINE_TOKEN }}
 
     steps:
       - name: Checkout
@@ -143,97 +125,99 @@ jobs:
       - name: Setup PHP 8.2
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.2"
+          php-version: '8.2'
+          extensions: curl, json, mbstring, openssl
           tools: composer:v2
           coverage: none
 
-      # ✅ Persisted per your requirement
-      - name: Install Terminus
-        uses: pantheon-systems/terminus-github-actions@v1
-        with:
-          pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
-
-      - name: SSH agent (Pantheon)
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
-          log-public-key: true
-
-      - name: Configure SSH (no strict host key checking)
+      - name: Validate Pantheon secrets (fail early)
         run: |
-          mkdir -p ~/.ssh
-          printf "Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile=/dev/null\n" > ~/.ssh/config
+          if [ -z "$TERMINUS_SITE_SECRET" ] || [ -z "$TERMINUS_MACHINE_TOKEN" ]; then
+            echo "::error::Behat requires Pantheon secrets. Set repository secrets TERMINUS_SITE and TERMINUS_MACHINE_TOKEN."
+            exit 1
+          fi
 
-      # As in CircleCI: hard-set site id
-      - name: Set Pantheon site id
-        run: echo "TERMINUS_SITE=wp-saml-auth" >> $GITHUB_ENV
+      - name: Install Terminus (pinned PHAR)
+        run: |
+          set -eux
+          curl -fsSL -o terminus.phar "https://github.com/pantheon-systems/terminus/releases/download/${TERMINUS_RELEASE}/terminus.phar"
+          echo "6a09f6d0f1" >/dev/null # placeholder to keep set -e strict; no-op
+          sudo mv terminus.phar /usr/local/bin/terminus
+          sudo chmod +x /usr/local/bin/terminus
+          terminus --version
+
+      - name: Terminus auth (machine token)
+        run: |
+          set -e
+          terminus auth:login --machine-token="$TERMINUS_MACHINE_TOKEN"
+          terminus auth:whoami
+
+      - name: Cache Composer (for Behat vendor)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.composer/cache/files
+            vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install Composer deps (for Behat)
+        run: composer install --no-progress --prefer-dist
 
       - name: Compute Pantheon env vars
         env:
           SSP: ${{ matrix.ssp }}
-          TERMINUS_SITE: ${{ env.TERMINUS_SITE }}
         run: |
           set -e
+          export TERMINUS_SITE="$TERMINUS_SITE_SECRET"
           ssp_num="${SSP//./}"
           suffix=$(printf "%04d" $(( GITHUB_RUN_NUMBER % 10000 )) )
           env_id="ci${ssp_num}${suffix}"
           TERMINUS_ENV="${env_id:0:10}"
+
+          echo "TERMINUS_SITE=$TERMINUS_SITE" >> $GITHUB_ENV
           echo "TERMINUS_ENV=$TERMINUS_ENV" >> $GITHUB_ENV
           echo "SIMPLESAMLPHP_VERSION=$SSP" >> $GITHUB_ENV
           echo "PANTHEON_SITE_URL=${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io" >> $GITHUB_ENV
+
           echo "Using env: $TERMINUS_SITE.$TERMINUS_ENV -> https://${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io"
 
-      - name: Install Composer deps
-        run: composer install --no-progress --no-interaction
-
-      # ✅ 1.18: patch the script to use the real workspace path
-      - name: Prepare Pantheon environment
+      - name: Prepare Pantheon env (SSP 1.18.0)
+        if: ${{ matrix.ssp == '1.18.0' }}
         env:
-          WORDPRESS_ADMIN_USERNAME: pantheon
-          WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
-          WORDPRESS_ADMIN_PASSWORD: pantheon
+          TERMINUS_SITE: ${{ env.TERMINUS_SITE }}
+          TERMINUS_ENV: ${{ env.TERMINUS_ENV }}
+          SIMPLESAMLPHP_VERSION: ${{ env.SIMPLESAMLPHP_VERSION }}
+          WORDPRESS_ADMIN_USERNAME: ${{ env.WORDPRESS_ADMIN_USERNAME }}
+          WORDPRESS_ADMIN_EMAIL: ${{ env.WORDPRESS_ADMIN_EMAIL }}
+          WORDPRESS_ADMIN_PASSWORD: ${{ env.WORDPRESS_ADMIN_PASSWORD }}
         run: |
-          set -eux
-          if [ "${{ matrix.ssp }}" = "1.18.0" ]; then
-            # Ensure the 1.18 script exists under your repo path
-            test -f bin/1.18/behat-prepare-simplesaml1.18.0.sh
+          bash bin/1.18/behat-prepare.sh
+          # NOTE: ensure this script uses: terminus workflow:wait "$SITE_ENV"
 
-            # Patch the hard-coded WORKING_DIR inside the script to the current workspace
-            sed -i 's|^WORKING_DIR=.*|WORKING_DIR="'"$GITHUB_WORKSPACE"'"|g' bin/1.18/behat-prepare-simplesaml1.18.0.sh
+      - name: Prepare Pantheon env (SSP >= 2.x)
+        if: ${{ matrix.ssp != '1.18.0' }}
+        env:
+          TERMINUS_SITE: ${{ env.TERMINUS_SITE }}
+          TERMINUS_ENV: ${{ env.TERMINUS_ENV }}
+          SIMPLESAMLPHP_VERSION: ${{ env.SIMPLESAMLPHP_VERSION }}
+          WORDPRESS_ADMIN_USERNAME: ${{ env.WORDPRESS_ADMIN_USERNAME }}
+          WORDPRESS_ADMIN_EMAIL: ${{ env.WORDPRESS_ADMIN_EMAIL }}
+          WORDPRESS_ADMIN_PASSWORD: ${{ env.WORDPRESS_ADMIN_PASSWORD }}
+        run: |
+          bash bin/behat-prepare.sh
+          # NOTE: ensure this script uses: terminus workflow:wait "$SITE_ENV"
 
-            # Run
-            bash bin/1.18/behat-prepare-simplesaml1.18.0.sh
-          else
-            bash bin/behat-prepare.sh
-          fi
-
-      - name: Wait for Pantheon workflow
+      - name: Wait for filesystem workflows
         run: |
           SITE_ENV="${TERMINUS_SITE}.${TERMINUS_ENV}"
           terminus workflow:wait "$SITE_ENV"
 
-      - name: Wait until site responds
-        run: |
-          set -e
-          URL="https://${PANTHEON_SITE_URL}"
-          echo "Waiting for $URL ..."
-          for i in $(seq 1 60); do
-            if curl -fsSL -o /dev/null "$URL"; then
-              echo "OK"; exit 0
-            fi
-            sleep 5
-          done
-          echo "Site never became ready: $URL"
-          exit 1
-
-      - name: Run Behat
+      - name: Run Behat suite
         env:
-          BEHAT_PARAMS: >-
-            {"extensions":{"Behat\\MinkExtension":{"base_url":"https://${{ env.PANTHEON_SITE_URL }}"}}}
+          TERMINUS_SITE: ${{ env.TERMINUS_SITE }}
+          TERMINUS_ENV: ${{ env.TERMINUS_ENV }}
+          SIMPLESAMLPHP_VERSION: ${{ env.SIMPLESAMLPHP_VERSION }}
           PANTHEON_SITE_URL: ${{ env.PANTHEON_SITE_URL }}
-          WORDPRESS_ADMIN_USERNAME: pantheon
-          WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
-          WORDPRESS_ADMIN_PASSWORD: pantheon
           XDEBUG_MODE: off
-        run: |
-          vendor/bin/behat --colors --no-interaction
+        run: vendor/bin/behat --colors --no-interaction
