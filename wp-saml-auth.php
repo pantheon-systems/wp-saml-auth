@@ -48,7 +48,7 @@ function wpsa_boostrap() {
  * @param string $option_name Configuration option name.
  */
 function wpsa_filter_option( $value, $option_name ) {
-	$defaults = [
+	$defaults = array(
 		/**
 		 * Type of SAML connection bridge to use.
 		 *
@@ -58,7 +58,7 @@ function wpsa_filter_option( $value, $option_name ) {
 		 *
 		 * @param string
 		 */
-		'connection_type'        => 'simplesamlphp',
+		'connection_type'                   => 'simplesamlphp',
 		/**
 		 * Path to SimpleSAMLphp autoloader.
 		 *
@@ -69,7 +69,7 @@ function wpsa_filter_option( $value, $option_name ) {
 		 *
 		 * @param string
 		 */
-		'simplesamlphp_autoload' => class_exists( 'WP_SAML_Auth' ) ? WP_SAML_Auth::get_simplesamlphp_autoloader() : '',
+		'simplesamlphp_autoload'            => class_exists( 'WP_SAML_Auth' ) ? WP_SAML_Auth::get_simplesamlphp_autoloader() : '',
 		/**
 		 * Authentication source to pass to SimpleSAMLphp
 		 *
@@ -79,7 +79,7 @@ function wpsa_filter_option( $value, $option_name ) {
 		 *
 		 * @param string
 		 */
-		'auth_source'            => 'default-sp',
+		'auth_source'                       => 'default-sp',
 		/**
 		 * Configuration options for OneLogin library use.
 		 *
@@ -87,39 +87,39 @@ function wpsa_filter_option( $value, $option_name ) {
 		 *
 		 * @param array
 		 */
-		'internal_config'        => [
+		'internal_config'                   => array(
 			// Validation of SAML responses is required.
 			'strict'  => true,
 			'debug'   => defined( 'WP_DEBUG' ) && WP_DEBUG ? true : false,
 			'baseurl' => home_url(),
-			'sp'      => [
+			'sp'      => array(
 				'entityId'                 => 'urn:' . parse_url( home_url(), PHP_URL_HOST ),
-				'assertionConsumerService' => [
+				'assertionConsumerService' => array(
 					'url'     => home_url(),
 					'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST',
-				],
-			],
-			'idp'     => [
+				),
+			),
+			'idp'     => array(
 				// Required: Set based on provider's supplied value.
 				'entityId'                 => '',
-				'singleSignOnService'      => [
+				'singleSignOnService'      => array(
 					// Required: Set based on provider's supplied value.
 					'url'     => '',
 					'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
-				],
-				'singleLogoutService'      => [
+				),
+				'singleLogoutService'      => array(
 					// Required: Set based on provider's supplied value.
 					'url'     => '',
 					'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect',
-				],
+				),
 				// Required: Contents of the IDP's public x509 certificate.
 				// Use file_get_contents() to load certificate contents into scope.
 				'x509cert'                 => '',
 				// Optional: Instead of using the x509 cert, you can specify the fingerprint and algorithm.
 				'certFingerprint'          => '',
 				'certFingerprintAlgorithm' => '',
-			],
-		],
+			),
+		),
 		/**
 		 * Whether or not to automatically provision new WordPress users.
 		 *
@@ -130,7 +130,7 @@ function wpsa_filter_option( $value, $option_name ) {
 		 *
 		 * @param bool
 		 */
-		'auto_provision'         => true,
+		'auto_provision'                    => true,
 		/**
 		 * Whether or not to permit logging in with username and password.
 		 *
@@ -139,63 +139,63 @@ function wpsa_filter_option( $value, $option_name ) {
 		 *
 		 * @param bool
 		 */
-		'permit_wp_login'        => true,
+		'permit_wp_login'                   => true,
 		/**
 		 * Attribute by which to get a WordPress user for a SAML user.
 		 *
 		 * @param string Supported options are 'email' and 'login'.
 		 */
-		'get_user_by'            => 'email',
+		'get_user_by'                       => 'email',
 		/**
 		 * SAML attribute which includes the user_login value for a user.
 		 *
 		 * @param string
 		 */
-		'user_login_attribute'   => 'uid',
+		'user_login_attribute'              => 'uid',
 		/**
 		 * SAML attribute which includes the user_email value for a user.
 		 *
 		 * @param string
 		 */
-		'user_email_attribute'   => 'mail',
+		'user_email_attribute'              => 'mail',
 		/**
 		 * SAML attribute which includes the display_name value for a user.
 		 *
 		 * @param string
 		 */
-		'display_name_attribute' => 'display_name',
+		'display_name_attribute'            => 'display_name',
 		/**
 		 * SAML attribute which includes the first_name value for a user.
 		 *
 		 * @param string
 		 */
-		'first_name_attribute'   => 'first_name',
+		'first_name_attribute'              => 'first_name',
 		/**
 		 * SAML attribute which includes the last_name value for a user.
 		 *
 		 * @param string
 		 */
-		'last_name_attribute'    => 'last_name',
+		'last_name_attribute'               => 'last_name',
 		/**
 		 * Default WordPress role to grant when provisioning new users.
 		 *
 		 * @param string
 		 */
-		'default_role'           => get_option( 'default_role' ),
+		'default_role'                      => get_option( 'default_role' ),
 		/**
 		 * Minimum recommended version of SimpleSAMLphp.
 		 * Versions below this will show a warning but still work.
 		 *
 		 * @param string
 		 */
-		'min_simplesamlphp_version' => '2.3.7',
+		'min_simplesamlphp_version'         => '2.3.7',
 		/**
 		 * Critical security version of SimpleSAMLphp.
 		 * Versions below this will show an error and block authentication if `enforce_min_simplesamlphp_version` is true.
 		 *
 		 * @param string
 		 */
-		'critical_simplesamlphp_version' => '2.0.0',
+		'critical_simplesamlphp_version'    => '2.0.0',
 		/**
 		 * Whether to enforce the minimum SimpleSAMLphp version requirement.
 		 * If true, authentication will be blocked for versions below critical_simplesamlphp_version. Defaults to false.
@@ -203,7 +203,7 @@ function wpsa_filter_option( $value, $option_name ) {
 		 * @param bool
 		 */
 		'enforce_min_simplesamlphp_version' => false,
-	];
+	);
 	$value = isset( $defaults[ $option_name ] ) ? $defaults[ $option_name ] : $value;
 	return $value;
 }
