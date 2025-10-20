@@ -28,25 +28,40 @@ require_once $_tests_dir . '/includes/functions.php';
 /**
  * Provide deterministic default options for the plugin under test.
  * IMPORTANT: Always return our autoload path for 'simplesamlphp_autoload'.
+ *
+ * These defaults are aligned with your test expectations:
+ *  - auto_provision: true
+ *  - permit_wp_login: true
+ *  - get_user_by: 'email'
+ *  - default_role: 'subscriber'
  */
 function _wp_saml_auth_filter_option($value, $option_name) {
     switch ($option_name) {
         case 'simplesamlphp_autoload':
             return realpath(__DIR__ . '/simplesamlphp-stubs/autoload.php');
 
-        // Defaults to keep tests deterministic; individual tests can override.
+        // Defaults to keep tests deterministic and in line with assertions.
         case 'permit_wp_login':
-            return false;
+            return true;
+
         case 'auto_provision':
-            return false;
+            return true;
+
         case 'allow_slo':
             return false;
+
+        case 'get_user_by':
+            return 'email';
+
         case 'user_login_attribute':
             return 'uid';
+
         case 'user_email_attribute':
             return 'mail';
+
         case 'user_role_attribute':
             return 'eduPersonAffiliation';
+
         case 'default_role':
             return 'subscriber';
     }
