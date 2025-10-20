@@ -4,11 +4,6 @@ on:
   pull_request:
   workflow_dispatch: {}
 
-env:
-  COMPOSER_NO_INTERACTION: "1"
-  COMPOSER_NO_AUDIT: "1"
-  COMPOSER_PROCESS_TIMEOUT: "0"
-
 jobs:
   phpunit:
     name: PHPUnit (PHP ${{ matrix.php }})
@@ -16,106 +11,85 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: ["7.4", "8.0", "8.1", "8.2", "8.3", "8.4"]
+        php: ['7.4', '8.0', '8.1', '8.2', '8.3', '8.4']
 
     services:
       mysql:
         image: mysql:8
         env:
           MYSQL_ROOT_PASSWORD: root
-        ports: ["3306:3306"]
+        ports:
+          - 3306:3306
         options: >-
           --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
-          --health-interval=10s
+          --health-interval=5s
           --health-timeout=5s
           --health-retries=10
+
+    env:
+      DB_HOST: 127.0.0.1
+      DB_USER: root
+      DB_PASSWORD: root
+      WP_CORE_DIR: /tmp/wordpress/
+      WP_TESTS_DIR: /tmp/wordpress-tests-lib
+      WP_TESTS_PHPUNIT_POLYFILLS_PATH: /tmp/phpunit-deps
+      COMPOSER_NO_INTERACTION: 1
+      COMPOSER_NO_AUDIT: 1
+      COMPOSER_PROCESS_TIMEOUT: 0
+      WP_VERSION: 6.8.3
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          persist-credentials: false
-          submodules: recursive
-          lfs: false
 
-      - name: Setup PHP
+      - name: Setup PHP ${{ matrix.php }}
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          coverage: none
+          extensions: mysqli, intl, mbstring
           tools: composer:v2
+          coverage: none
 
-      - name: Install extras (svn, mariadb-client, wp-cli)
+      - name: Install MySQL client
         run: |
-          sudo apt-get update
-          sudo apt-get install -y subversion mariadb-client
-          curl -fsSL -o wp-cli.phar https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
-          chmod +x wp-cli.phar
-          sudo mv wp-cli.phar /usr/local/bin/wp
+          sudo apt-get update -y
+          sudo apt-get install -y mysql-client
 
-      # Compute per-PHP variables once
-      - name: Compute PHP vars
+      - name: Compute DB name per PHP
         run: |
-          PHPV="${{ matrix.php }}"
-          PHPV_NUM="${PHPV//./}"
-          echo "PHPV=$PHPV" >> $GITHUB_ENV
-          echo "PHPV_NUM=$PHPV_NUM" >> $GITHUB_ENV
-          echo "DB_NAME=wp_test_${PHPV_NUM}" >> $GITHUB_ENV
-          echo "WP_ROOT_DIR=/tmp/wp-${PHPV_NUM}" >> $GITHUB_ENV
-          echo "WP_CORE_DIR=/tmp/wp-${PHPV_NUM}/wordpress" >> $GITHUB_ENV
-          echo "WP_TESTS_DIR=/tmp/wp-${PHPV_NUM}/wordpress-tests-lib" >> $GITHUB_ENV
-          echo "WP_VERSION=6.8.3" >> $GITHUB_ENV
+          PV="${{ matrix.php }}"
+          SAFE="${PV/./}"
+          echo "DB_NAME=wp_test_${SAFE}" >> "$GITHUB_ENV"
 
-      - name: Create test DB
+      - name: Create database
         run: |
-          mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME};"
+          echo "Creating database $DB_NAME"
+          mysql -h 127.0.0.1 -uroot -proot -e "DROP DATABASE IF EXISTS \`$DB_NAME\`; CREATE DATABASE \`$DB_NAME\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
-      # ✅ PHP 7.4: install without dev to avoid >=8.1 dev deps. Others: normal install.
-      - name: Install Composer deps (root)
+      - name: Install Yoast PHPUnit Polyfills (isolated)
         run: |
-          if [ "${PHPV}" = "7.4" ]; then
-            composer install --no-progress --no-interaction --no-dev
-          else
-            composer install --no-progress --no-interaction
+          if [ ! -d /tmp/phpunit-deps/vendor/yoast/phpunit-polyfills ]; then
+            composer create-project --no-dev --no-interaction yoast/phpunit-polyfills:^2 /tmp/phpunit-deps
           fi
+          test -f /tmp/phpunit-deps/vendor/yoast/phpunit-polyfills/phpunitpolyfills-autoload.php
 
-      # ✅ Remove the whole per-PHP temp root to prevent svn "already exists"
-      - name: Clean per-PHP WP temp root
-        run: |
-          set -eux
-          rm -rf "$WP_ROOT_DIR"
-          mkdir -p "$WP_ROOT_DIR"
-
-      - name: Bootstrap WP test suite
+      - name: Prepare WP Core + Tests (all logic lives in the script)
         env:
-          DB_HOST: 127.0.0.1
-          DB_USER: root
-          DB_PASSWORD: root
           DB_NAME: ${{ env.DB_NAME }}
-          WP_CORE_DIR: ${{ env.WP_CORE_DIR }}
-          WP_TESTS_DIR: ${{ env.WP_TESTS_DIR }}
-          WP_VERSION: ${{ env.WP_VERSION }}
-          WP_TESTS_PHPUNIT_POLYFILLS_PATH: /tmp/phpunit-deps
-        run: |
-          bash bin/phpunit-bootstrap.sh
+        run: bash bin/phpunit-bootstrap.sh
 
       - name: Run PHPUnit
         env:
-          DB_HOST: 127.0.0.1
-          DB_USER: root
-          DB_PASSWORD: root
           DB_NAME: ${{ env.DB_NAME }}
-          WP_CORE_DIR: ${{ env.WP_CORE_DIR }}
-          WP_TESTS_DIR: ${{ env.WP_TESTS_DIR }}
-          WP_TESTS_PHPUNIT_POLYFILLS_PATH: /tmp/phpunit-deps
           XDEBUG_MODE: off
         run: |
           if [ -x vendor/bin/phpunit ]; then
             vendor/bin/phpunit
           else
-            PHPV_CUR=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
-            if [ "$PHPV_CUR" = "8.4" ]; then
+            PHPV=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
+            if [ "$PHPV" = "8.4" ]; then
               curl -fsSL https://phar.phpunit.de/phpunit-10.phar -o phpunit.phar
             else
               curl -fsSL https://phar.phpunit.de/phpunit-9.phar -o phpunit.phar
@@ -123,6 +97,7 @@ jobs:
             php ./phpunit.phar
           fi
 
+  # DO NOT TOUCH — finalised & well-tested
   behat:
     name: Behat (SSP ${{ matrix.ssp }})
     runs-on: ubuntu-latest
