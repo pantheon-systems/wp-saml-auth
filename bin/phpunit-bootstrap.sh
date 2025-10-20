@@ -98,8 +98,6 @@ ln -s "${WP_SRC_DIR}"    "${WP_CORE_LINK}"
 ln -s "${WP_TESTS_REAL}" "${WP_TESTS_LINK}"
 
 # ---- Extra shim for tags that resolve tests/phpunit/src/wp-settings.php ------
-# Some WP test tags require .../tests/phpunit/src/wp-settings.php.
-# Ensure that path exists by symlinking tests/phpunit/src -> real src.
 if [[ ! -e "${WP_TESTS_REAL}/src" ]]; then
   ln -s "${WP_SRC_DIR}" "${WP_TESTS_REAL}/src"
 fi
@@ -175,6 +173,7 @@ echo "== Writing MU plugin to force provider=internal and add SimpleSAML stubs =
 mkdir -p "${WP_SRC_DIR}/wp-content/mu-plugins"
 cat > "${WP_SRC_DIR}/wp-content/mu-plugins/wp-samlauth-phpunit.php" <<'PHP'
 <?php
+namespace {
 /**
  * PHPUnit-only MU plugin:
  *  - Force wp-saml-auth to use provider=internal (no SimpleSAML in unit tests)
@@ -206,6 +205,7 @@ add_filter(
     100,
     2
 );
+} // end global namespace
 
 // ---- Simple SAML stubs (used only if something forces provider=simpleSAML) --
 namespace SimpleSAML {
@@ -253,7 +253,6 @@ namespace SimpleSAML\Auth {
         }
 
         public function getAuthData( $key ) {
-            // Provide a minimal shape—extend if your tests read specific keys.
             if ( $key === 'saml:sp:NameID' ) {
                 return [ 'Value' => 'employee' ];
             }
