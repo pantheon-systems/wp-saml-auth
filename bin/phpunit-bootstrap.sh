@@ -2,28 +2,27 @@
 #
 # Prepares a WordPress develop checkout for PHPUnit in the layout expected by
 # the core test runner, plus PHPUnit polyfills. Also injects a minimal MU plugin
-# to force wp-saml-auth to use the "internal" provider during unit tests AND
-# provide a SimpleSAMLphp stub so tests never fatal if 'simplesamlphp' is used.
+# that:
+#   - forces wp-saml-auth provider to "simplesamlphp"
+#   - disables real autoloading
+#   - supplies SimpleSAML stub classes/attributes for tests
+#   - sets options to match the PHPUnit suite expectations
 #
-# Inputs (env):
+# Env expected (provided by workflow):
 #   DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
-#   WP_VERSION                        (e.g. 6.8.3)
-#   WP_CORE_DIR                       (legacy path; will symlink to <ROOT>/src)
-#   WP_TESTS_DIR                      (legacy path; will symlink to <ROOT>/tests/phpunit)
-#   WP_TESTS_PHPUNIT_POLYFILLS_PATH   (e.g. /tmp/phpunit-deps) [optional]
-#
-# Optional (autodetected if missing):
-#   PHPV, PHPV_NUM
+#   WP_VERSION
+#   WP_CORE_DIR, WP_TESTS_DIR
+#   WP_TESTS_PHPUNIT_POLYFILLS_PATH (optional)
 #
 set -euo pipefail
 
-# ---- Derive PHP version labels (for logs only) -------------------------------
+# --- PHP labels for logs only -------------------------------------------------
 if [[ -z "${PHPV:-}" || -z "${PHPV_NUM:-}" ]]; then
   PHPV="$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')"
   PHPV_NUM="${PHPV/./}"
 fi
 
-# ---- Sanity checks -----------------------------------------------------------
+# --- Sanity checks ------------------------------------------------------------
 : "${DB_HOST:?DB_HOST is required}"
 : "${DB_USER:?DB_USER is required}"
 : "${DB_PASSWORD:?DB_PASSWORD is required}"
@@ -35,18 +34,18 @@ fi
 echo "== PHP version: ${PHPV} (${PHPV_NUM}) =="
 echo "== WP_VERSION=${WP_VERSION} =="
 
-# ---- Ensure system deps ------------------------------------------------------
+# --- Ensure system deps -------------------------------------------------------
 echo "== Ensuring dependencies (svn, rsync, unzip) =="
 need_install=0
-command -v svn >/dev/null 2>&1 || need_install=1
-command -v rsync >/devnull 2>&1 || need_install=1
-command -v unzip >/dev/null 2>&1 || need_install=1
+command -v svn >/dev/null 2>&1     || need_install=1
+command -v rsync >/devnull 2>&1    || need_install=1
+command -v unzip >/dev/null 2>&1   || need_install=1
 if [[ $need_install -eq 1 ]]; then
   sudo apt-get update -y
   sudo apt-get install -y subversion rsync unzip
 fi
 
-# ---- Ensure MySQL is reachable ----------------------------------------------
+# --- Ensure MySQL is reachable -----------------------------------------------
 if command -v mysql >/dev/null 2>&1; then
   echo "== Waiting for MySQL at ${DB_HOST} =="
   for i in $(seq 1 60); do
@@ -59,7 +58,7 @@ if command -v mysql >/dev/null 2>&1; then
   done
 fi
 
-# ---- Build a correct WP develop layout under a versioned root ----------------
+# --- Build a versioned WP develop layout -------------------------------------
 WP_ROOT_DIR="/tmp/wpdev-${PHPV_NUM}"
 WP_SRC_DIR="${WP_ROOT_DIR}/src"
 WP_TESTS_REAL="${WP_ROOT_DIR}/tests/phpunit"
@@ -76,16 +75,10 @@ svn export --quiet --force "https://develop.svn.wordpress.org/tags/${WP_VERSION}
 
 echo "== Fetching wp-tests-config-sample.php =="
 svn export --quiet --force "https://develop.svn.wordpress.org/tags/${WP_VERSION}/wp-tests-config-sample.php" "${WP_TESTS_REAL}/wp-tests-config-sample.php"
+[[ -f "${WP_TESTS_REAL}/wp-tests-config-sample.php" ]] || { echo "Sample config not found"; exit 1; }
 
-if [[ ! -f "${WP_TESTS_REAL}/wp-tests-config-sample.php" ]]; then
-  echo "Sample config not found in ${WP_TESTS_REAL}"
-  exit 1
-fi
-
-# ---- Create/refresh legacy compatibility symlinks (strip trailing slashes) ---
-normalize_path() {
-  local p="$1"; [[ "$p" != "/" ]] && p="${p%/}"; printf "%s" "$p"
-}
+# --- Create legacy compatibility symlinks (strip trailing slashes) -----------
+normalize_path() { local p="$1"; [[ "$p" != "/" ]] && p="${p%/}"; printf "%s" "$p"; }
 WP_CORE_LINK="$(normalize_path "${WP_CORE_DIR}")"
 WP_TESTS_LINK="$(normalize_path "${WP_TESTS_DIR}")"
 
@@ -95,12 +88,10 @@ mkdir -p "$(dirname "${WP_CORE_LINK}")" "$(dirname "${WP_TESTS_LINK}")"
 ln -s "${WP_SRC_DIR}"    "${WP_CORE_LINK}"
 ln -s "${WP_TESTS_REAL}" "${WP_TESTS_LINK}"
 
-# ---- Some core runners expect tests/phpunit/src to exist ---------------------
-if [[ ! -e "${WP_TESTS_REAL}/src" ]]; then
-  ln -s "${WP_SRC_DIR}" "${WP_TESTS_REAL}/src"
-fi
+# Some runners expect tests/phpunit/src to exist:
+[[ -e "${WP_TESTS_REAL}/src" ]] || ln -s "${WP_SRC_DIR}" "${WP_TESTS_REAL}/src"
 
-# ---- Write wp-tests-config.php with a correct ABSPATH ------------------------
+# --- Write wp-tests-config.php with correct ABSPATH ---------------------------
 echo "== Writing wp-tests-config.php in ${WP_TESTS_REAL} =="
 cp "${WP_TESTS_REAL}/wp-tests-config-sample.php" "${WP_TESTS_REAL}/wp-tests-config.php"
 
@@ -143,7 +134,7 @@ if (strpos($cfg, "WP_DEBUG") === false) {
 file_put_contents($cfgFile, $cfg);
 PHP
 
-# ---- Provide Yoast PHPUnit Polyfills if requested ---------------------------
+# --- Yoast PHPUnit Polyfills (optional) --------------------------------------
 if [[ -n "${WP_TESTS_PHPUNIT_POLYFILLS_PATH:-}" ]]; then
   echo "== Ensuring Yoast PHPUnit Polyfills in ${WP_TESTS_PHPUNIT_POLYFILLS_PATH} =="
   if [[ ! -d "${WP_TESTS_PHPUNIT_POLYFILLS_PATH}/vendor/yoast/phpunit-polyfills" && ! -f "${WP_TESTS_PHPUNIT_POLYFILLS_PATH}/phpunitpolyfills-autoload.php" ]]; then
@@ -159,45 +150,56 @@ if [[ -n "${WP_TESTS_PHPUNIT_POLYFILLS_PATH:-}" ]]; then
       rm -rf "${tmpcp}"
     fi
   fi
-  if [[ ! -f "${WP_TESTS_PHPUNIT_POLYFILLS_PATH}/phpunitpolyfills-autoload.php" ]]; then
-    echo "Yoast PHPUnit Polyfills autoloader was not found in ${WP_TESTS_PHPUNIT_POLYFILLS_PATH}"
-    exit 1
-  fi
+  [[ -f "${WP_TESTS_PHPUNIT_POLYFILLS_PATH}/phpunitpolyfills-autoload.php" ]] || { echo "Yoast Polyfills autoloader missing"; exit 1; }
 fi
 
-# ---- MU plugin to force provider & provide SimpleSAML stubs ------------------
-echo "== Writing MU plugin to force provider=internal and add SimpleSAML stubs =="
+# --- MU plugin to run SAML path with stubs & test-aligned options ------------
+echo "== Writing MU plugin for SAML stubs & expected defaults =="
 mkdir -p "${WP_SRC_DIR}/wp-content/mu-plugins"
 cat > "${WP_SRC_DIR}/wp-content/mu-plugins/wp-samlauth-phpunit.php" <<'PHP'
 <?php
 namespace {
 /**
- * PHPUnit-only MU plugin:
- *  - Force wp-saml-auth to use provider=internal during unit tests
- *  - Prevent real SimpleSAML autoloader usage
- *  - Provide NO overrides for defaults like auto_provision / permit_wp_login,
- *    so the plugin's own defaults apply (matches PHPUnit expectations).
+ * PHPUnit MU plugin that:
+ *  - uses provider 'simplesamlphp'
+ *  - disables real autoloading
+ *  - provides SimpleSAML stubs
+ *  - sets options to match the PHPUnit tests (no WP password login, auto-provision ON, get_user_by=uid).
  */
-if ( ! defined( 'WP_SAML_AUTH_PROVIDER' ) ) {
-    define( 'WP_SAML_AUTH_PROVIDER', 'internal' );
-}
 add_filter(
     'wp_saml_auth_option',
     static function( $value, $option ) {
-        if ( $option === 'provider' ) {
-            return 'internal';
+        switch ( $option ) {
+            case 'provider':
+                return 'simplesamlphp';
+            case 'simplesamlphp_autoload':
+                return ''; // never require a real autoloader
+            case 'permit_wp_login':
+                return false;
+            case 'auto_provision':
+                return true;
+            case 'get_user_by':
+                return 'uid';
+            case 'user_login_attribute':
+                return 'uid';
+            case 'user_email_attribute':
+                return 'mail';
+            case 'user_display_name_attribute':
+                return 'displayName';
+            case 'user_first_name_attribute':
+                return 'givenName';
+            case 'user_last_name_attribute':
+                return 'sn';
+            default:
+                return $value;
         }
-        if ( $option === 'simplesamlphp_autoload' ) {
-            return ''; // never try to require an autoloader in unit tests
-        }
-        return $value; // keep plugin defaults for all other options
     },
     100,
     2
 );
 } // end global namespace
 
-// ---- SimpleSAML stubs (used only if a test forces provider=simpleSAML) ------
+// ---- SimpleSAML stubs (engaged when provider='simplesamlphp') ---------------
 namespace SimpleSAML {
     class Configuration {
         public static function getInstance() { return new self(); }
@@ -211,15 +213,16 @@ namespace SimpleSAML\Auth {
 
         /** @var array<string,array<int,string>> */
         private $attrs = [
-            // The PHPUnit suite expects a default "student" identity in some tests.
+            // Default to "student" identity to match tests.
             'mail'         => [ 'test-student@example.com' ],
             'uid'          => [ 'student' ],
             'displayName'  => [ 'Student Example' ],
             'givenName'    => [ 'Student' ],
             'sn'           => [ 'Example' ],
+            // You can add role/entitlement attributes here if tests expect them.
         ];
 
-        public function __construct( $source ) { /* ignore */ }
+        public function __construct( $source ) { /* ignore source */ }
 
         public function isAuthenticated() { return $this->authed; }
 
@@ -229,7 +232,7 @@ namespace SimpleSAML\Auth {
 
         public function logout( $params = [] ) { $this->authed = false; }
 
-        public function getAttributes() { return $this->attrs; }
+        public function getAttributes() { return $this->authed ? $this->attrs : $this->attrs; }
 
         public function getAuthData( $key ) {
             if ( $key === 'saml:sp:NameID' ) {
