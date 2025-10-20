@@ -39,7 +39,7 @@ echo "== WP_VERSION=${WP_VERSION} =="
 
 # ---- Ensure system deps ------------------------------------------------------
 echo "== Ensuring dependencies (svn, rsync, unzip) =="
-if ! command -v svn >/dev/null 2>&1 || ! command -v rsync >/dev/null 2>&1 || ! command -v unzip >/dev/null 2>&1; then
+if ! command -v svn >/dev/null 2>&1 || ! command -v rsync >/devnull 2>&1 || ! command -v unzip >/dev/null 2>&1; then
   sudo apt-get update -y
   sudo apt-get install -y subversion rsync unzip
 fi
@@ -82,7 +82,6 @@ fi
 
 # ---- Create/refresh legacy compatibility symlinks (strip trailing slashes) ---
 normalize_path() {
-  # strip a single trailing slash if present (but not root)
   local p="$1"
   [[ "$p" != "/" ]] && p="${p%/}"
   printf "%s" "$p"
@@ -96,6 +95,14 @@ rm -rf "${WP_CORE_LINK}" "${WP_TESTS_LINK}"
 mkdir -p "$(dirname "${WP_CORE_LINK}")" "$(dirname "${WP_TESTS_LINK}")"
 ln -s "${WP_SRC_DIR}"    "${WP_CORE_LINK}"
 ln -s "${WP_TESTS_REAL}" "${WP_TESTS_LINK}"
+
+# ---- Extra shim for tags that resolve tests/phpunit/src/wp-settings.php ------
+# Some WP test tags build the path to wp-settings.php as:
+#   <tests/phpunit>/src/wp-settings.php
+# Ensure that path exists by symlinking tests/phpunit/src -> real src.
+if [[ ! -e "${WP_TESTS_REAL}/src" ]]; then
+  ln -s "${WP_SRC_DIR}" "${WP_TESTS_REAL}/src"
+fi
 
 # ---- Write wp-tests-config.php with a correct ABSPATH ------------------------
 echo "== Writing wp-tests-config.php in ${WP_TESTS_REAL} =="
