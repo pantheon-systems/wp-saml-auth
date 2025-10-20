@@ -1,18 +1,16 @@
 #!/usr/bin/env bash
 #
-# Prepares a WordPress develop checkout for PHPUnit in the exact layout that
-# the core test runner expects:
-#   <ROOT>/src
-#   <ROOT>/tests/phpunit
-#
-# It also ensures Yoast PHPUnit Polyfills are available (PHP 7.4–8.x).
+# Prepares a WordPress develop checkout for PHPUnit in the layout expected by
+# the core test runner, plus PHPUnit polyfills. Also injects a minimal MU plugin
+# to force wp-saml-auth to use the "internal" provider during unit tests so we
+# do not require SimpleSAMLphp in CI.
 #
 # Inputs (env):
 #   DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
 #   WP_VERSION                        (e.g. 6.8.3)
-#   WP_CORE_DIR                       (legacy path; will be symlinked to <ROOT>/src)
-#   WP_TESTS_DIR                      (legacy path; will be symlinked to <ROOT>/tests/phpunit)
-#   WP_TESTS_PHPUNIT_POLYFILLS_PATH   (e.g. /tmp/phpunit-deps)  [optional]
+#   WP_CORE_DIR                       (legacy path; will symlink to <ROOT>/src)
+#   WP_TESTS_DIR                      (legacy path; will symlink to <ROOT>/tests/phpunit)
+#   WP_TESTS_PHPUNIT_POLYFILLS_PATH   (e.g. /tmp/phpunit-deps) [optional]
 #
 # Optional (autodetected if missing):
 #   PHPV, PHPV_NUM
@@ -39,7 +37,11 @@ echo "== WP_VERSION=${WP_VERSION} =="
 
 # ---- Ensure system deps ------------------------------------------------------
 echo "== Ensuring dependencies (svn, rsync, unzip) =="
-if ! command -v svn >/dev/null 2>&1 || ! command -v rsync >/devnull 2>&1 || ! command -v unzip >/dev/null 2>&1; then
+need_install=0
+command -v svn >/dev/null 2>&1 || need_install=1
+command -v rsync >/dev/null 2>&1 || need_install=1
+command -v unzip >/dev/null 2>&1 || need_install=1
+if [[ $need_install -eq 1 ]]; then
   sudo apt-get update -y
   sudo apt-get install -y subversion rsync unzip
 fi
@@ -86,7 +88,6 @@ normalize_path() {
   [[ "$p" != "/" ]] && p="${p%/}"
   printf "%s" "$p"
 }
-
 WP_CORE_LINK="$(normalize_path "${WP_CORE_DIR}")"
 WP_TESTS_LINK="$(normalize_path "${WP_TESTS_DIR}")"
 
@@ -97,8 +98,7 @@ ln -s "${WP_SRC_DIR}"    "${WP_CORE_LINK}"
 ln -s "${WP_TESTS_REAL}" "${WP_TESTS_LINK}"
 
 # ---- Extra shim for tags that resolve tests/phpunit/src/wp-settings.php ------
-# Some WP test tags build the path to wp-settings.php as:
-#   <tests/phpunit>/src/wp-settings.php
+# Some WP test tags require .../tests/phpunit/src/wp-settings.php.
 # Ensure that path exists by symlinking tests/phpunit/src -> real src.
 if [[ ! -e "${WP_TESTS_REAL}/src" ]]; then
   ln -s "${WP_SRC_DIR}" "${WP_TESTS_REAL}/src"
@@ -169,6 +169,38 @@ if [[ -n "${WP_TESTS_PHPUNIT_POLYFILLS_PATH:-}" ]]; then
     exit 1
   fi
 fi
+
+# ---- Force wp-saml-auth into "internal" provider for PHPUnit -----------------
+# We drop a tiny MU plugin into the exported /src tree. This only affects the
+# ephemeral WP used by PHPUnit, and avoids SimpleSAMLphp autoloader calls.
+echo "== Writing MU plugin to force wp-saml-auth provider=internal =="
+mkdir -p "${WP_SRC_DIR}/wp-content/mu-plugins"
+cat > "${WP_SRC_DIR}/wp-content/mu-plugins/wp-samlauth-phpunit.php" <<'PHP'
+<?php
+/**
+ * Force wp-saml-auth options suitable for unit tests.
+ * Prevents attempts to load SimpleSAMLphp and permits classic WP login.
+ */
+add_filter(
+    'wp_saml_auth_option',
+    function( $value, $option ) {
+        static $overrides = [
+            'provider'          => 'internal', // critical: don't touch SimpleSAMLphp in unit tests
+            'permit_wp_login'   => true,
+            'auto_provision'    => true,
+            'get_user_by'       => 'email',
+            // make sure we don't try to require an autoloader path:
+            'simplesamlphp_autoload' => '',
+        ];
+        if ( array_key_exists( $option, $overrides ) ) {
+            return $overrides[ $option ];
+        }
+        return $value;
+    },
+    10,
+    2
+);
+PHP
 
 echo "== Layout =="
 echo "  ROOT:   ${WP_ROOT_DIR}"
