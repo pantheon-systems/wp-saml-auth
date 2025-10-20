@@ -2,8 +2,8 @@
 #
 # Prepares a WordPress develop checkout for PHPUnit in the layout expected by
 # the core test runner, plus PHPUnit polyfills. Also injects a minimal MU plugin
-# to force wp-saml-auth to use the "internal" provider during unit tests so we
-# do not require SimpleSAMLphp in CI.
+# to force wp-saml-auth to use the "internal" provider during unit tests AND
+# provide a SimpleSAMLphp stub so tests never fatal if 'simplesamlphp' is used.
 #
 # Inputs (env):
 #   DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
@@ -170,36 +170,97 @@ if [[ -n "${WP_TESTS_PHPUNIT_POLYFILLS_PATH:-}" ]]; then
   fi
 fi
 
-# ---- Force wp-saml-auth into "internal" provider for PHPUnit -----------------
-# We drop a tiny MU plugin into the exported /src tree. This only affects the
-# ephemeral WP used by PHPUnit, and avoids SimpleSAMLphp autoloader calls.
-echo "== Writing MU plugin to force wp-saml-auth provider=internal =="
+# ---- MU plugin to force provider & provide SimpleSAML stubs ------------------
+echo "== Writing MU plugin to force provider=internal and add SimpleSAML stubs =="
 mkdir -p "${WP_SRC_DIR}/wp-content/mu-plugins"
 cat > "${WP_SRC_DIR}/wp-content/mu-plugins/wp-samlauth-phpunit.php" <<'PHP'
 <?php
 /**
- * Force wp-saml-auth options suitable for unit tests.
- * Prevents attempts to load SimpleSAMLphp and permits classic WP login.
+ * PHPUnit-only MU plugin:
+ *  - Force wp-saml-auth to use provider=internal (no SimpleSAML in unit tests)
+ *  - Provide lightweight stubs for SimpleSAML classes so tests never fatal
+ *    even if 'simplesamlphp' gets selected/forced by a test.
  */
+
+// Ensure provider is internal as early as possible.
+if ( ! defined( 'WP_SAML_AUTH_PROVIDER' ) ) {
+    define( 'WP_SAML_AUTH_PROVIDER', 'internal' );
+}
+
+// Filter override for options read via wp_saml_auth_get_option().
 add_filter(
     'wp_saml_auth_option',
-    function( $value, $option ) {
+    static function( $value, $option ) {
         static $overrides = [
-            'provider'          => 'internal', // critical: don't touch SimpleSAMLphp in unit tests
-            'permit_wp_login'   => true,
-            'auto_provision'    => true,
-            'get_user_by'       => 'email',
-            // make sure we don't try to require an autoloader path:
-            'simplesamlphp_autoload' => '',
+            'provider'                => 'internal',
+            'permit_wp_login'         => true,
+            'auto_provision'          => true,
+            'get_user_by'             => 'email',
+            'simplesamlphp_autoload'  => '', // never try to require an autoloader
         ];
         if ( array_key_exists( $option, $overrides ) ) {
             return $overrides[ $option ];
         }
         return $value;
     },
-    10,
+    100,
     2
 );
+
+// ---- Simple SAML stubs (used only if something forces provider=simpleSAML) --
+namespace SimpleSAML {
+    class Configuration {
+        public static function getInstance() {
+            return new self();
+        }
+    }
+}
+
+namespace SimpleSAML\Auth {
+    class Simple {
+        /** @var bool */
+        private $authed = false;
+
+        /** @var array<string,array<int,string>> */
+        private $attrs = [
+            'mail'         => [ 'test-em@example.com' ],
+            'uid'          => [ 'employee' ],
+            'displayName'  => [ 'Employee Example' ],
+            'givenName'    => [ 'Employee' ],
+            'sn'           => [ 'Example' ],
+        ];
+
+        public function __construct( $source ) { /* ignore */ }
+
+        public function isAuthenticated() {
+            return $this->authed;
+        }
+
+        public function requireAuth() {
+            $this->authed = true;
+        }
+
+        public function login( $params = [] ) {
+            $this->authed = true;
+        }
+
+        public function logout( $params = [] ) {
+            $this->authed = false;
+        }
+
+        public function getAttributes() {
+            return $this->attrs;
+        }
+
+        public function getAuthData( $key ) {
+            // Provide a minimal shape—extend if your tests read specific keys.
+            if ( $key === 'saml:sp:NameID' ) {
+                return [ 'Value' => 'employee' ];
+            }
+            return null;
+        }
+    }
+}
 PHP
 
 echo "== Layout =="
