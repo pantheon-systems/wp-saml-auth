@@ -8,7 +8,6 @@ set -euo pipefail
 #   WP_CORE_DIR        e.g. /tmp/wp-84/wordpress
 #   WP_TESTS_DIR       e.g. /tmp/wp-84/wordpress-tests-lib
 #   WP_TESTS_PHPUNIT_POLYFILLS_PATH (optional) e.g. /tmp/phpunit-deps
-#   (PHPV is optional; used for logging only)
 
 DB_HOST="${DB_HOST:-127.0.0.1}"
 DB_USER="${DB_USER:-root}"
@@ -68,26 +67,33 @@ fi
 echo "== Writing wp-tests-config.php =="
 cp "${WP_TESTS_DIR}/wp-tests-config-sample.php" "${WP_TESTS_DIR}/wp-tests-config.php"
 
-php -r '
-$cfgFile = getenv("WP_TESTS_DIR")."/wp-tests-config.php";
+# >>> Replaced fragile `php -r` with a heredoc script (no escaping issues) <<<
+php <<'PHP'
+<?php
+$cfgFile = getenv('WP_TESTS_DIR') . '/wp-tests-config.php';
 $cfg = file_get_contents($cfgFile);
-$rep = [
-  "youremptytestdbnamehere" => getenv("DB_NAME"),
-  "yourusernamehere"        => getenv("DB_USER"),
-  "yourpasswordhere"        => getenv("DB_PASSWORD"),
-  "localhost"               => getenv("DB_HOST"),
+
+$replacements = [
+    'youremptytestdbnamehere' => getenv('DB_NAME'),
+    'yourusernamehere'        => getenv('DB_USER'),
+    'yourpasswordhere'        => getenv('DB_PASSWORD'),
+    'localhost'               => getenv('DB_HOST'),
 ];
-$cfg = strtr($cfg, $rep);
+$cfg = strtr($cfg, $replacements);
+
+$abs = rtrim(getenv('WP_CORE_DIR'), '/') . '/';
 $cfg = preg_replace(
-  "/define\\(\\s*\\x27ABSPATH\\x27\\s*,.*?\\);/s",
-  "define( \x27ABSPATH\x27, \x27".addslashes(getenv("WP_CORE_DIR"))."/\x27 );",
-  $cfg
+    "/define\\(\\s*'ABSPATH'\\s*,\\s*'.*?'\\s*\\);/s",
+    "define('ABSPATH', '" . addslashes($abs) . "');",
+    $cfg
 );
+
 if (strpos($cfg, "WP_DEBUG") === false) {
-  $cfg .= "\ndefine( \x27WP_DEBUG\x27, true );\n";
+    $cfg .= "\ndefine('WP_DEBUG', true);\n";
 }
+
 file_put_contents($cfgFile, $cfg);
-' WP_TESTS_DIR="${WP_TESTS_DIR}" DB_NAME="${DB_NAME}" DB_USER="${DB_USER}" DB_PASSWORD="${DB_PASSWORD}" DB_HOST="${DB_HOST}" WP_CORE_DIR="${WP_CORE_DIR}"
+PHP
 
 # ------- Ensure Yoast PHPUnit Polyfills (isolated) -------
 echo "== Ensuring Yoast PHPUnit Polyfills in ${POLYFILLS_DIR} =="
@@ -123,7 +129,6 @@ ensure_polyfills() {
 ensure_polyfills
 
 # ------- Force WP SAML Auth to use the mock provider in PHPUnit -------
-# This avoids requiring a real SimpleSAMLphp during unit tests.
 echo "== Installing MU plugin to force WP SAML Auth provider=mock for tests =="
 MU_DIR="${WP_CORE_DIR}/wp-content/mu-plugins"
 mkdir -p "${MU_DIR}"
@@ -140,7 +145,6 @@ add_filter('option_wp_saml_auth_settings', function ($opts) {
         $opts = [];
     }
     $opts['provider'] = 'mock';
-    // Reasonable defaults for tests; adjust per your plugin’s expectations.
     $opts['auto_provision'] = true;
     $opts['match_login_by'] = 'email';
     $opts['user_login_attribute']   = 'uid';
