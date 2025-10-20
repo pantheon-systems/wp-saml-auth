@@ -47,8 +47,8 @@ class WP_SAML_Auth {
 	public static function get_instance() {
 		if ( ! isset( self::$instance ) ) {
 			self::$instance = new WP_SAML_Auth();
-			add_action( 'init', array( self::$instance, 'action_init' ) );
-			add_action( 'plugins_loaded', array( self::$instance, 'load_textdomain' ) );
+			add_action( 'init', [ self::$instance, 'action_init' ] );
+			add_action( 'plugins_loaded', [ self::$instance, 'load_textdomain' ] );
 		}
 		return self::$instance;
 	}
@@ -156,12 +156,12 @@ class WP_SAML_Auth {
 	 * Initialize the controller logic on the 'init' hook
 	 */
 	public function action_init() {
-		add_action( 'login_head', array( $this, 'action_login_head' ) );
-		add_action( 'login_message', array( $this, 'action_login_message' ) );
-		add_action( 'wp_logout', array( $this, 'action_wp_logout' ) );
-		add_filter( 'login_body_class', array( $this, 'filter_login_body_class' ) );
-		add_filter( 'authenticate', array( $this, 'filter_authenticate' ), 21, 3 ); // after wp_authenticate_username_password runs.
-		add_action( 'admin_notices', array( $this, 'action_admin_notices' ) );
+		add_action( 'login_head', [ $this, 'action_login_head' ] );
+		add_action( 'login_message', [ $this, 'action_login_message' ] );
+		add_action( 'wp_logout', [ $this, 'action_wp_logout' ] );
+		add_filter( 'login_body_class', [ $this, 'filter_login_body_class' ] );
+		add_filter( 'authenticate', [ $this, 'filter_authenticate' ], 21, 3 ); // after wp_authenticate_username_password runs.
+		add_action( 'admin_notices', [ $this, 'action_admin_notices' ] );
 	}
 
 	/**
@@ -200,15 +200,15 @@ class WP_SAML_Auth {
 		if ( ! self::get_option( 'permit_wp_login' ) || ! did_action( 'login_form_login' ) ) {
 			return $message;
 		}
-		$strings = array(
+		$strings = [
 			'title'     => __( 'Use one-click authentication:', 'wp-saml-auth' ),
 			'button'    => __( 'Sign In', 'wp-saml-auth' ),
 			'alt_title' => __( 'Or, sign in with WordPress:', 'wp-saml-auth' ),
-		);
+		];
 
-		$query_args  = array(
+		$query_args  = [
 			'action' => 'wp-saml-auth',
-		);
+		];
 		$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
 		if ( $redirect_to ) {
 			$query_args['redirect_to'] = rawurlencode( $redirect_to );
@@ -240,11 +240,11 @@ class WP_SAML_Auth {
 			if ( empty( $internal_config['idp']['singleLogoutService']['url'] ) ) {
 				return;
 			}
-			$args = array(
-				'parameters'   => array(),
+			$args = [
+				'parameters'   => [],
 				'nameId'       => null,
 				'sessionIndex' => null,
-			);
+			];
 			/**
 			 * Permit the arguments passed to the logout() method to be customized.
 			 *
@@ -374,7 +374,7 @@ class WP_SAML_Auth {
 				 *
 				 * @param array $parameters
 				 */
-				$parameters = apply_filters( 'wp_saml_auth_login_parameters', array() );
+				$parameters = apply_filters( 'wp_saml_auth_login_parameters', [] );
 
 				$provider->login( $redirect_to, $parameters, $force_authn );
 			}
@@ -382,10 +382,10 @@ class WP_SAML_Auth {
 			$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
 			if ( $redirect_to ) {
 				$redirect_to = add_query_arg(
-					array(
+					[
 						'redirect_to' => rawurlencode( $redirect_to ),
 						'action'      => 'wp-saml-auth',
-					),
+					],
 					wp_login_url()
 				);
 			} else {
@@ -396,13 +396,13 @@ class WP_SAML_Auth {
 				if ( false === stripos( $redirect_to, reset( $request ) ) ) {
 					$redirect_to = add_query_arg( 'redirect_to', sanitize_text_field( $_SERVER['REQUEST_URI'] ), $redirect_to );
 				} else {
-					$redirect_to = add_query_arg( array( 'action' => 'wp-saml-auth' ), $redirect_to );
+					$redirect_to = add_query_arg( [ 'action' => 'wp-saml-auth' ], $redirect_to );
 				}
 			}
 			$provider->requireAuth(
-				array(
+				[
 					'ReturnTo' => $redirect_to,
-				)
+				]
 			);
 			$attributes = $provider->getAttributes();
 		} else {
@@ -458,8 +458,8 @@ class WP_SAML_Auth {
 			return new WP_Error( 'wp_saml_auth_auto_provision_disabled', esc_html__( 'No WordPress user exists for your account. Please contact your administrator.', 'wp-saml-auth' ) );
 		}
 
-		$user_args = array();
-		foreach ( array( 'display_name', 'user_login', 'user_email', 'first_name', 'last_name' ) as $type ) {
+		$user_args = [];
+		foreach ( [ 'display_name', 'user_login', 'user_email', 'first_name', 'last_name' ] as $type ) {
 			$attribute          = self::get_option( "{$type}_attribute" );
 			$user_args[ $type ] = ! empty( $attributes[ $attribute ][0] ) ? $attributes[ $attribute ][0] : '';
 		}
@@ -536,12 +536,12 @@ class WP_SAML_Auth {
 		 */
 		$base_paths = apply_filters(
 			'wp_saml_auth_simplesamlphp_path_array',
-			array(
+			[
 				ABSPATH . 'simplesaml',
 				ABSPATH . 'private/simplesamlphp',
 				ABSPATH . 'simplesamlphp',
 				plugin_dir_path( __DIR__ ) . 'simplesamlphp',
-			)
+			]
 		);
 
 		foreach ( $base_paths as $base_path ) {
@@ -633,7 +633,7 @@ class WP_SAML_Auth {
 		// Try to get version from legacy SimpleSAML_Configuration class (SSP < 2.0).
 		if ( class_exists( 'SimpleSAML_Configuration' ) ) {
 			try {
-				if ( is_callable( array( 'SimpleSAML_Configuration', 'getConfig' ) ) ) {
+				if ( is_callable( [ 'SimpleSAML_Configuration', 'getConfig' ] ) ) {
 					$simple_saml_config_obj = \SimpleSAML_Configuration::getConfig();
 					if ( is_object( $simple_saml_config_obj ) && method_exists( $simple_saml_config_obj, 'getVersion' ) ) {
 						$ssp_version = $simple_saml_config_obj->getVersion();
@@ -751,14 +751,14 @@ class WP_SAML_Auth {
 						__( "WP SAML Auth wasn't able to find the <code>OneLogin\Saml2\Auth</code> class. Please verify your Composer autoloader, or <a href='%s'>visit the plugin page</a> for more information.", 'wp-saml-auth' ),
 						$plugin_page
 					),
-					array(
+					[
 						'type'        => 'error',
 						'dismissible' => true,
-						'attributes'  => array(
+						'attributes'  => [
 							'data-slug' => 'wp-saml-auth',
 							'data-type' => 'onelogin-not-found',
-						),
-					)
+						],
+					]
 				);
 			}
 		}
@@ -775,14 +775,14 @@ class WP_SAML_Auth {
 					__( 'SimpleSAMLphp is defined as the SAML connection type, but the SimpleSAMLphp library was not found.Visit the <a href="%s">plugin page</a> for more information', 'wp-saml-auth' ),
 					$plugin_page
 				),
-				array(
+				[
 					'type'        => 'error',
 					'dismissible' => true,
-					'attributes'  => array(
+					'attributes'  => [
 						'data-slug' => 'wp-saml-auth',
 						'data-type' => 'simplesamlphp-not-found',
-					),
-				)
+					],
+				]
 			);
 		}
 
@@ -798,14 +798,14 @@ class WP_SAML_Auth {
 						esc_html( $min_version ),
 						esc_url( admin_url( 'options-general.php?page=wp-saml-auth-settings' ) )
 					),
-					array(
+					[
 						'type'        => 'error',
 						'dismissible' => false,
-						'attributes'  => array(
+						'attributes'  => [
 							'data-slug' => 'wp-saml-auth',
 							'data-type' => 'simplesamlphp-critical-vulnerability',
-						),
-					)
+						],
+					]
 				);
 			} elseif ( 'warning' === $simplesamlphp_version_status ) {
 				$min_version = self::get_option( 'min_simplesamlphp_version' );
@@ -817,14 +817,14 @@ class WP_SAML_Auth {
 						esc_html( $min_version ),
 						esc_url( admin_url( 'options-general.php?page=wp-saml-auth-settings' ) )
 					),
-					array(
+					[
 						'type'        => 'warning',
 						'dismissible' => true,
-						'attributes'  => array(
+						'attributes'  => [
 							'data-slug' => 'wp-saml-auth',
 							'data-type' => 'simplesamlphp-version-warning',
-						),
-					)
+						],
+					]
 				);
 			}
 		} elseif ( 'unknown' === $simplesamlphp_version_status ) {
@@ -839,14 +839,14 @@ class WP_SAML_Auth {
 					esc_html( self::get_option( 'min_simplesamlphp_version' ) ),
 					esc_url( admin_url( 'options-general.php?page=wp-saml-auth-settings' ) )
 				),
-				array(
+				[
 					'type'        => 'warning',
 					'dismissible' => true,
-					'attributes'  => array(
+					'attributes'  => [
 						'data-slug' => 'wp-saml-auth',
 						'data-type' => 'simplesamlphp-version-unknown',
-					),
-				)
+					],
+				]
 			);
 		}
 	}
