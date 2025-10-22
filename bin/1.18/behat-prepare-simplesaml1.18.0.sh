@@ -115,6 +115,8 @@ rm "$PREPARE_DIR/simplesamlphp-latest.tar.gz"
 ###
 # Configure SimpleSAMLphp for the environment
 ###
+# For the purposes of the Behat tests, we're using SimpleSAMLphp as an identity
+# provider with its exampleauth module enabled
 # Append to existing config as you had it
 echo "// This variable was added by behat-prepare.sh." >> "$PREPARE_DIR/private/simplesamlphp/config/authsources.php"
 {
@@ -123,7 +125,7 @@ echo "// This variable was added by behat-prepare.sh." >> "$PREPARE_DIR/private/
 echo "\$wordpress_admin_username = '${WORDPRESS_ADMIN_USERNAME}';" >> "$PREPARE_DIR/private/simplesamlphp/config/authsources.php"
 echo "\$wordpress_admin_email = '${WORDPRESS_ADMIN_EMAIL}';" >> "$PREPARE_DIR/private/simplesamlphp/config/authsources.php"
 cat "$BASH_DIR/authsources.php.additions" >> "$PREPARE_DIR/private/simplesamlphp/config/authsources.php"
-cat "$BASH_DIR/config.php.additions"     >> "$PREPARE_DIR/private/simplesamlphp/config/config.php"
+cat "$BASH_DIR/config.php.additions" >> "$PREPARE_DIR/private/simplesamlphp/config/config.php"
 
 cp "$BASH_DIR/saml20-idp-hosted.php" "$PREPARE_DIR/private/simplesamlphp/metadata/saml20-idp-hosted.php"
 cp "$FIXTURES_DIR/shib13-idp-hosted.php" "$PREPARE_DIR/private/simplesamlphp/metadata/shib13-idp-hosted.php"
