@@ -38,4 +38,4 @@ jobs:
       - name: Run ShellCheck
         run: |
           shellcheck --version
-          shellcheck -x -e SC1091 bin/*.sh
+          shellcheck -x bin/*.sh
