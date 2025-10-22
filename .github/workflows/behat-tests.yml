@@ -132,7 +132,6 @@ jobs:
           mkdir -p ~/.ssh
           printf "Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile=/dev/null\n" > ~/.ssh/config
 
-      # As in CircleCI: hard-set site id
       - name: Set Pantheon site id
         run: echo "TERMINUS_SITE=wp-saml-auth" >> $GITHUB_ENV
 
