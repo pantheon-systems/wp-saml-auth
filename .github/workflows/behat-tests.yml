@@ -92,7 +92,6 @@ jobs:
             php ./phpunit.phar
           fi
 
-  # DO NOT TOUCH — finalised & well-tested
   behat:
     name: Behat (SSP ${{ matrix.ssp }})
     runs-on: ubuntu-latest
