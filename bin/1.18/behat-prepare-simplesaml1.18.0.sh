@@ -92,7 +92,7 @@ if [ ! -d "$WORKING_DIR/tests" ]; then
 	exit 1
 fi
 if [ ! -d "$WORKING_DIR/tests/behat" ]; then
-	echo "$WORKING_DIR/tests does not exist"
+	echo "$WORKING_DIR/tests/behat does not exist"
 	exit 1
 fi
 if [ ! -f "$WORKING_DIR/tests/behat/0-login.feature" ]; then
