@@ -1,11 +1,13 @@
 <?php
 /**
- * PHPUnit bootstrap file for WP SAML Auth
+ * PHPUnit bootstrap file
+ *
+ * @package Wp_Saml_Auth
  */
 
-$_tests_dir = getenv('WP_TESTS_DIR');
-if (! $_tests_dir) {
-    $_tests_dir = '/tmp/wordpress-tests-lib';
+$_tests_dir = getenv( 'WP_TESTS_DIR' );
+if ( ! $_tests_dir ) {
+	$_tests_dir = '/tmp/wordpress-tests-lib';
 }
 
 /**
