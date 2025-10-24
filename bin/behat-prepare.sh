@@ -10,8 +10,8 @@
 # If Terminus is unauthenticated, skip provisioning (CI may be running only unit tests)
 TERMINUS_USER_ID=$(terminus auth:whoami --field=id 2>&1)
 if [[ ! $TERMINUS_USER_ID =~ ^[A-Za-z0-9-]{36}$ ]]; then
-  echo "Terminus unauthenticated; assuming unauthenticated build"
-  exit 0
+	echo "Terminus unauthenticated; assuming unauthenticated build"
+	exit 0
 fi
 
 set -ex
