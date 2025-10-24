@@ -73,6 +73,7 @@ rsync -av \
 	--exclude='.git' \
 	./* "$PREPARE_DIR"/wp-content/plugins/wp-saml-auth
 
+WORKING_DIR="/home/tester/pantheon-systems/wp-saml-auth"
 # Check that the WORKING _DIRECTORY exists
 if [ ! -d "$WORKING_DIR" ]; then
 	echo "WORKING_DIR ($WORKING_DIR) does not exist"
@@ -84,6 +85,8 @@ if [ ! -f "$BASH_DIR"/1-adminnotice.feature ]; then
 	echo "\"$BASH_DIR/1-adminnotice.feature\" does not exist"
 	exit 1
 fi
+
+# Check that $WORKING_DIR/tests exists
 if [ ! -d "$WORKING_DIR/tests" ]; then
 	echo "$WORKING_DIR/tests does not exist"
 	exit 1
