@@ -58,7 +58,7 @@ function wpsa_filter_option( $value, $option_name ) {
 		 *
 		 * @param string
 		 */
-		'connection_type'                   => 'simplesamlphp',
+		'connection_type'        => 'simplesamlphp',
 		/**
 		 * Path to SimpleSAMLphp autoloader.
 		 *
@@ -87,7 +87,7 @@ function wpsa_filter_option( $value, $option_name ) {
 		 *
 		 * @param array
 		 */
-		'internal_config'                   => [
+		'internal_config'        => [
 			// Validation of SAML responses is required.
 			'strict'  => true,
 			'debug'   => defined( 'WP_DEBUG' ) && WP_DEBUG ? true : false,
@@ -130,7 +130,7 @@ function wpsa_filter_option( $value, $option_name ) {
 		 *
 		 * @param bool
 		 */
-		'auto_provision'                    => true,
+		'auto_provision'         => true,
 		/**
 		 * Whether or not to permit logging in with username and password.
 		 *
@@ -139,25 +139,25 @@ function wpsa_filter_option( $value, $option_name ) {
 		 *
 		 * @param bool
 		 */
-		'permit_wp_login'                   => true,
+		'permit_wp_login'        => true,
 		/**
 		 * Attribute by which to get a WordPress user for a SAML user.
 		 *
 		 * @param string Supported options are 'email' and 'login'.
 		 */
-		'get_user_by'                       => 'email',
+		'get_user_by'            => 'email',
 		/**
 		 * SAML attribute which includes the user_login value for a user.
 		 *
 		 * @param string
 		 */
-		'user_login_attribute'              => 'uid',
+		'user_login_attribute'   => 'uid',
 		/**
 		 * SAML attribute which includes the user_email value for a user.
 		 *
 		 * @param string
 		 */
-		'user_email_attribute'              => 'mail',
+		'user_email_attribute'   => 'mail',
 		/**
 		 * SAML attribute which includes the display_name value for a user.
 		 *
@@ -169,33 +169,33 @@ function wpsa_filter_option( $value, $option_name ) {
 		 *
 		 * @param string
 		 */
-		'first_name_attribute'              => 'first_name',
+		'first_name_attribute'   => 'first_name',
 		/**
 		 * SAML attribute which includes the last_name value for a user.
 		 *
 		 * @param string
 		 */
-		'last_name_attribute'               => 'last_name',
+		'last_name_attribute'    => 'last_name',
 		/**
 		 * Default WordPress role to grant when provisioning new users.
 		 *
 		 * @param string
 		 */
-		'default_role'                      => get_option( 'default_role' ),
+		'default_role'           => get_option( 'default_role' ),
 		/**
 		 * Minimum recommended version of SimpleSAMLphp.
 		 * Versions below this will show a warning but still work.
 		 *
 		 * @param string
 		 */
-		'min_simplesamlphp_version'         => '2.3.7',
+		'min_simplesamlphp_version' => '2.3.7',
 		/**
 		 * Critical security version of SimpleSAMLphp.
 		 * Versions below this will show an error and block authentication if `enforce_min_simplesamlphp_version` is true.
 		 *
 		 * @param string
 		 */
-		'critical_simplesamlphp_version'    => '2.0.0',
+		'critical_simplesamlphp_version' => '2.0.0',
 		/**
 		 * Whether to enforce the minimum SimpleSAMLphp version requirement.
 		 * If true, authentication will be blocked for versions below critical_simplesamlphp_version. Defaults to false.
