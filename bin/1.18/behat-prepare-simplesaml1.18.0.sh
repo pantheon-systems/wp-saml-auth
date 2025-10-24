@@ -97,32 +97,37 @@ if [ ! -d "$WORKING_DIR/tests/behat" ]; then
 	echo "$WORKING_DIR/tests/behat does not exist"
 	exit 1
 fi
+
+# Check that $WORKING_DIR/tests/behat contains 0-login.feature
 if [ ! -f "$WORKING_DIR/tests/behat/0-login.feature" ]; then
 	echo "$WORKING_DIR/tests/behat/0-login.feature does not exist"
 	exit 1
 fi
+
+# If we got through all that stuff, we should be good to copy the file now.
 echo "Copying 1-adminnotice.feature to local Behat tests directory (${WORKING_DIR}/tests/behat/)"
-cp "$BASH_DIR/1-adminnotice.feature" "$WORKING_DIR/tests/behat/"
+cp "$BASH_DIR"/1-adminnotice.feature "$WORKING_DIR"/tests/behat/
 
 ###
-# Add SimpleSAMLphp to the environment (1.18.x uses /www and tpl.php templates)
+# Add SimpleSAMLphp to the environment
+# SimpleSAMLphp is installed to ~/code/private, and then symlinked into the
+# web root
 ###
 echo "Setting up SimpleSAMLphp"
-rm -rf "$PREPARE_DIR/private"
-mkdir -p "$PREPARE_DIR/private"
-wget https://github.com/simplesamlphp/simplesamlphp/releases/download/v1.18.4/simplesamlphp-1.18.4.tar.gz \
-  -O "$PREPARE_DIR/simplesamlphp-latest.tar.gz"
-tar -zxvf "$PREPARE_DIR/simplesamlphp-latest.tar.gz" -C "$PREPARE_DIR/private"
-ORIG_SIMPLESAMLPHP_DIR=$(ls "$PREPARE_DIR/private")
-mv "$PREPARE_DIR/private/$ORIG_SIMPLESAMLPHP_DIR" "$PREPARE_DIR/private/simplesamlphp"
-rm "$PREPARE_DIR/simplesamlphp-latest.tar.gz"
+rm -rf "$PREPARE_DIR"/private
+mkdir "$PREPARE_DIR"/private
+wget https://github.com/simplesamlphp/simplesamlphp/releases/download/v1.18.4/simplesamlphp-1.18.4.tar.gz -O "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
+tar -zxvf "$PREPARE_DIR"/simplesamlphp-latest.tar.gz -C "$PREPARE_DIR"/private
+ORIG_SIMPLESAMLPHP_DIR=$(ls "$PREPARE_DIR"/private)
+mv "$PREPARE_DIR"/private/"$ORIG_SIMPLESAMLPHP_DIR" "$PREPARE_DIR"/private/simplesamlphp
+rm "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
 
 ###
 # Configure SimpleSAMLphp for the environment
-###
 # For the purposes of the Behat tests, we're using SimpleSAMLphp as an identity
 # provider with its exampleauth module enabled
-# Append to existing config as you had it
+# Append existing configuration files with our the specifics for our tests
+# Silence output so as not to show the password.
 echo "// This variable was added by behat-prepare.sh." >> "$PREPARE_DIR/private/simplesamlphp/config/authsources.php"
 {
   echo "\$wordpress_admin_password = '${WORDPRESS_ADMIN_PASSWORD}';"
