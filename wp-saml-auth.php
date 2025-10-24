@@ -69,7 +69,7 @@ function wpsa_filter_option( $value, $option_name ) {
 		 *
 		 * @param string
 		 */
-		'simplesamlphp_autoload'            => class_exists( 'WP_SAML_Auth' ) ? WP_SAML_Auth::get_simplesamlphp_autoloader() : '',
+		'simplesamlphp_autoload' => class_exists( 'WP_SAML_Auth' ) ? WP_SAML_Auth::get_simplesamlphp_autoloader() : '',
 		/**
 		 * Authentication source to pass to SimpleSAMLphp
 		 *
@@ -79,7 +79,7 @@ function wpsa_filter_option( $value, $option_name ) {
 		 *
 		 * @param string
 		 */
-		'auth_source'                       => 'default-sp',
+		'auth_source'            => 'default-sp',
 		/**
 		 * Configuration options for OneLogin library use.
 		 *
@@ -163,7 +163,7 @@ function wpsa_filter_option( $value, $option_name ) {
 		 *
 		 * @param string
 		 */
-		'display_name_attribute'            => 'display_name',
+		'display_name_attribute' => 'display_name',
 		/**
 		 * SAML attribute which includes the first_name value for a user.
 		 *
