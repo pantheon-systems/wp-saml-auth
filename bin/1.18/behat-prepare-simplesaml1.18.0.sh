@@ -96,7 +96,7 @@ if [ ! -d "$WORKING_DIR/tests/behat" ]; then
 	exit 1
 fi
 if [ ! -f "$WORKING_DIR/tests/behat/0-login.feature" ]; then
-	echo "$WORKING_DIR/tests/behat does not exist"
+	echo "$WORKING_DIR/tests/behat/0-login.feature does not exist"
 	exit 1
 fi
 echo "Copying 1-adminnotice.feature to local Behat tests directory (${WORKING_DIR}/tests/behat/)"
