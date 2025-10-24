@@ -54,45 +54,47 @@ cp "$BASH_DIR"/functions.simplesaml1.18.0.php  "$PREPARE_DIR"/wp-content/themes/
 cp "$FIXTURES_DIR"/style.css "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"/style.css
 
 echo "Adding WP Native PHP Sessions to the environment"
-rm -rf "$PREPARE_DIR/wp-content/plugins/wp-native-php-sessions"
-wget -O "$PREPARE_DIR/wp-native-php-sessions.zip" https://downloads.wordpress.org/plugin/wp-native-php-sessions.zip
-unzip "$PREPARE_DIR/wp-native-php-sessions.zip" -d "$PREPARE_DIR"
-mv "$PREPARE_DIR/wp-native-php-sessions" "$PREPARE_DIR/wp-content/plugins/"
-rm "$PREPARE_DIR/wp-native-php-sessions.zip"
+rm -rf "$PREPARE_DIR"/wp-content/plugins/wp-native-php-sessions
+# Download the latest WP Native PHP sessions release from WordPress.org
+wget -O "$PREPARE_DIR"/wp-native-php-sessions.zip https://downloads.wordpress.org/plugin/wp-native-php-sessions.zip
+unzip "$PREPARE_DIR"/wp-native-php-sessions.zip -d "$PREPARE_DIR"
+mv "$PREPARE_DIR"/wp-native-php-sessions "$PREPARE_DIR"/wp-content/plugins/
+rm "$PREPARE_DIR"/wp-native-php-sessions.zip
 
 ###
 # Add the copy of this plugin itself to the environment
 ###
 echo "Copying WP SAML Auth into WordPress"
-cd "$BASH_DIR/../.."
+cd "$BASH_DIR"/../..
 rsync -av \
-  --exclude='node_modules/' \
-  --exclude='simplesamlphp/' \
-  --exclude='tests/' \
-  --exclude='.git' \
-  ./* "$PREPARE_DIR/wp-content/plugins/wp-saml-auth"
+	--exclude='node_modules/' \
+	--exclude='simplesamlphp/' \
+	--exclude='tests/' \
+	--exclude='.git' \
+	./* "$PREPARE_DIR"/wp-content/plugins/wp-saml-auth
 
-# 1.18 flow: copy the extra feature into the repo-mounted test dir you expect
-WORKING_DIR="/home/tester/pantheon-systems/wp-saml-auth"
+# Check that the WORKING _DIRECTORY exists
 if [ ! -d "$WORKING_DIR" ]; then
-  echo "WORKING_DIR ($WORKING_DIR) does not exist"
-  exit 1
+	echo "WORKING_DIR ($WORKING_DIR) does not exist"
+	exit 1
 fi
-if [ ! -f "$BASH_DIR/1-adminnotice.feature" ]; then
-  echo "\"$BASH_DIR/1-adminnotice.feature\" does not exist"
-  exit 1
+
+# Check that "$BASH_DIR"/1-adminnotice.feature exists.
+if [ ! -f "$BASH_DIR"/1-adminnotice.feature ]; then
+	echo "\"$BASH_DIR/1-adminnotice.feature\" does not exist"
+	exit 1
 fi
 if [ ! -d "$WORKING_DIR/tests" ]; then
-  echo "$WORKING_DIR/tests does not exist"
-  exit 1
+	echo "$WORKING_DIR/tests does not exist"
+	exit 1
 fi
 if [ ! -d "$WORKING_DIR/tests/behat" ]; then
-  echo "$WORKING_DIR/tests/behat does not exist"
-  exit 1
+	echo "$WORKING_DIR/tests does not exist"
+	exit 1
 fi
 if [ ! -f "$WORKING_DIR/tests/behat/0-login.feature" ]; then
-  echo "$WORKING_DIR/tests/behat/0-login.feature does not exist"
-  exit 1
+	echo "$WORKING_DIR/tests/behat does not exist"
+	exit 1
 fi
 echo "Copying 1-adminnotice.feature to local Behat tests directory (${WORKING_DIR}/tests/behat/)"
 cp "$BASH_DIR/1-adminnotice.feature" "$WORKING_DIR/tests/behat/"
