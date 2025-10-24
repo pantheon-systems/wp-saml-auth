@@ -356,11 +356,11 @@ class WP_SAML_Auth_Settings {
 			],
 			// Security section.
 			[
-				'section' => 'security',
-				'uid'     => 'security_info',
-				'label'   => __( 'Security Information', 'wp-saml-auth' ),
-				'type'    => 'html',
-				'html'    => '<div class="wp-saml-auth-security-info">' .
+                    'section'     => 'security',
+                    'uid'         => 'security_info',
+                    'label'       => __( 'Security Information', 'wp-saml-auth' ),
+                    'type'        => 'html',
+                    'html'        => '<div class="wp-saml-auth-security-info">' .
 					'<p><strong>' . __( 'SimpleSAMLphp Security Requirements:', 'wp-saml-auth' ) . '</strong></p>' .
 					'<ul>' .
 					// Translators: %s maps to the critical version of SimpleSAMLphp.
