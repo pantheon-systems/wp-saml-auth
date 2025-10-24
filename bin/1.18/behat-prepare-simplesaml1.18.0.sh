@@ -158,7 +158,7 @@ sed -i  -- "s/this.disabled=true; this.form.submit(); return true;//g" "$PREPARE
 sed -i  -- "s/<button id='submit' class=\"btn\" tabindex=\"6\"/<button class=\"btn\" tabindex=\"6\"/g" "$PREPARE_DIR"/private/simplesamlphp/modules/core/templates/loginuserpass.tpl.php
 
 cd "$PREPARE_DIR"
-# Make the SimpleSAMLphp installation publicly accessible (1.x webroot is www)
+# Make the SimpleSAMLphp installation publicly accessible
 ln -s ./private/simplesamlphp/www ./simplesaml
 
 ###

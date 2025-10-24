@@ -1,56 +1,64 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/bash
 
-# Safer logging helpers
-log() { printf '%s\n' "$*"; }
-warn() { printf 'WARN: %s\n' "$*" >&2; }
-err() { printf 'ERROR: %s\n' "$*" >&2; }
+###
+# Delete the Pantheon site environment after the Behat test suite has run.
+###
 
-# Show a helpful message if anything fails unexpectedly.
-trap 'err "Cleanup failed on line $LINENO."' ERR
-
-SITE="${TERMINUS_SITE:-}"
-ENV="${TERMINUS_ENV:-}"
-
-log "== Behat cleanup =="
-log "TERMINUS_SITE=${SITE}"
-log "TERMINUS_ENV=${ENV}"
-
-# Quietly skip if Terminus isn't available in this job.
-if ! command -v terminus >/dev/null 2>&1; then
-  warn "terminus not found; skipping cleanup."
-  exit 0
+TERMINUS_USER_ID=$(terminus auth:whoami --field=id 2>&1)
+if [[ ! $TERMINUS_USER_ID =~ ^[A-Za-z0-9-]{36}$ ]]; then
+	echo "Terminus unauthenticated; assuming unauthenticated build"
+	exit 0
 fi
 
-# Require both variables.
-if [[ -z "$SITE" || -z "$ENV" ]]; then
-  warn "TERMINUS_SITE/TERMINUS_ENV not set; skipping."
-  exit 0
+set -ex
+
+if [ -z "$TERMINUS_SITE" ] || [ -z "$TERMINUS_ENV" ]; then
+	echo "TERMINUS_SITE and TERMINUS_ENV environment variables must be set"
+	exit 1
 fi
 
-# Never allow destructive ops on protected Pantheon envs.
-case "$ENV" in
-  dev|test|live)
-    warn "Refusing to delete protected environment: $ENV"
-    exit 0
-    ;;
-esac
 
-# Best-effort check if the env currently exists.
-# We avoid extra deps (jq) and parse a simple table/tsv.
-if terminus env:list "$SITE" --format=tsv >/tmp/terminus-envs.tsv 2>/dev/null; then
-  if ! awk 'NR>1 {print $1}' /tmp/terminus-envs.tsv | grep -Fxq "$ENV"; then
-    log "Environment ${SITE}.${ENV} does not exist; nothing to delete."
-    log "Behat cleanup finished."
+###
+# Loop through all collected site env files
+###
+for env_file in /tmp/behat-envs/site_env_*.txt; do
+  [ -f "$env_file" ] || continue
+  SITE_ENV_FROM_FILE=$(cat "$env_file")
+
+  echo "Deleting test environment: $SITE_ENV_FROM_FILE"
+  terminus multidev:delete "$SITE_ENV_FROM_FILE" --delete-branch --yes || true
+done
+
+###
+# Also delete the oldest 5 multidevs that start with ci-
+###
+echo "Cleaning up old ci- environments"
+
+# Get the list of environments in TSV format
+ENV_LIST_TSV=$(terminus env:list "$TERMINUS_SITE" --fields=id,created --format=tsv 2>/dev/null)
+
+# Check if ENV_LIST_TSV is empty
+if [ -z "$ENV_LIST_TSV" ]; then
+  echo "Warning: Failed to retrieve environment list or no environments found. Skipping cleanup of old 'ci-' environments."
+else
+  # Get the IDs of the 10 oldest 'ci-' environments
+  # 1. Filter for lines where the first column (id) starts with "ci-"
+  # 2. Sort by the second column (created date)
+  # 3. Take the top 10
+  # 4. Extract the first column (id)
+  OLDEST_CI_ENVS=$(echo "$ENV_LIST_TSV" | \
+    grep '^ci-' | \
+    sort -k2,2 | \
+    head -n 10 | \
+    awk '{print $1}')
+
+  if [ -z "$OLDEST_CI_ENVS" ]; then
+    echo "No 'ci-' prefixed environments found to cleanup after filtering and sorting."
     exit 0
   fi
-else
-  warn "Could not retrieve env list for ${SITE} (continuing with best-effort delete)."
+  for ENV_ID in $OLDEST_CI_ENVS; do
+    echo "Deleting environment: $TERMINUS_SITE.$ENV_ID"
+	# Allow this to fail without failing the workflow.
+    terminus multidev:delete "$TERMINUS_SITE.$ENV_ID" --delete-branch --yes || true
+  done
 fi
-
-log "Deleting multidev ${SITE}.${ENV} (if exists)"
-# --yes for non-interactive; --delete-branch to clean the Git branch.
-# We ignore errors so cleanup never fails the job.
-terminus multidev:delete "${SITE}.${ENV}" --delete-branch --yes || warn "Delete command reported a non-zero exit; continuing."
-
-log "Behat cleanup finished."
