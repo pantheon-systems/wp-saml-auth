@@ -31,11 +31,10 @@ terminus env:wipe "$SITE_ENV" --yes
 # Get all necessary environment details.
 ###
 PANTHEON_GIT_URL=$(terminus connection:info "$SITE_ENV" --field=git_url)
-# Keep the exact format you asked for:
-PANTHEON_SITE_URL="${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io"
-PREPARE_DIR="/tmp/${TERMINUS_ENV}-${TERMINUS_SITE}"
+PANTHEON_SITE_URL="$TERMINUS_ENV-$TERMINUS_SITE.pantheonsite.io"
+PREPARE_DIR="/tmp/$TERMINUS_ENV-$TERMINUS_SITE"
 BASH_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-FIXTURES_DIR="$(dirname "$BASH_DIR")/fixtures"
+FIXTURES_DIR="$(dirname "$BASH_DIR")"/fixtures
 
 ###
 # Switch to git mode for pushing the files up
@@ -48,10 +47,11 @@ git clone -b "$TERMINUS_ENV" "$PANTHEON_GIT_URL" "$PREPARE_DIR"
 # Add WP Native PHP Sessions and child theme to environment
 ###
 echo "Creating a child theme called $TERMINUS_SITE"
-rm -rf "$PREPARE_DIR/wp-content/themes/${TERMINUS_SITE}"
-mkdir -p "$PREPARE_DIR/wp-content/themes/${TERMINUS_SITE}"
-cp "$BASH_DIR/functions.simplesaml1.18.0.php" "$PREPARE_DIR/wp-content/themes/${TERMINUS_SITE}/functions.php"
-cp "$FIXTURES_DIR/style.css" "$PREPARE_DIR/wp-content/themes/${TERMINUS_SITE}/style.css"
+rm -rf "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"
+# Create a child theme that includes WP SAML Auth configuration details
+mkdir "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"
+cp "$BASH_DIR"/functions.simplesaml1.18.0.php  "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"/functions.php
+cp "$FIXTURES_DIR"/style.css "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"/style.css
 
 echo "Adding WP Native PHP Sessions to the environment"
 rm -rf "$PREPARE_DIR/wp-content/plugins/wp-native-php-sessions"
