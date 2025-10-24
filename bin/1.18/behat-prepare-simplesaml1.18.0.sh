@@ -91,6 +91,8 @@ if [ ! -d "$WORKING_DIR/tests" ]; then
 	echo "$WORKING_DIR/tests does not exist"
 	exit 1
 fi
+
+# Check that $WORKING_DIR/tests contains a behat directory
 if [ ! -d "$WORKING_DIR/tests/behat" ]; then
 	echo "$WORKING_DIR/tests/behat does not exist"
 	exit 1
