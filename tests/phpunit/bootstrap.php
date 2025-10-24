@@ -22,9 +22,7 @@ if (! defined('WP_TESTS_PHPUNIT_POLYFILLS_PATH')) {
     }
 }
 
-/**
- * WP testing helpers (tests_add_filter, etc.)
- */
+// Give access to tests_add_filter() function.
 require_once $_tests_dir . '/includes/functions.php';
 
 /**
