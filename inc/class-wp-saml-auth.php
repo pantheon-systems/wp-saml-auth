@@ -435,9 +435,9 @@ class WP_SAML_Auth {
 		}
 
 		// Some SAML providers return oddly shaped responses.
-		$attributes  = apply_filters( 'wp_saml_auth_patch_attributes', $attributes, $provider );
+		$attributes = apply_filters( 'wp_saml_auth_patch_attributes', $attributes, $provider );
 		$get_user_by = self::get_option( 'get_user_by' );
-		$attribute   = self::get_option( "user_{$get_user_by}_attribute" );
+		$attribute = self::get_option( "user_{$get_user_by}_attribute" );
 		if ( empty( $attributes[ $attribute ][0] ) ) {
 			// Translators: Communicates how the user is fetched based on the SAML response.
 			return new WP_Error( 'wp_saml_auth_missing_attribute', sprintf( esc_html__( '"%1$s" attribute is expected, but missing, in SAML response. Attribute is used to fetch existing user by "%2$s". Please contact your administrator.', 'wp-saml-auth' ), $attribute, $get_user_by ) );
