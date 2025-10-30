@@ -144,16 +144,14 @@ rm "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
 # provider with its exampleauth module enabled
 ###
 # Try -full, then fallback
+mkdir -p "$PREPARE_DIR/private/simplesamlphp"
 if ! curl -fsSL "$SIMPLESAMLPHP_DOWNLOAD_URL" -o "$PREPARE_DIR/simplesamlphp-latest.tar.gz"; then
   echo "Falling back to non-full SimpleSAMLphp tarball..."
   curl -fsSL "$FALLBACK_SSP_URL" -o "$PREPARE_DIR/simplesamlphp-latest.tar.gz"
 fi
 
 tar -zxvf "$PREPARE_DIR/simplesamlphp-latest.tar.gz" -C "$PREPARE_DIR/private"
-ORIG_SSP_DIR=$(
-  find "$PREPARE_DIR/private" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' \
-  | grep -E '^simplesamlphp-[0-9]' | head -n1
-)
+ORIG_SSP_DIR=$(ls "$PREPARE_DIR/private")
 mv "$PREPARE_DIR/private/$ORIG_SSP_DIR" "$PREPARE_DIR/private/simplesamlphp"
 rm "$PREPARE_DIR/simplesamlphp-latest.tar.gz"
 
