@@ -84,8 +84,7 @@ rm -rf "$PREPARE_DIR"/wp-content/plugins/wp-saml-auth/.git
 
 # Add extra tests if we're running 2.0.0
 if [ "$SIMPLESAMLPHP_VERSION" == '2.0.0' ]; then
-  pwd
-	WORKING_DIR="/home/runner/pantheon-systems/wp-saml-auth"
+	WORKING_DIR="/tmp/pantheon-systems/wp-saml-auth"
 	mkdir -p $WORKING_DIR
 	# Check that the WORKING _DIRECTORY exists
 	if [ ! -d "$WORKING_DIR" ]; then
@@ -134,7 +133,6 @@ tar -zxvf "$PREPARE_DIR"/simplesamlphp-latest.tar.gz -C "$PREPARE_DIR"/private
 ORIG_SIMPLESAMLPHP_DIR=$(ls "$PREPARE_DIR"/private)
 mv "$PREPARE_DIR"/private/"$ORIG_SIMPLESAMLPHP_DIR" "$PREPARE_DIR"/private/simplesamlphp
 rm "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
-rm -rf "$PREPARE_DIR/private"
 
 ###
 # Configure SimpleSAMLphp for the environment
@@ -147,7 +145,6 @@ if ! curl -fsSL "$SIMPLESAMLPHP_DOWNLOAD_URL" -o "$PREPARE_DIR/simplesamlphp-lat
   curl -fsSL "$FALLBACK_SSP_URL" -o "$PREPARE_DIR/simplesamlphp-latest.tar.gz"
 fi
 
-mkdir -p "$PREPARE_DIR/private"
 tar -zxvf "$PREPARE_DIR/simplesamlphp-latest.tar.gz" -C "$PREPARE_DIR/private"
 ORIG_SSP_DIR=$(ls "$PREPARE_DIR/private")
 mv "$PREPARE_DIR/private/$ORIG_SSP_DIR" "$PREPARE_DIR/private/simplesamlphp"
