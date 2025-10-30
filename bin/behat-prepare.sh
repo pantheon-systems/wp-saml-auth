@@ -84,8 +84,13 @@ rm -rf "$PREPARE_DIR"/wp-content/plugins/wp-saml-auth/.git
 
 # Add extra tests if we're running 2.0.0
 if [ "$SIMPLESAMLPHP_VERSION" == '2.0.0' ]; then
-	WORKING_DIR="/tmp/pantheon-systems/wp-saml-auth"
+	WORKING_DIR="/home/tester/pantheon-systems/wp-saml-auth"
+
+	echo "HERE-HERE-HERE-HERE-HERE-HERE-HERE-HERE-HERE-HERE-HERE"
 	mkdir -p $WORKING_DIR
+	ls -la
+	pwd
+
 	# Check that the WORKING _DIRECTORY exists
 	if [ ! -d "$WORKING_DIR" ]; then
 		echo "WORKING_DIR ($WORKING_DIR) does not exist"
