@@ -88,7 +88,8 @@ if [ "$SIMPLESAMLPHP_VERSION" == '2.0.0' ]; then
 	mkdir -p $WORKING_DIR
 	mkdir -p $WORKING_DIR/tests
 	mkdir -p $WORKING_DIR/tests/behat
-	
+	touch $WORKING_DIR/tests/behat/0-login.feature
+
 	# Check that the WORKING _DIRECTORY exists
 	if [ ! -d "$WORKING_DIR" ]; then
 		echo "WORKING_DIR ($WORKING_DIR) does not exist"
