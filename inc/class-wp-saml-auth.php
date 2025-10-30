@@ -534,9 +534,7 @@ class WP_SAML_Auth {
 		 *
 		 * @param array $simplesamlphp_path_array An array of paths to check for SimpleSAMLphp.
 		 */
-		$base_paths = apply_filters(
-			'wp_saml_auth_simplesamlphp_path_array',
-			[
+		$base_paths = apply_filters( 'wp_saml_auth_simplesamlphp_path_array', [
 				ABSPATH . 'simplesaml',
 				ABSPATH . 'private/simplesamlphp',
 				ABSPATH . 'simplesamlphp',
@@ -588,8 +586,7 @@ class WP_SAML_Auth {
 					// Translators: %s is the error message returned from the exception.
                     __( 'SimpleSAMLphp autoloader not found. Error: %s', 'wp-saml-auth' ),
                     $e->getMessage()
-					)
-				);
+                ) );
 			}
 		}
 
@@ -622,8 +619,7 @@ class WP_SAML_Auth {
 						// Translators: %s is the error message returned from the exception.
                         __( 'Error getting SimpleSAMLphp version: %s', 'wp-saml-auth' ),
                         $e->getMessage()
-						)
-					);
+                    ) );
 				}
 			}
 		}
@@ -647,8 +643,7 @@ class WP_SAML_Auth {
 						// Translators: %s is the error message returned from the exception.
                         __( 'Error getting SimpleSAMLphp version: %s', 'wp-saml-auth' ),
                         $e->getMessage()
-						)
-					);
+                    ) );
 				}
 			}
 		}
@@ -660,8 +655,7 @@ class WP_SAML_Auth {
 					// Translators: %s is the base directory we tried.
                     __( 'SimpleSAMLphp base directory does not exist: %s', 'wp-saml-auth' ),
                     $base_dir
-					)
-				);
+                ) );
 			}
 			return false;
 		}
@@ -836,9 +830,9 @@ class WP_SAML_Auth {
 					esc_url( admin_url( 'options-general.php?page=wp-saml-auth-settings' ) )
 				),
 				[
-					'type'        => 'warning',
+					'type' => 'warning',
 					'dismissible' => true,
-					'attributes'  => [
+					'attributes' => [
 						'data-slug' => 'wp-saml-auth',
 						'data-type' => 'simplesamlphp-version-unknown',
 					],
