@@ -100,12 +100,13 @@ fi
 ###
 echo "Setting up SimpleSAMLphp $SIMPLESAMLPHP_VERSION"
 wget "$SIMPLESAMLPHP_DOWNLOAD_URL" -O "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
+mkdir -p "$PREPARE_DIR/private"
 tar -zxvf "$PREPARE_DIR"/simplesamlphp-latest.tar.gz -C "$PREPARE_DIR"/private
 ORIG_SIMPLESAMLPHP_DIR=$(ls "$PREPARE_DIR"/private)
 mv "$PREPARE_DIR"/private/"$ORIG_SIMPLESAMLPHP_DIR" "$PREPARE_DIR"/private/simplesamlphp
 rm "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
 rm -rf "$PREPARE_DIR/private"
-mkdir -p "$PREPARE_DIR/private"
+
 
 ###
 # Configure SimpleSAMLphp for the environment
