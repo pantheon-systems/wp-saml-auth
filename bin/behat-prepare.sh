@@ -85,10 +85,10 @@ rm -rf "$PREPARE_DIR"/wp-content/plugins/wp-saml-auth/.git
 # Add extra tests if we're running 2.0.0
 if [ "$SIMPLESAMLPHP_VERSION" == '2.0.0' ]; then
 	WORKING_DIR=$HOME"/pantheon-systems/wp-saml-auth"
-	mkdir -p $WORKING_DIR
-	mkdir -p $WORKING_DIR/tests
-	mkdir -p $WORKING_DIR/tests/behat
-	touch $WORKING_DIR/tests/behat/0-login.feature
+	mkdir -p "$WORKING_DIR"
+	mkdir -p "$WORKING_DIR"/tests
+	mkdir -p "$WORKING_DIR"/tests/behat
+	touch "$WORKING_DIR"/tests/behat/0-login.feature
 
 	# Check that the WORKING _DIRECTORY exists
 	if [ ! -d "$WORKING_DIR" ]; then
@@ -130,9 +130,9 @@ fi
 # SimpleSAMLphp is installed to ~/code/private, and then symlinked into the
 # web root
 ###
+echo "Setting up SimpleSAMLphp $SIMPLESAMLPHP_VERSION"
 rm -rf "$PREPARE_DIR"/private
 mkdir "$PREPARE_DIR"/private
-echo "Setting up SimpleSAMLphp $SIMPLESAMLPHP_VERSION"
 wget "$SIMPLESAMLPHP_DOWNLOAD_URL" -O "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
 tar -zxvf "$PREPARE_DIR"/simplesamlphp-latest.tar.gz -C "$PREPARE_DIR"/private
 ORIG_SIMPLESAMLPHP_DIR=$(ls "$PREPARE_DIR"/private)
@@ -217,6 +217,7 @@ openssl req -newkey rsa:2048 -new -x509 -days 3652 -nodes -out "$PREPARE_DIR"/pr
 
 TWIG_TEMPLATE_PATH="$PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.twig"
 # Modify the login template so Behat can submit the form
+echo "Operating on: $TWIG_TEMPLATE_PATH"
 sed -i  -- "s/<button class=\"pure-button pure-button-red pure-input-1-2 pure-input-sm-1-1 right\" id=\"submit_button\"/<button class=\"pure-button pure-button-red pure-input-1-2 pure-input-sm-1-1 right\" id=\"submit\"/g" "$TWIG_TEMPLATE_PATH"
 sed -i  -- "s/Login/Submit/g" "$TWIG_TEMPLATE_PATH"
 # Modify the loginuserpass.js file so Behat can submit the form
@@ -228,7 +229,6 @@ composer install --no-dev --working-dir="$PREPARE_DIR"/private/simplesamlphp --i
 
 # Copy SimpleSAMLphp installation into public /simplesaml directory.
 cd "$PREPARE_DIR"
-
 mkdir -p "$PREPARE_DIR"/simplesaml
 cp -r "$PREPARE_DIR"/private/simplesamlphp/public/* "$PREPARE_DIR"/simplesaml
 cp -r "$PREPARE_DIR"/private/simplesamlphp/vendor "$PREPARE_DIR"/simplesaml/
@@ -262,15 +262,10 @@ terminus workflow:wait "$SITE_ENV"
 ###
 # Silence output so as not to show the password.
 {
-  terminus wp "$SITE_ENV" -- core install \
-    --title="${TERMINUS_ENV}-${TERMINUS_SITE}" \
-    --url="$PANTHEON_SITE_URL" \
-    --admin_user="$WORDPRESS_ADMIN_USERNAME" \
-    --admin_email="$WORDPRESS_ADMIN_EMAIL" \
-    --admin_password="$WORDPRESS_ADMIN_PASSWORD"
+  terminus wp "$SITE_ENV" -- core install --title="$TERMINUS_ENV"-"$TERMINUS_SITE" --url="$PANTHEON_SITE_URL" --admin_user="$WORDPRESS_ADMIN_USERNAME" --admin_email="$WORDPRESS_ADMIN_EMAIL" --admin_password="$WORDPRESS_ADMIN_PASSWORD"
 } &> /dev/null
 
-terminus wp "$SITE_ENV" -- option update home   "https://$PANTHEON_SITE_URL"
+terminus wp "$SITE_ENV" -- option update home "https://$PANTHEON_SITE_URL"
 terminus wp "$SITE_ENV" -- option update siteurl "https://$PANTHEON_SITE_URL"
 terminus wp "$SITE_ENV" -- plugin activate wp-native-php-sessions wp-saml-auth
 terminus wp "$SITE_ENV" -- theme activate "$TERMINUS_SITE"
