@@ -188,7 +188,7 @@ git push || true
 {
   terminus wp "$SITE_ENV" -- core install --title="${TERMINUS_ENV}-${TERMINUS_SITE}" --url="$PANTHEON_SITE_URL" --admin_user="$WORDPRESS_ADMIN_USERNAME" --admin_email="$WORDPRESS_ADMIN_EMAIL" --admin_password="$WORDPRESS_ADMIN_PASSWORD"
 } &> /dev/null
-terminus wp "$SITE_ENV" -- option update home "https://$PANTHEON_SITE_URL" || true
+terminus wp "$SITE_ENV" -- option update home "https://$PANTHEON_SITE_URL"
 terminus wp "$SITE_ENV" -- option update siteurl "https://$PANTHEON_SITE_URL"
 terminus wp "$SITE_ENV" -- plugin activate wp-native-php-sessions wp-saml-auth
 terminus wp "$SITE_ENV" -- theme activate "$TERMINUS_SITE"
