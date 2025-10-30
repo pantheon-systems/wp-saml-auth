@@ -360,17 +360,17 @@ class WP_SAML_Auth_Settings {
 				'uid'         => 'security_info',
 				'label'       => __( 'Security Information', 'wp-saml-auth' ),
 				'type'        => 'html',
-				'html'        => '<div class="wp-saml-auth-security-info">' .
-				'<p><strong>' . __( 'SimpleSAMLphp Security Requirements:', 'wp-saml-auth' ) . '</strong></p>' .
-				'<ul>' .
-				// Translators: %s maps to the critical version of SimpleSAMLphp.
-				'<li>' . sprintf( __( '<strong>Critical Security Requirement:</strong> Version %s or later is required to fix CVE-2023-26881 (XML signature validation bypass vulnerability).', 'wp-saml-auth' ), WP_SAML_Auth::get_option( 'critical_simplesamlphp_version' ) ) . '</li>' .
-				// Translators: %s maps to the minimum version of SimpleSAMLphp.
-				'<li>' . sprintf( __( '<strong>Recommended Security Requirement:</strong> Version %s or later is recommended for additional security fixes.', 'wp-saml-auth' ), WP_SAML_Auth::get_option( 'min_simplesamlphp_version' ) ) . '</li>' .
-				'</ul>' .
-				'<p>' . __( 'Authentication will be blocked for versions below the critical security requirement when "Enforce Security Requirements" is enabled.', 'wp-saml-auth' ) . '</p>' .
-				'</div>',
-			],
+                'html'        => '<div class="wp-saml-auth-security-info">' .
+                        '<p><strong>' . __( 'SimpleSAMLphp Security Requirements:', 'wp-saml-auth' ) . '</strong></p>' .
+                        '<ul>' .
+                        // Translators: %s maps to the critical version of SimpleSAMLphp.
+                        '<li>' . sprintf( __( '<strong>Critical Security Requirement:</strong> Version %s or later is required to fix CVE-2023-26881 (XML signature validation bypass vulnerability).', 'wp-saml-auth' ), WP_SAML_Auth::get_option( 'critical_simplesamlphp_version' ) ) . '</li>' .
+                        // Translators: %s maps to the minimum version of SimpleSAMLphp.
+                        '<li>' . sprintf( __( '<strong>Recommended Security Requirement:</strong> Version %s or later is recommended for additional security fixes.', 'wp-saml-auth' ), WP_SAML_Auth::get_option( 'min_simplesamlphp_version' ) ) . '</li>' .
+                        '</ul>' .
+                        '<p>' . __( 'Authentication will be blocked for versions below the critical security requirement when "Enforce Security Requirements" is enabled.', 'wp-saml-auth' ) . '</p>' .
+                        '</div>',
+            ],
 			[
 				'section'     => 'security',
 				'uid'         => 'enforce_min_simplesamlphp_version',
