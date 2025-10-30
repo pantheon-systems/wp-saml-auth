@@ -95,11 +95,23 @@ fi
 
 ###
 # Add SimpleSAMLphp to the environment
+# SimpleSAMLphp is installed to ~/code/private, and then symlinked into the
+# web root
 ###
 echo "Setting up SimpleSAMLphp $SIMPLESAMLPHP_VERSION"
+wget "$SIMPLESAMLPHP_DOWNLOAD_URL" -O "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
+tar -zxvf "$PREPARE_DIR"/simplesamlphp-latest.tar.gz -C "$PREPARE_DIR"/private
+ORIG_SIMPLESAMLPHP_DIR=$(ls "$PREPARE_DIR"/private)
+mv "$PREPARE_DIR"/private/"$ORIG_SIMPLESAMLPHP_DIR" "$PREPARE_DIR"/private/simplesamlphp
+rm "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
 rm -rf "$PREPARE_DIR/private"
 mkdir -p "$PREPARE_DIR/private"
 
+###
+# Configure SimpleSAMLphp for the environment
+# For the purposes of the Behat tests, we're using SimpleSAMLphp as an identity
+# provider with its exampleauth module enabled
+###
 # Try -full, then fallback
 if ! curl -fsSL "$SIMPLESAMLPHP_DOWNLOAD_URL" -o "$PREPARE_DIR/simplesamlphp-latest.tar.gz"; then
   echo "Falling back to non-full SimpleSAMLphp tarball..."
@@ -111,7 +123,7 @@ ORIG_SSP_DIR=$(ls "$PREPARE_DIR/private")
 mv "$PREPARE_DIR/private/$ORIG_SSP_DIR" "$PREPARE_DIR/private/simplesamlphp"
 rm "$PREPARE_DIR/simplesamlphp-latest.tar.gz"
 
-# Configure SimpleSAMLphp
+# Create the authsources.php with dynamic user variables.
 cat > "$PREPARE_DIR/private/simplesamlphp/config/authsources.php" <<EOF
 <?php
 \$config = [];
@@ -149,29 +161,31 @@ foreach (\$config['example-userpass'] as \$key => &\$user) {
 return \$config;
 EOF
 
-cp "$BASH_DIR/fixtures/config.php"         "$PREPARE_DIR/private/simplesamlphp/config/config.php"
-cp "$BASH_DIR/fixtures/config-prepare.php" "$PREPARE_DIR/wp-content/mu-plugins/config-prepare.php"
-cp "$BASH_DIR/fixtures/saml20-sp-remote.php"  "$PREPARE_DIR/private/simplesamlphp/metadata/saml20-sp-remote.php"
-cp "$BASH_DIR/fixtures/saml20-idp-hosted.php" "$PREPARE_DIR/private/simplesamlphp/metadata/saml20-idp-hosted.php"
-cp "$BASH_DIR/fixtures/shib13-idp-hosted.php" "$PREPARE_DIR/private/simplesamlphp/metadata/shib13-idp-hosted.php"
-cp "$BASH_DIR/fixtures/shib13-sp-remote.php"  "$PREPARE_DIR/private/simplesamlphp/metadata/shib13-sp-remote.php"
+cp "$BASH_DIR"/fixtures/config.php "$PREPARE_DIR"/private/simplesamlphp/config/config.php
+cp "$BASH_DIR"/fixtures/config-prepare.php "$PREPARE_DIR"/wp-content/mu-plugins/config-prepare.php
+# Copy identify provider configuration files into their appropriate locations
+cp "$BASH_DIR"/fixtures/saml20-sp-remote.php  "$PREPARE_DIR"/private/simplesamlphp/metadata/saml20-sp-remote.php
+cp "$BASH_DIR"/fixtures/saml20-idp-hosted.php  "$PREPARE_DIR"/private/simplesamlphp/metadata/saml20-idp-hosted.php
+cp "$BASH_DIR"/fixtures/shib13-idp-hosted.php  "$PREPARE_DIR"/private/simplesamlphp/metadata/shib13-idp-hosted.php
+cp "$BASH_DIR"/fixtures/shib13-sp-remote.php  "$PREPARE_DIR"/private/simplesamlphp/metadata/shib13-sp-remote.php
 
-touch "$PREPARE_DIR/private/simplesamlphp/modules/exampleauth/enable"
+# Enable the exampleauth module
+touch "$PREPARE_DIR"/private/simplesamlphp/modules/exampleauth/enable
 
-openssl req -newkey rsa:2048 -new -x509 -days 3652 -nodes \
-  -out "$PREPARE_DIR/private/simplesamlphp/cert/saml.crt" \
-  -keyout "$PREPARE_DIR/private/simplesamlphp/cert/saml.pem" -batch
+# Generate a certificate SimpleSAMLphp uses for encryption
+# Because these files are in ~/code/private, they're inaccessible from the web
+openssl req -newkey rsa:2048 -new -x509 -days 3652 -nodes -out "$PREPARE_DIR"/private/simplesamlphp/cert/saml.crt -keyout "$PREPARE_DIR"/private/simplesamlphp/cert/saml.pem -batch
 
 TWIG_TEMPLATE_PATH="$PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.twig"
-echo "Operating on: $TWIG_TEMPLATE_PATH"
-sed -i -- 's/id="submit_button"/id="submit"/g' "$TWIG_TEMPLATE_PATH" || true
-sed -i -- 's/>Login</>Submit</g' "$TWIG_TEMPLATE_PATH" || true
+# Modify the login template so Behat can submit the form
+sed -i  -- "s/<button class=\"pure-button pure-button-red pure-input-1-2 pure-input-sm-1-1 right\" id=\"submit_button\"/<button class=\"pure-button pure-button-red pure-input-1-2 pure-input-sm-1-1 right\" id=\"submit\"/g" "$TWIG_TEMPLATE_PATH"
+sed -i  -- "s/Login/Submit/g" "$TWIG_TEMPLATE_PATH"
+# Modify the loginuserpass.js file so Behat can submit the form
+JS_FILE_PATH="$PREPARE_DIR/private/simplesamlphp/modules/core/public/assets/js/loginuserpass.js" # Adjust path if necessary
+sed -i -- 's/getElementById("submit_button")/getElementById("submit")/g' "$JS_FILE_PATH"
+sed -i -- 's/button.disabled = true;//g' "$JS_FILE_PATH"
 
-JS_FILE_PATH="$PREPARE_DIR/private/simplesamlphp/modules/core/public/assets/js/loginuserpass.js"
-sed -i -- 's/getElementById("submit_button")/getElementById("submit")/g' "$JS_FILE_PATH" || true
-sed -i -- 's/button.disabled = true;//g' "$JS_FILE_PATH" || true
-
-composer install --no-dev --working-dir="$PREPARE_DIR/private/simplesamlphp" --ignore-platform-req=ext-ldap || true
+composer install --no-dev --working-dir="$PREPARE_DIR/private/simplesamlphp" --ignore-platform-req=ext-ldap
 
 cd "$PREPARE_DIR"
 mkdir -p "$PREPARE_DIR/simplesaml"
