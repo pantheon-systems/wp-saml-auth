@@ -101,6 +101,7 @@ fi
 echo "Setting up SimpleSAMLphp $SIMPLESAMLPHP_VERSION"
 wget "$SIMPLESAMLPHP_DOWNLOAD_URL" -O "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
 mkdir -p "$PREPARE_DIR/private"
+echo "THERE-THERE-THERE-THERE-THERE-THERE-THERE-THERE-THERE-THERE-THERE-THERE-THERE-THERE"
 tar -zxvf "$PREPARE_DIR"/simplesamlphp-latest.tar.gz -C "$PREPARE_DIR"/private
 ORIG_SIMPLESAMLPHP_DIR=$(ls "$PREPARE_DIR"/private)
 mv "$PREPARE_DIR"/private/"$ORIG_SIMPLESAMLPHP_DIR" "$PREPARE_DIR"/private/simplesamlphp
@@ -119,6 +120,7 @@ if ! curl -fsSL "$SIMPLESAMLPHP_DOWNLOAD_URL" -o "$PREPARE_DIR/simplesamlphp-lat
   curl -fsSL "$FALLBACK_SSP_URL" -o "$PREPARE_DIR/simplesamlphp-latest.tar.gz"
 fi
 
+echo "HERE-HERE-HERE-HERE-HERE-HERE-HERE-HERE"
 tar -zxvf "$PREPARE_DIR/simplesamlphp-latest.tar.gz" -C "$PREPARE_DIR/private"
 ORIG_SSP_DIR=$(ls "$PREPARE_DIR/private")
 mv "$PREPARE_DIR/private/$ORIG_SSP_DIR" "$PREPARE_DIR/private/simplesamlphp"
