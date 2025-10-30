@@ -519,7 +519,7 @@ class WP_SAML_Auth {
 		 */
 		if ( ! self::$is_resolving_autoloader_via_option ) {
 			self::$is_resolving_autoloader_via_option = true;
-			$simplesamlphp_autoloader                 = self::get_option( 'simplesamlphp_autoload' );
+			$simplesamlphp_autoloader = self::get_option( 'simplesamlphp_autoload' );
 			self::$is_resolving_autoloader_via_option = false; // Reset recursion guard.
 
 			// Check the configured 'simplesamlphp_autoload' path first.
@@ -575,7 +575,7 @@ class WP_SAML_Auth {
 	 */
 	public function get_simplesamlphp_version() {
 		$simplesamlphp_autoloader = self::get_simplesamlphp_autoloader();
-		$base_dir                 = rtrim( preg_replace( '#/lib/?$#', '', dirname( $simplesamlphp_autoloader ) ), '/\\' );
+		$base_dir = rtrim( preg_replace( '#/lib/?$#', '', dirname( $simplesamlphp_autoloader ) ), '/\\' );
 
 		try {
 			if ( file_exists( $simplesamlphp_autoloader ) ) {
@@ -584,11 +584,10 @@ class WP_SAML_Auth {
 		} catch ( \Exception $e ) {
 			// Log an error to the debug log.
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log(
-					sprintf(
+				error_log( sprintf(
 					// Translators: %s is the error message returned from the exception.
-						__( 'SimpleSAMLphp autoloader not found. Error: %s', 'wp-saml-auth' ),
-						$e->getMessage()
+                    __( 'SimpleSAMLphp autoloader not found. Error: %s', 'wp-saml-auth' ),
+                    $e->getMessage()
 					)
 				);
 			}
@@ -619,11 +618,10 @@ class WP_SAML_Auth {
 			} catch ( \Exception $e ) {
 				// Log an error to the debug log.
 				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log(
-						sprintf(
+					error_log( sprintf(
 						// Translators: %s is the error message returned from the exception.
-							__( 'Error getting SimpleSAMLphp version: %s', 'wp-saml-auth' ),
-							$e->getMessage()
+                        __( 'Error getting SimpleSAMLphp version: %s', 'wp-saml-auth' ),
+                        $e->getMessage()
 						)
 					);
 				}
@@ -645,11 +643,10 @@ class WP_SAML_Auth {
 			} catch ( \Exception $e ) {
 				// Log an error to the debug log.
 				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log(
-						sprintf(
+					error_log( sprintf(
 						// Translators: %s is the error message returned from the exception.
-							__( 'Error getting SimpleSAMLphp version: %s', 'wp-saml-auth' ),
-							$e->getMessage()
+                        __( 'Error getting SimpleSAMLphp version: %s', 'wp-saml-auth' ),
+                        $e->getMessage()
 						)
 					);
 				}
@@ -659,11 +656,10 @@ class WP_SAML_Auth {
 		if ( ! is_dir( $base_dir ) ) {
 			// Log an error to the debug log if the base directory does not exist.
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log(
-					sprintf(
+				error_log( sprintf(
 					// Translators: %s is the base directory we tried.
-						__( 'SimpleSAMLphp base directory does not exist: %s', 'wp-saml-auth' ),
-						$base_dir
+                    __( 'SimpleSAMLphp base directory does not exist: %s', 'wp-saml-auth' ),
+                    $base_dir
 					)
 				);
 			}
@@ -714,7 +710,7 @@ class WP_SAML_Auth {
 			return 'unknown';
 		}
 
-		$min_version      = self::get_option( 'min_simplesamlphp_version' );
+		$min_version = self::get_option( 'min_simplesamlphp_version' );
 		$critical_version = self::get_option( 'critical_simplesamlphp_version' );
 
 		if ( version_compare( $version, $critical_version, '<' ) ) {
@@ -733,10 +729,10 @@ class WP_SAML_Auth {
 			return;
 		}
 
-		$connection_type              = self::get_option( 'connection_type' );
-		$simplesamlphp_version        = $this->get_simplesamlphp_version();
+		$connection_type = self::get_option( 'connection_type' );
+		$simplesamlphp_version = $this->get_simplesamlphp_version();
 		$simplesamlphp_version_status = $this->check_simplesamlphp_version( $simplesamlphp_version );
-		$plugin_page                  = 'https://wordpress.org/plugins/wp-saml-auth';
+		$plugin_page = 'https://wordpress.org/plugins/wp-saml-auth';
 
 		// Using 'internal' (default) connection type.
 		if ( 'internal' === $connection_type ) {
@@ -752,9 +748,9 @@ class WP_SAML_Auth {
 						$plugin_page
 					),
 					[
-						'type'        => 'error',
+						'type' => 'error',
 						'dismissible' => true,
-						'attributes'  => [
+						'attributes' => [
 							'data-slug' => 'wp-saml-auth',
 							'data-type' => 'onelogin-not-found',
 						],
@@ -776,9 +772,9 @@ class WP_SAML_Auth {
 					$plugin_page
 				),
 				[
-					'type'        => 'error',
+					'type' => 'error',
 					'dismissible' => true,
-					'attributes'  => [
+					'attributes' => [
 						'data-slug' => 'wp-saml-auth',
 						'data-type' => 'simplesamlphp-not-found',
 					],
@@ -799,9 +795,9 @@ class WP_SAML_Auth {
 						esc_url( admin_url( 'options-general.php?page=wp-saml-auth-settings' ) )
 					),
 					[
-						'type'        => 'error',
+						'type' => 'error',
 						'dismissible' => false,
-						'attributes'  => [
+						'attributes' => [
 							'data-slug' => 'wp-saml-auth',
 							'data-type' => 'simplesamlphp-critical-vulnerability',
 						],
@@ -818,9 +814,9 @@ class WP_SAML_Auth {
 						esc_url( admin_url( 'options-general.php?page=wp-saml-auth-settings' ) )
 					),
 					[
-						'type'        => 'warning',
+						'type' => 'warning',
 						'dismissible' => true,
-						'attributes'  => [
+						'attributes' => [
 							'data-slug' => 'wp-saml-auth',
 							'data-type' => 'simplesamlphp-version-warning',
 						],

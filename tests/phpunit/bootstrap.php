@@ -93,6 +93,9 @@ function _manually_load_plugin() {
 tests_add_filter('muplugins_loaded', '_manually_load_plugin');
 
 /**
+ * Log the current user out.
+ *
+ * @since 2.5.0
  * Cookie shims for unit tests.
  */
 function wp_set_auth_cookie($user_id, $remember = false, $secure = '', $token = '') {
@@ -102,6 +105,12 @@ function wp_set_auth_cookie($user_id, $remember = false, $secure = '', $token = 
 function wp_logout() {
     wp_destroy_current_session();
     wp_set_current_user(0);
+
+    /**
+     * Fires after a user is logged-out.
+     *
+     * @since 1.5.0
+     */
     do_action('wp_logout');
 }
 
