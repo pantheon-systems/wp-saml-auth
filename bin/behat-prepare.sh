@@ -150,7 +150,10 @@ if ! curl -fsSL "$SIMPLESAMLPHP_DOWNLOAD_URL" -o "$PREPARE_DIR/simplesamlphp-lat
 fi
 
 tar -zxvf "$PREPARE_DIR/simplesamlphp-latest.tar.gz" -C "$PREPARE_DIR/private"
-ORIG_SSP_DIR=$(ls "$PREPARE_DIR/private")
+ORIG_SSP_DIR=$(
+  find "$PREPARE_DIR/private" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' \
+  | grep -E '^simplesamlphp-[0-9]' | head -n1
+)
 mv "$PREPARE_DIR/private/$ORIG_SSP_DIR" "$PREPARE_DIR/private/simplesamlphp"
 rm "$PREPARE_DIR/simplesamlphp-latest.tar.gz"
 
