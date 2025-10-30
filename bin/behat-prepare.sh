@@ -130,9 +130,10 @@ fi
 # SimpleSAMLphp is installed to ~/code/private, and then symlinked into the
 # web root
 ###
+rm -rf "$PREPARE_DIR"/private
+mkdir "$PREPARE_DIR"/private
 echo "Setting up SimpleSAMLphp $SIMPLESAMLPHP_VERSION"
 wget "$SIMPLESAMLPHP_DOWNLOAD_URL" -O "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
-mkdir -p "$PREPARE_DIR/private"
 tar -zxvf "$PREPARE_DIR"/simplesamlphp-latest.tar.gz -C "$PREPARE_DIR"/private
 ORIG_SIMPLESAMLPHP_DIR=$(ls "$PREPARE_DIR"/private)
 mv "$PREPARE_DIR"/private/"$ORIG_SIMPLESAMLPHP_DIR" "$PREPARE_DIR"/private/simplesamlphp
@@ -196,8 +197,10 @@ foreach (\$config['example-userpass'] as \$key => &\$user) {
 return \$config;
 EOF
 
+# Copy demo configuration files with our specifics for our tests
 cp "$BASH_DIR"/fixtures/config.php "$PREPARE_DIR"/private/simplesamlphp/config/config.php
 cp "$BASH_DIR"/fixtures/config-prepare.php "$PREPARE_DIR"/wp-content/mu-plugins/config-prepare.php
+
 # Copy identify provider configuration files into their appropriate locations
 cp "$BASH_DIR"/fixtures/saml20-sp-remote.php  "$PREPARE_DIR"/private/simplesamlphp/metadata/saml20-sp-remote.php
 cp "$BASH_DIR"/fixtures/saml20-idp-hosted.php  "$PREPARE_DIR"/private/simplesamlphp/metadata/saml20-idp-hosted.php
@@ -209,6 +212,7 @@ touch "$PREPARE_DIR"/private/simplesamlphp/modules/exampleauth/enable
 
 # Generate a certificate SimpleSAMLphp uses for encryption
 # Because these files are in ~/code/private, they're inaccessible from the web
+echo "Operating on: $TWIG_TEMPLATE_PATH"
 openssl req -newkey rsa:2048 -new -x509 -days 3652 -nodes -out "$PREPARE_DIR"/private/simplesamlphp/cert/saml.crt -keyout "$PREPARE_DIR"/private/simplesamlphp/cert/saml.pem -batch
 
 TWIG_TEMPLATE_PATH="$PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.twig"
@@ -220,21 +224,37 @@ JS_FILE_PATH="$PREPARE_DIR/private/simplesamlphp/modules/core/public/assets/js/l
 sed -i -- 's/getElementById("submit_button")/getElementById("submit")/g' "$JS_FILE_PATH"
 sed -i -- 's/button.disabled = true;//g' "$JS_FILE_PATH"
 
-composer install --no-dev --working-dir="$PREPARE_DIR/private/simplesamlphp" --ignore-platform-req=ext-ldap
+composer install --no-dev --working-dir="$PREPARE_DIR"/private/simplesamlphp --ignore-platform-req=ext-ldap
 
+# Copy SimpleSAMLphp installation into public /simplesaml directory.
 cd "$PREPARE_DIR"
-mkdir -p "$PREPARE_DIR/simplesaml"
-cp -r "$PREPARE_DIR/private/simplesamlphp/public/"*   "$PREPARE_DIR/simplesaml/"
-cp -r "$PREPARE_DIR/private/simplesamlphp/"{vendor,src,modules,config,templates,cert,metadata,routing,attributemap,lib} "$PREPARE_DIR/simplesaml/"
+
+mkdir -p "$PREPARE_DIR"/simplesaml
+cp -r "$PREPARE_DIR"/private/simplesamlphp/public/* "$PREPARE_DIR"/simplesaml
+cp -r "$PREPARE_DIR"/private/simplesamlphp/vendor "$PREPARE_DIR"/simplesaml/
+cp -r "$PREPARE_DIR"/private/simplesamlphp/src "$PREPARE_DIR"/simplesaml/
+cp -r "$PREPARE_DIR"/private/simplesamlphp/modules "$PREPARE_DIR"/simplesaml/
+cp -r "$PREPARE_DIR"/private/simplesamlphp/config "$PREPARE_DIR"/simplesaml/
+cp -r "$PREPARE_DIR"/private/simplesamlphp/templates "$PREPARE_DIR"/simplesaml/
+cp -r "$PREPARE_DIR"/private/simplesamlphp/cert "$PREPARE_DIR"/simplesaml/
+cp -r "$PREPARE_DIR"/private/simplesamlphp/metadata "$PREPARE_DIR"/simplesaml/
+cp -r "$PREPARE_DIR"/private/simplesamlphp/routing "$PREPARE_DIR"/simplesaml/
+cp -r "$PREPARE_DIR"/private/simplesamlphp/attributemap "$PREPARE_DIR"/simplesaml/
+cp -r "$PREPARE_DIR"/private/simplesamlphp/lib "$PREPARE_DIR"/simplesaml/
+
+# Modify the include...
 sed -i "s|dirname(__FILE__, 2) . '/src/_autoload.php'|__DIR__ . '/src/_autoload.php'|" "$PREPARE_DIR/simplesaml/_include.php"
 
+###
+# Push files to the environment
+###
 git -C "$PREPARE_DIR" add private wp-content simplesaml
 git -C "$PREPARE_DIR" config user.email "wp-saml-auth@getpantheon.com"
 git -C "$PREPARE_DIR" config user.name "Pantheon"
 git -C "$PREPARE_DIR" commit -m "Include SimpleSAMLphp and its configuration files" || true
 git -C "$PREPARE_DIR" push
 
-# NOTE: some Terminus installs don't have build:workflow; use workflow:wait
+# Sometimes Pantheon takes a little time to refresh the filesystem
 terminus workflow:wait "$SITE_ENV"
 
 ###
