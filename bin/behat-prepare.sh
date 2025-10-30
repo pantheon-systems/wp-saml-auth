@@ -188,6 +188,10 @@ git -C "$PREPARE_DIR" push
 # NOTE: some Terminus installs don't have build:workflow; use workflow:wait
 terminus workflow:wait "$SITE_ENV"
 
+###
+# Set up WordPress, theme, and plugins for the test run
+###
+# Silence output so as not to show the password.
 {
   terminus wp "$SITE_ENV" -- core install \
     --title="${TERMINUS_ENV}-${TERMINUS_SITE}" \
@@ -195,13 +199,14 @@ terminus workflow:wait "$SITE_ENV"
     --admin_user="$WORDPRESS_ADMIN_USERNAME" \
     --admin_email="$WORDPRESS_ADMIN_EMAIL" \
     --admin_password="$WORDPRESS_ADMIN_PASSWORD"
-} &> /dev/null || true
+} &> /dev/null
 
 terminus wp "$SITE_ENV" -- option update home   "https://$PANTHEON_SITE_URL"
 terminus wp "$SITE_ENV" -- option update siteurl "https://$PANTHEON_SITE_URL"
 terminus wp "$SITE_ENV" -- plugin activate wp-native-php-sessions wp-saml-auth
 terminus wp "$SITE_ENV" -- theme activate "$TERMINUS_SITE"
 terminus wp "$SITE_ENV" -- rewrite structure '/%year%/%monthnum%/%day%/%postname%/'
+# Create writeable directories in /files (aka wp-content/uploads) that SimpleSAMLphp might need.
 terminus wp "$SITE_ENV" -- eval '
     $dirs = [
         WP_CONTENT_DIR . "/uploads/simplesaml/log",
