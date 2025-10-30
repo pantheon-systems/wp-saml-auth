@@ -316,7 +316,7 @@ class WP_SAML_Auth {
 	public function do_saml_authentication() {
 		// Check SimpleSAMLphp version if using simplesamlphp connection type.
 		if ( 'simplesamlphp' === self::get_option( 'connection_type' ) && self::get_option( 'enforce_min_simplesamlphp_version' ) ) {
-			$version        = $this->get_simplesamlphp_version();
+			$version = $this->get_simplesamlphp_version();
 			$version_status = $this->check_simplesamlphp_version( $version );
 
 			if ( 'critical' === $version_status ) {
