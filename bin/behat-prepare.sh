@@ -36,10 +36,12 @@ PANTHEON_GIT_URL=$(terminus connection:info "$SITE_ENV" --field=git_url)
 PANTHEON_SITE_URL="$TERMINUS_ENV-$TERMINUS_SITE.pantheonsite.io"
 PREPARE_DIR="/tmp/$TERMINUS_ENV-$TERMINUS_SITE"
 BASH_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
-# Try "-full" first; if that 404s, fall back to non-"-full"
 SIMPLESAMLPHP_DOWNLOAD_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}-full.tar.gz"
-FALLBACK_SSP_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}.tar.gz"
+
+# 2.0.0 didn't have the -full suffix.
+if [ "$SIMPLESAMLPHP_VERSION" == '2.0.0' ]; then
+	SIMPLESAMLPHP_DOWNLOAD_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}.tar.gz"
+fi
 
 # Seed known_hosts for Pantheon Git (avoid interactive host key prompt).
 HOST=$(echo "$PANTHEON_GIT_URL" | sed -E 's#ssh://[^@]+@([^:]+):([0-9]+)/.*#\1#')
@@ -65,7 +67,7 @@ cp "$BASH_DIR"/fixtures/functions.php  "$PREPARE_DIR"/wp-content/themes/"$TERMIN
 cp "$BASH_DIR"/fixtures/style.css  "$PREPARE_DIR"/wp-content/themes/"$TERMINUS_SITE"/style.css
 
 echo "Adding WP Native PHP Sessions to the environment"
-rm -rf "$PREPARE_DIR/wp-content/plugins/wp-native-php-sessions"
+rm -rf "$PREPARE_DIR"/wp-content/plugins/wp-native-php-sessions
 # Download the latest WP Native PHP sessions release from WordPress.org
 wget -O "$PREPARE_DIR"/wp-native-php-sessions.zip https://downloads.wordpress.org/plugin/wp-native-php-sessions.zip
 unzip "$PREPARE_DIR"/wp-native-php-sessions.zip -d "$PREPARE_DIR"
