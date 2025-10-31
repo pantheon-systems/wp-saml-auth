@@ -535,12 +535,11 @@ class WP_SAML_Auth {
 		 * @param array $simplesamlphp_path_array An array of paths to check for SimpleSAMLphp.
 		 */
 		$base_paths = apply_filters( 'wp_saml_auth_simplesamlphp_path_array', [
-				ABSPATH . 'simplesaml',
-				ABSPATH . 'private/simplesamlphp',
-				ABSPATH . 'simplesamlphp',
-				plugin_dir_path( __DIR__ ) . 'simplesamlphp',
-			]
-		);
+            ABSPATH . 'simplesaml',
+            ABSPATH . 'private/simplesamlphp',
+            ABSPATH . 'simplesamlphp',
+            plugin_dir_path( __DIR__ ) . 'simplesamlphp',
+        ] );
 
 		foreach ( $base_paths as $base_path ) {
 			$trimmed_base = rtrim( $base_path, '/\\' );
@@ -583,7 +582,7 @@ class WP_SAML_Auth {
 			// Log an error to the debug log.
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 				error_log( sprintf(
-					// Translators: %s is the error message returned from the exception.
+                    // Translators: %s is the error message returned from the exception.
                     __( 'SimpleSAMLphp autoloader not found. Error: %s', 'wp-saml-auth' ),
                     $e->getMessage()
                 ) );
