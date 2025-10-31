@@ -310,7 +310,7 @@ Minimum supported PHP version is 7.3.
 
 == Changelog ==
 
-= 2.2.1-dev (20 August 2025) =
+= 2.2.1-dev (3 November 2025) =
 * Fix warning message on the plugin's settings page for users who aren't using SimpleSAML
 * Adds PHP 8.4 compatibility [[#410](https://github.com/pantheon-systems/wp-saml-auth/pull/410)].
 * Increases minimum supported PHP version to 7.4.
@@ -482,3 +482,4 @@ Minimum supported PHP version is 7.3.
 
 = 0.1.0 (April 18, 2016) =
 * Initial release.
+
