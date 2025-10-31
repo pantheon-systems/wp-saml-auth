@@ -110,7 +110,7 @@ class WP_SAML_Auth {
 
 			// test again in case `require_once $simplesamlphp_autoloader` didn't find it.
 			if ( ! class_exists( $this->simplesamlphp_class ) ) {
-				$this->maybe_log_error();
+				$this->maybeLogError();
 				return;
 			}
 
