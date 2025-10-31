@@ -103,7 +103,7 @@ class WP_SAML_Auth {
 					require_once $simplesamlphp_autoloader;
 				} else {
 					// Autoloader not found.
-					$this->maybe_log_error( $simplesamlphp_autoloader );
+					$this->maybeLogError( $simplesamlphp_autoloader );
 					return;
 				}
 			}
