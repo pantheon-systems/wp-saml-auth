@@ -1,13 +1,13 @@
 <?php
 /**
- * Class WP_SAML_Auth_Settings
- *
- * @package WP_SAML_Auth
- */
+	* Class WP_SAML_Auth_Settings
+	*
+	* @package WP_SAML_Auth
+	*/
 
 /**
- * Configure and manage the WP SAML Auth plugin.
- */
+	* Configure and manage the WP SAML Auth plugin.
+	*/
 class WP_SAML_Auth_Settings {
 
 	/**
