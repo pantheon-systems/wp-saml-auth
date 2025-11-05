@@ -326,15 +326,15 @@ class WP_SAML_Auth_Settings {
 					'description' => __( 'If checked, create a new WordPress user upon login. <br>If unchecked, WordPress user will already need to exist in order to log in.', 'wp-saml-auth' ),
 					'default'     => 'true',
 				],
-				[
+			[
 				'section'     => 'general',
 				'uid'         => 'permit_wp_login',
 				'label'       => __( 'Permit WordPress login', 'wp-saml-auth' ),
 				'type'        => 'checkbox',
 				'description' => __( 'If checked, WordPress user can also log in with the standard username and password flow.', 'wp-saml-auth' ),
 				'default'     => 'true',
-				],
-				[
+			],
+			[
 				'section'     => 'general',
 				'uid'         => 'get_user_by',
 				'label'       => __( 'Get User By', 'wp-saml-auth' ),
@@ -345,17 +345,17 @@ class WP_SAML_Auth_Settings {
 				],
 				'description' => __( 'Attribute by which SAML requests are matched to WordPress users.', 'wp-saml-auth' ),
 				'default'     => 'email',
-				],
-				[
+			],
+			[
 				'section'     => 'general',
 				'uid'         => 'baseurl',
 				'label'       => __( 'Base URL', 'wp-saml-auth' ),
 				'type'        => 'url',
 				'description' => __( 'The base url to be used when constructing URLs.', 'wp-saml-auth' ),
 				'default'     => home_url(),
-				],
-				// Security section.
-				[
+			],
+			// Security section.
+			[
 				'section' => 'security',
 				'uid'     => 'security_info',
 				'label'   => __( 'Security Information', 'wp-saml-auth' ),
@@ -370,17 +370,17 @@ class WP_SAML_Auth_Settings {
 						'</ul>' .
 						'<p>' . __( 'Authentication will be blocked for versions below the critical security requirement when "Enforce Security Requirements" is enabled.', 'wp-saml-auth' ) . '</p>' .
 						'</div>',
-				],
-				[
+			],
+			[
 				'section'     => 'security',
 				'uid'         => 'enforce_min_simplesamlphp_version',
 				'label'       => __( 'Enforce Security Requirements', 'wp-saml-auth' ),
 				'type'        => 'checkbox',
 				'description' => __( 'If checked, authentication will be blocked for SimpleSAMLphp versions with critical security vulnerabilities (below 2.0.0).', 'wp-saml-auth' ),
 				'default'     => true,
-				],
-				// sp section.
-				[
+			],
+			// sp section.
+			[
 				'section'     => 'sp',
 				'uid'         => 'sp_entityId',
 				'label'       => __( 'Entity Id (Required)', 'wp-saml-auth' ),
@@ -389,8 +389,8 @@ class WP_SAML_Auth_Settings {
 				'description' => __( 'SP (WordPress) entity identifier.', 'wp-saml-auth' ),
 				'default'     => 'urn:' . parse_url( home_url(), PHP_URL_HOST ),
 				'required'    => true,
-				],
-				[
+			],
+			[
 				'section'     => 'sp',
 				'uid'         => 'sp_assertionConsumerService_url',
 				'label'       => __( 'Assertion Consumer Service URL (Required)', 'wp-saml-auth' ),
@@ -398,46 +398,46 @@ class WP_SAML_Auth_Settings {
 				'description' => __( 'URL where the response from the IdP should be returned (usually the login URL).', 'wp-saml-auth' ),
 				'default'     => home_url( '/wp-login.php' ),
 				'required'    => true,
-				],
-				// idp section.
-				[
+			],
+			// idp section.
+			[
 				'section'     => 'idp',
 				'uid'         => 'idp_entityId',
 				'label'       => __( 'Entity Id (Required)', 'wp-saml-auth' ),
 				'type'        => 'text',
 				'description' => __( 'IdP entity identifier.', 'wp-saml-auth' ),
 				'required'    => true,
-				],
-				[
+			],
+			[
 				'section'     => 'idp',
 				'uid'         => 'idp_singleSignOnService_url',
 				'label'       => __( 'Single SignOn Service URL (Required)', 'wp-saml-auth' ),
 				'type'        => 'url',
 				'description' => __( 'URL of the IdP where the SP (WordPress) will send the authentication request.', 'wp-saml-auth' ),
 				'required'    => true,
-				],
-				[
+			],
+			[
 				'section'     => 'idp',
 				'uid'         => 'idp_singleLogoutService_url',
 				'label'       => __( 'Single Logout Service URL', 'wp-saml-auth' ),
 				'type'        => 'url',
 				'description' => __( 'URL of the IdP where the SP (WordPress) will send the signout request.', 'wp-saml-auth' ),
-				],
-				[
+			],
+			[
 				'section'     => 'idp',
 				'uid'         => 'x509cert',
 				'label'       => __( 'x509 Certificate Path', 'wp-saml-auth' ),
 				'type'        => 'text',
 				'description' => __( 'Path to the x509 certificate file, used for verifying the request.<br/>Include <code>ABSPATH</code> to set path base to WordPress\' ABSPATH constant.', 'wp-saml-auth' ),
-				],
-				[
+			],
+			[
 				'section'     => 'idp',
 				'uid'         => 'certFingerprint',
 				'label'       => __( 'Certificate Fingerprint', 'wp-saml-auth' ),
 				'type'        => 'text',
 				'description' => __( 'If not using x509 certificate, paste the certificate fingerprint and specify the fingerprint algorithm below.', 'wp-saml-auth' ),
-				],
-				[
+			],
+			[
 				'section' => 'idp',
 				'uid'     => 'certFingerprintAlgorithm',
 				'label'   => __( 'Certificate Fingerprint Algorithm', 'wp-saml-auth' ),
@@ -449,43 +449,43 @@ class WP_SAML_Auth_Settings {
 					'sha384' => 'sha384',
 					'sha512' => 'sha512',
 				],
-				],
-				// attributes section.
-				[
+			],
+			// attributes section.
+			[
 				'section' => 'attributes',
 				'uid'     => 'user_login_attribute',
 				'label'   => 'user_login',
 				'type'    => 'text',
 				'default' => 'uid',
-				],
-				[
+			],
+			[
 				'section' => 'attributes',
 				'uid'     => 'user_email_attribute',
 				'label'   => 'user_email',
 				'type'    => 'text',
 				'default' => 'email',
-				],
-				[
+			],
+			[
 				'section' => 'attributes',
 				'uid'     => 'display_name_attribute',
 				'label'   => 'display_name',
 				'type'    => 'text',
 				'default' => 'display_name',
-				],
-				[
+			],
+			[
 				'section' => 'attributes',
 				'uid'     => 'first_name_attribute',
 				'label'   => 'first_name',
 				'type'    => 'text',
 				'default' => 'first_name',
-				],
-				[
+			],
+			[
 				'section' => 'attributes',
 				'uid'     => 'last_name_attribute',
 				'label'   => 'last_name',
 				'type'    => 'text',
 				'default' => 'last_name',
-				],
+			],
 		];
 	}
 
