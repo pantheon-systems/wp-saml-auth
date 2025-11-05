@@ -41,12 +41,6 @@ if [ "$SIMPLESAMLPHP_VERSION" == '2.0.0' ]; then
 	SIMPLESAMLPHP_DOWNLOAD_URL="https://github.com/simplesamlphp/simplesamlphp/releases/download/v${SIMPLESAMLPHP_VERSION}/simplesamlphp-${SIMPLESAMLPHP_VERSION}.tar.gz"
 fi
 
-# Seed known_hosts for Pantheon Git (avoid interactive host key prompt).
-HOST=$(echo "$PANTHEON_GIT_URL" | sed -E 's#ssh://[^@]+@([^:]+):([0-9]+)/.*#\1#')
-PORT=$(echo "$PANTHEON_GIT_URL" | sed -E 's#ssh://[^@]+@([^:]+):([0-9]+)/.*#\2#')
-mkdir -p "$HOME/.ssh"
-ssh-keyscan -p "$PORT" "$HOST" 2>/dev/null >> "$HOME/.ssh/known_hosts" || true
-
 ###
 # Switch to git mode for pushing the files up
 ###
