@@ -1,5 +1,8 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # shellcheck disable=SC2016,SC2026
+###
+# Execute the Behat test suite against a prepared Pantheon site environment.
+###
 set -euo pipefail
 set -x
 
