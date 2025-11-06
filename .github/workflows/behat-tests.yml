@@ -69,80 +69,28 @@ jobs:
             echo "$PWD" >> "$GITHUB_PATH"
           fi
 
-      - name: Compute dynamic DB name
-        run: |
-          set -euo pipefail
-          PHPV=$(php -r 'echo PHP_MAJOR_VERSION.PHP_MINOR_VERSION;')   # 83 for PHP 8.3
-          SHORTSHA="${GITHUB_SHA:-nosha}"; SHORTSHA="${SHORTSHA:0:7}"
-          RUNID="${GITHUB_RUN_ID:-0}"
-          RAW="wp_test_${PHPV}_${RUNID}_${SHORTSHA}"
-          SAFE=$(echo "$RAW" | tr -c '[:alnum:]_' '_' | cut -c1-63)
-          echo "DB_NAME=$SAFE" >> "$GITHUB_ENV"
-          echo "Using DB_NAME=$SAFE"
-
-      - name: Create/reset DB
-        env:
-          MYSQL_PWD: ${{ env.DB_PASSWORD }}
-        run: |
-          mysql -h "${DB_HOST}" -u "${DB_USER}" -e "DROP DATABASE IF EXISTS \`${DB_NAME}\`;
-            CREATE DATABASE \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-
       - name: Require wpunit-helpers (if missing)
         run: |
           if ! composer show -D pantheon-systems/wpunit-helpers >/dev/null 2>&1; then
             composer require --dev pantheon-systems/wpunit-helpers:^2 --no-interaction --no-progress
           fi
 
-      - name: Update wpunit-helpers to latest
-        run: composer update pantheon-systems/wpunit-helpers --no-interaction --no-progress
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
 
-      - name: Install WordPress test framework
-        run: |
-          bash bin/install-wp-tests.sh \
-            --dbname="$DB_NAME" \
-            --dbuser="$DB_USER" \
-            --dbpass="$DB_PASSWORD" \
-            --dbhost="$DB_HOST" \
-            --version="$WP_VERSION" \
-            --skip-db=true
+      - name: Install wpunit-helpers
+        run: composer require --no-interaction --dev pantheon-systems/wpunit-helpers
 
-      - name: Copy & activate plugin-under-test
+      - name: Make CI runner executable
+        run: chmod +x bin/ci-run-phpunit.sh
+
+      - name: Run PHPUnit (single step)
         env:
-          WP_CORE_DIR: /tmp/wordpress
-          PLUGIN_SLUG: wp-saml-auth
-        run: |
-          set -euo pipefail
-          PLUG_DIR="$WP_CORE_DIR/wp-content/plugins/$PLUGIN_SLUG"
-          mkdir -p "$PLUG_DIR"
-          rsync -a --delete ./ "$PLUG_DIR/" \
-            --exclude .git --exclude .github --exclude node_modules --exclude vendor/.cache
-          if [ -f "$PLUG_DIR/composer.json" ]; then
-            ( cd "$PLUG_DIR" && composer install --no-interaction --no-progress )
-          fi
-          wp plugin activate "$PLUGIN_SLUG" --path="$WP_CORE_DIR"
-
-      - name: Force internal provider for tests (bootstrap-safe)
-        env:
-          WP_TESTS_DIR: /tmp/wordpress-tests-lib
-        run: |
-          set -euo pipefail
-          cat > /tmp/ci-wpsaml-bootstrap.php <<'PHP'
-          <?php
-          // Loaded by WP's test bootstrap; register the filter before plugins run.
-          if (function_exists('tests_add_filter')) {
-            tests_add_filter('plugins_loaded', function () {
-              add_filter('wp_saml_auth_option', function ($v, $name) {
-                return $name === 'connection_type' ? 'internal' : $v;
-              }, 10, 2);
-            });
-          }
-          PHP
-          CFG="${WP_TESTS_DIR%/}/wp-tests-config.php"
-          grep -q "ci-wpsaml-bootstrap.php" "$CFG" || \
-            printf "\n// CI: force WP SAML Auth internal provider\nrequire '/tmp/ci-wpsaml-bootstrap.php';\n" >> "$CFG"
-
-      - name: PHPUnit
-        run: vendor/bin/phpunit --do-not-cache-result
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASSWORD: root
+          WP_VERSION: 6.8.3   # or "latest"
+        run: bash bin/ci-run-phpunit.sh
 
 ## TO DO: This is getting this: https://github.com/pantheon-systems/wp-saml-auth/actions/runs/19140065110/job/54702360664
 #      - name: Run upstream phpunit-test.sh (honor our setup)
