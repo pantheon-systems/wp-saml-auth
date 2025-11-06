@@ -5,10 +5,12 @@ set -euo pipefail
 DB_HOST="${DB_HOST:-127.0.0.1}"
 DB_USER="${DB_USER:-root}"
 DB_PASSWORD="${DB_PASSWORD:-root}"
-DB_NAME="${DB_NAME:-wp_test_$(date +%j)_$RANDOM_$(date +%s)_}"
-WP_VERSION="${WP_VERSION:-latest}"
 
-# Paths for the WP core and test harness (match your job env)
+# Safer unique DB name (alnum + underscores only)
+_rnd="$(printf '%04d' $(( ${RANDOM:-0} % 10000 )))"
+DB_NAME="${DB_NAME:-wp_test_$(date +%j)_${_rnd}_$(date +%s)_}"
+
+WP_VERSION="${WP_VERSION:-latest}"
 WP_CORE_DIR="${WP_CORE_DIR:-/tmp/wordpress}"
 WP_TESTS_DIR="${WP_TESTS_DIR:-/tmp/wordpress-tests-lib}"
 WP_TESTS_PHPUNIT_POLYFILLS_PATH="${WP_TESTS_PHPUNIT_POLYFILLS_PATH:-/tmp/phpunit-deps}"
@@ -29,9 +31,10 @@ fi
 
 # --- Create/reset DB ---
 echo ">> Creating/resetting database ${DB_NAME}"
-mysql --protocol=tcp -h "${DB_HOST}" -u "${DB_USER}" -p"${DB_PASSWORD}" -e "DROP DATABASE IF EXISTS \`${DB_NAME}\`; CREATE DATABASE \`${DB_NAME}\`;"
+mysql --protocol=tcp -h "${DB_HOST}" -u "${DB_USER}" -p"${DB_PASSWORD}" \
+  -e "DROP DATABASE IF EXISTS \`${DB_NAME}\`; CREATE DATABASE \`${DB_NAME}\`;"
 
-# --- Install WP core + test harness (svn auto-installs if missing) ---
+# --- Install WP core + test harness ---
 echo ">> Installing WP test harness (WP ${WP_VERSION})"
 bash "$INSTALLER" \
   --dbname="${DB_NAME}" \
@@ -53,7 +56,7 @@ echo ">> Installing plugin composer deps"
 echo ">> Activating plugin wp-saml-auth"
 wp --path="${WP_CORE_DIR}" plugin activate wp-saml-auth --quiet || true
 
-# --- Seed minimal settings in the WP options table (harmless but not strictly required) ---
+# --- Seed minimal settings in the WP options table (optional safeguard) ---
 echo ">> Writing minimal SAML settings into TEST DB (${DB_NAME})"
 wp --path="${WP_CORE_DIR}" option update wp_saml_auth_settings "$(cat <<'JSON'
 {
@@ -78,19 +81,13 @@ wp --path="${WP_CORE_DIR}" option update wp_saml_auth_settings "$(cat <<'JSON'
 JSON
 )" --format=json --quiet || true
 
-# --- HARD override without MU: auto_prepend a tiny file so filters run before plugin loads ---
+# --- NO MU PLUGIN: use auto_prepend_file to force internal provider during tests ---
 OVERRIDE_FILE="/tmp/wpsa-force-internal.php"
 cat > "${OVERRIDE_FILE}" <<'PHP'
 <?php
-// Loaded before everything via -d auto_prepend_file (no MU plugin involved).
+// Ensures tests always use the internal provider without touching repo files.
+// Loaded before everything via -d auto_prepend_file.
 
-// Make sure WP core is present; quietly bail if not.
-if (!function_exists('add_filter')) {
-    // If we're not in a WP request yet, register a shutdown hook or just proceed:
-    // PHPUnit runs through WP bootstrap which will define add_filter later.
-}
-
-// Guarantee internal provider regardless of DB, constants, or env.
 if (function_exists('add_filter')) {
     add_filter('pre_option_wp_saml_auth_settings', static function () {
         return array(
@@ -146,7 +143,5 @@ if (function_exists('add_filter')) {
 }
 PHP
 
-# --- Finally run PHPUnit with the prepend override (no MU involved) ---
 echo ">> Running PHPUnit"
-# Avoid PHPUnit result cache; ensure our override loads first.
 exec vendor/bin/phpunit --do-not-cache-result -d "auto_prepend_file=${OVERRIDE_FILE}"
