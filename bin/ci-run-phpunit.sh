@@ -115,15 +115,12 @@ log "Injecting bootstrap to force internal provider w/ minimal OneLogin config"
 CI_BOOT="/tmp/ci-wpsaml-bootstrap.php"
 cat > "$CI_BOOT" <<'PHP'
 <?php
-// Loaded by WP's PHPUnit bootstrap; register filters before plugins complete init.
+// Loaded by WP's PHPUnit bootstrap; run before regular plugins load.
 if (function_exists('tests_add_filter')) {
-  tests_add_filter('plugins_loaded', function () {
+  tests_add_filter('muplugins_loaded', function () {
     // Force OneLogin internal provider
     add_filter('wp_saml_auth_option', function ($value, $name) {
-      if ($name === 'connection_type') {
-        return 'internal';
-      }
-      return $value;
+      return ($name === 'connection_type') ? 'internal' : $value;
     }, 10, 2);
 
     // Minimal internal_config required by OneLogin validator
