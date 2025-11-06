@@ -67,10 +67,10 @@ jobs:
           SAFE="${PV/./}"
           echo "DB_NAME=wp_test_${SAFE}" >> "$GITHUB_ENV"
 
-#      - name: Create database
-#        run: |
-#          echo "Creating database $DB_NAME"
-#          mysql -h 127.0.0.1 -uroot -proot -e "DROP DATABASE IF EXISTS \`$DB_NAME\`; CREATE DATABASE \`$DB_NAME\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+      - name: Create database
+        run: |
+          echo "Creating database $DB_NAME"
+          mysql -h 127.0.0.1 -uroot -proot -e "DROP DATABASE IF EXISTS \`$DB_NAME\`; CREATE DATABASE \`$DB_NAME\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
       # 1) Ensure the package is required (once in CI is fine if you don't want to commit the change)
       - name: Require wpunit-helpers (if missing)
@@ -104,11 +104,12 @@ jobs:
             --dbuser="$DB_USER" \
             --dbpass="$DB_PASSWORD" \
             --dbhost="$DB_HOST" \
-            --version="$WP_VERSION"
+            --version="$WP_VERSION" \
+            --skip-db=true
 
       # 6) Run PHPUnit via the helper
       - name: Run PHPUnit (stable only)
-        run: bin/phpunit-test.sh --skip-nightly
+        run: bash bin/phpunit-test.sh --skip-nightly
 
   behat:
     name: Behat (SSP ${{ matrix.ssp }})
