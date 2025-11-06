@@ -131,11 +131,16 @@ jobs:
             printf "\n// CI: force WP SAML Auth internal provider\n@include '/tmp/ci-wpsaml-config.php';\n" >> "$WP_CORE_DIR/wp-config.php"
           fi
 
-      - name: PHPUnit
-        run: vendor/bin/phpunit --do-not-cache-result
-
-#      - name: Run PHPUnit (stable only)
-#        run: bash bin/phpunit-test.sh --skip-nightly
+      - name: Run upstream phpunit-test.sh (stable only)
+        run: |
+          bin/phpunit-test.sh \
+            --skip-nightly \
+            --skip-db=true \
+            --dbname="${DB_NAME}" \
+            --dbuser="${DB_USER}" \
+            --dbpass="${DB_PASSWORD}" \
+            --dbhost="${DB_HOST}" \
+            --wpversion="${WP_VERSION}"
 
   behat:
     name: Behat (SSP ${{ matrix.ssp }})
