@@ -96,39 +96,16 @@ jobs:
             echo "$PWD" >> "$GITHUB_PATH"
           fi
 
-      # 5) Install the WP test framework (replaces your old bootstrap script)
+      # 5) Install the WP test framework
       - name: Install WP test framework
         run: |
-          bin/install-wp-tests.sh \
+          bash bin/install-wp-tests.sh \
             --dbname="$DB_NAME" --dbuser="$DB_USER" --dbpass="$DB_PASSWORD" \
             --dbhost="$DB_HOST" --wpversion="$WP_VERSION"
 
-      # 6) Run PHPUnit via the helper (replaces your old run script)
+      # 6) Run PHPUnit via the helper
       - name: Run PHPUnit (stable only)
         run: bin/phpunit-test.sh --skip-nightly
-
-
-        #      - name: Prepare WP Core + Tests (all logic lives in the script)
-        #        env:
-        #          DB_NAME: ${{ env.DB_NAME }}
-        #        run: bash bin/phpunit-bootstrap.sh
-        #
-        #      - name: Run PHPUnit
-        #        env:
-        #          DB_NAME: ${{ env.DB_NAME }}
-        #          XDEBUG_MODE: off
-        #        run: |
-        #          if [ -x vendor/bin/phpunit ]; then
-        #            vendor/bin/phpunit
-        #          else
-        #            PHPV=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
-        #            if [ "$PHPV" = "8.4" ]; then
-        #              curl -fsSL https://phar.phpunit.de/phpunit-10.phar -o phpunit.phar
-        #            else
-        #              curl -fsSL https://phar.phpunit.de/phpunit-9.phar -o phpunit.phar
-        #            fi
-        #            php ./phpunit.phar
-        #          fi
 
   behat:
     name: Behat (SSP ${{ matrix.ssp }})
