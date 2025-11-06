@@ -102,7 +102,6 @@ jobs:
             --version="$WP_VERSION" \
             --skip-db=true
 
-
       - name: Copy plugin & activate
         env:
           WP_CORE_DIR: /tmp/wordpress
@@ -164,9 +163,28 @@ jobs:
           # 4) Verify
           wp option get "$OPT_KEY" --format=json --path="$WP_CORE_DIR" | grep -q '"connection_type":"internal"'
 
+      - name: Create CI bootstrap (force internal provider)
+        run: |
+          cat >/tmp/ci-wpsaml-bootstrap.php <<'PHP'
+          <?php
+          // When the WP test harness loads, register a filter to force OneLogin ("internal").
+          if (function_exists('tests_add_filter')) {
+            tests_add_filter('plugins_loaded', function () {
+              add_filter('wp_saml_auth_option', function ($value, $option) {
+                if ($option === 'connection_type') {
+                  return 'internal';
+                }
+                return $value;
+              }, 10, 2);
+            });
+          }
+          PHP
 
       - name: PHPUnit
-        run: vendor/bin/phpunit --do-not-cache-result
+        run: |
+          php -d auto_prepend_file=/tmp/ci-wpsaml-bootstrap.php \
+          vendor/bin/phpunit --do-not-cache-result
+
 #      - name: Run PHPUnit (stable only)
 #        run: bash bin/phpunit-test.sh --skip-nightly
 
