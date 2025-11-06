@@ -8,6 +8,8 @@ jobs:
   phpunit:
     name: PHPUnit (PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -106,27 +108,27 @@ jobs:
         run: bin/phpunit-test.sh --skip-nightly
 
 
-#      - name: Prepare WP Core + Tests (all logic lives in the script)
-#        env:
-#          DB_NAME: ${{ env.DB_NAME }}
-#        run: bash bin/phpunit-bootstrap.sh
-#
-#      - name: Run PHPUnit
-#        env:
-#          DB_NAME: ${{ env.DB_NAME }}
-#          XDEBUG_MODE: off
-#        run: |
-#          if [ -x vendor/bin/phpunit ]; then
-#            vendor/bin/phpunit
-#          else
-#            PHPV=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
-#            if [ "$PHPV" = "8.4" ]; then
-#              curl -fsSL https://phar.phpunit.de/phpunit-10.phar -o phpunit.phar
-#            else
-#              curl -fsSL https://phar.phpunit.de/phpunit-9.phar -o phpunit.phar
-#            fi
-#            php ./phpunit.phar
-          fi
+        #      - name: Prepare WP Core + Tests (all logic lives in the script)
+        #        env:
+        #          DB_NAME: ${{ env.DB_NAME }}
+        #        run: bash bin/phpunit-bootstrap.sh
+        #
+        #      - name: Run PHPUnit
+        #        env:
+        #          DB_NAME: ${{ env.DB_NAME }}
+        #          XDEBUG_MODE: off
+        #        run: |
+        #          if [ -x vendor/bin/phpunit ]; then
+        #            vendor/bin/phpunit
+        #          else
+        #            PHPV=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
+        #            if [ "$PHPV" = "8.4" ]; then
+        #              curl -fsSL https://phar.phpunit.de/phpunit-10.phar -o phpunit.phar
+        #            else
+        #              curl -fsSL https://phar.phpunit.de/phpunit-9.phar -o phpunit.phar
+        #            fi
+        #            php ./phpunit.phar
+        #          fi
 
   behat:
     name: Behat (SSP ${{ matrix.ssp }})
