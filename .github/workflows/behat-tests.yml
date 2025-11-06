@@ -70,26 +70,62 @@ jobs:
           echo "Creating database $DB_NAME"
           mysql -h 127.0.0.1 -uroot -proot -e "DROP DATABASE IF EXISTS \`$DB_NAME\`; CREATE DATABASE \`$DB_NAME\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
-      - name: Prepare WP Core + Tests (all logic lives in the script)
-        env:
-          DB_NAME: ${{ env.DB_NAME }}
-        run: bash bin/phpunit-bootstrap.sh
-
-      - name: Run PHPUnit
-        env:
-          DB_NAME: ${{ env.DB_NAME }}
-          XDEBUG_MODE: off
+      # 1) Ensure the package is required (once in CI is fine if you don't want to commit the change)
+      - name: Require wpunit-helpers (if missing)
         run: |
-          if [ -x vendor/bin/phpunit ]; then
-            vendor/bin/phpunit
-          else
-            PHPV=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
-            if [ "$PHPV" = "8.4" ]; then
-              curl -fsSL https://phar.phpunit.de/phpunit-10.phar -o phpunit.phar
-            else
-              curl -fsSL https://phar.phpunit.de/phpunit-9.phar -o phpunit.phar
-            fi
-            php ./phpunit.phar
+          if ! composer show -D pantheon-systems/wpunit-helpers >/dev/null 2>&1; then
+            composer require --dev pantheon-systems/wpunit-helpers:^2 --no-interaction --no-progress
+          fi
+
+      # 2) Always pull the latest available version that matches ^2
+      - name: Update wpunit-helpers to latest
+        run: composer update pantheon-systems/wpunit-helpers --no-interaction --no-progress
+
+      # 3) (Optional) Install the rest of your deps
+      - name: Install deps
+        run: composer install --no-interaction --no-progress
+
+      # 4) WP-CLI (only if your runner doesn't already have it)
+      - name: Install WP-CLI (if needed)
+        run: |
+          if ! command -v wp >/dev/null 2>&1; then
+            curl -fsSL https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o wp
+            chmod +x wp
+            echo "$PWD" >> "$GITHUB_PATH"
+          fi
+
+      # 5) Install the WP test framework (replaces your old bootstrap script)
+      - name: Install WP test framework
+        run: |
+          bin/install-wp-tests.sh \
+            --dbname="$DB_NAME" --dbuser="$DB_USER" --dbpass="$DB_PASSWORD" \
+            --dbhost="$DB_HOST" --wpversion="$WP_VERSION"
+
+      # 6) Run PHPUnit via the helper (replaces your old run script)
+      - name: Run PHPUnit (stable only)
+        run: bin/phpunit-test.sh --skip-nightly
+
+
+#      - name: Prepare WP Core + Tests (all logic lives in the script)
+#        env:
+#          DB_NAME: ${{ env.DB_NAME }}
+#        run: bash bin/phpunit-bootstrap.sh
+#
+#      - name: Run PHPUnit
+#        env:
+#          DB_NAME: ${{ env.DB_NAME }}
+#          XDEBUG_MODE: off
+#        run: |
+#          if [ -x vendor/bin/phpunit ]; then
+#            vendor/bin/phpunit
+#          else
+#            PHPV=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
+#            if [ "$PHPV" = "8.4" ]; then
+#              curl -fsSL https://phar.phpunit.de/phpunit-10.phar -o phpunit.phar
+#            else
+#              curl -fsSL https://phar.phpunit.de/phpunit-9.phar -o phpunit.phar
+#            fi
+#            php ./phpunit.phar
           fi
 
   behat:
