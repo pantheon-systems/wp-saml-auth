@@ -64,7 +64,7 @@ jobs:
       - name: Compute dynamic DB name
         run: |
           set -euo pipefail
-          PHPV=$(php -r 'echo PHP_MAJOR_VERSION.PHP_MINOR_VERSION;')
+          PHPV=$(php -r 'echo PHP_MAJOR_VERSION.PHP_MINOR_VERSION;')   # 83 for PHP 8.3
           SHORTSHA="${GITHUB_SHA:-nosha}"; SHORTSHA="${SHORTSHA:0:7}"
           RUNID="${GITHUB_RUN_ID:-0}"
           RAW="wp_test_${PHPV}_${RUNID}_${SHORTSHA}"
@@ -87,17 +87,6 @@ jobs:
 
       - name: Update wpunit-helpers to latest
         run: composer update pantheon-systems/wpunit-helpers --no-interaction --no-progress
-
-      - name: Install deps
-        run: composer install --no-interaction --no-progress
-
-      - name: Install WP-CLI (if needed)
-        run: |
-          if ! command -v wp >/dev/null 2>&1; then
-            curl -fsSL https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o wp
-            chmod +x wp
-            echo "$PWD" >> "$GITHUB_PATH"
-          fi
 
       - name: Install WordPress test framework
         run: |
@@ -124,14 +113,14 @@ jobs:
           fi
           wp plugin activate "$PLUGIN_SLUG" --path="$WP_CORE_DIR"
 
-      - name: Force internal provider for PHPUnit (bootstrap-safe)
+      - name: Force internal provider for tests (bootstrap-safe)
         env:
           WP_TESTS_DIR: /tmp/wordpress-tests-lib
         run: |
           set -euo pipefail
           cat > /tmp/ci-wpsaml-bootstrap.php <<'PHP'
           <?php
-          // Loaded by wp-tests-config.php during PHPUnit bootstrap.
+          // Loaded by WP's test bootstrap; register the filter before plugins run.
           if (function_exists('tests_add_filter')) {
             tests_add_filter('plugins_loaded', function () {
               add_filter('wp_saml_auth_option', function ($v, $name) {
@@ -140,7 +129,6 @@ jobs:
             });
           }
           PHP
-          # Include it from the test bootstrap exactly once (idempotent)
           CFG="${WP_TESTS_DIR%/}/wp-tests-config.php"
           grep -q "ci-wpsaml-bootstrap.php" "$CFG" || \
             printf "\n// CI: force WP SAML Auth internal provider\nrequire '/tmp/ci-wpsaml-bootstrap.php';\n" >> "$CFG"
@@ -149,15 +137,15 @@ jobs:
         env:
           WP_VERSION: 6.8.3
         run: |
-          export DB_NAME DB_USER DB_PASSWORD DB_HOST
+          export DB_NAME DB_USER DB_PASSWORD DB_HOST WP_VERSION
           bash bin/phpunit-test.sh \
-            --skip-nightly \
-            --skip-db=true \
-            --dbname="${DB_NAME}" \
-            --dbuser="${DB_USER}" \
-            --dbpass="${DB_PASSWORD}" \
-            --dbhost="${DB_HOST}" \
-            --wpversion="${WP_VERSION}"
+          --skip-nightly \
+          --skip-db=true \
+          --dbname="${DB_NAME}" \
+          --dbuser="${DB_USER}" \
+          --dbpass="${DB_PASSWORD}" \
+          --dbhost="${DB_HOST}" \
+          --wpversion="${WP_VERSION}"
 
   behat:
     name: Behat (SSP ${{ matrix.ssp }})
