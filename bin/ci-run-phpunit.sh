@@ -56,12 +56,6 @@ require_cmd wp
 # Composer is optional: only used if plugin has composer.json
 if [ -f composer.json ]; then require_cmd composer; fi
 
-# Detect wpunit-helpers install script
-if [ ! -x bin/install-wp-tests.sh ]; then
-  echo "bin/install-wp-tests.sh not found. Install wpunit-helpers first: composer require --dev pantheon-systems/wpunit-helpers" >&2
-  exit 1
-fi
-
 ### 0) DB name (dynamic if not provided)
 if [ -z "${DB_NAME:-}" ]; then
   PHPV="$(php -r 'echo PHP_MAJOR_VERSION.PHP_MINOR_VERSION;')"   # e.g., 83
@@ -109,6 +103,50 @@ fi
 
 log "Activating plugin ${PLUGIN_SLUG}"
 wp plugin activate "$PLUGIN_SLUG" --path="$WP_CORE_DIR" >/dev/null
+
+# --- Write minimal SAML settings into the TEST DB (not the site DB) ---
+log "Writing minimal SAML settings into TEST DB (${DB_NAME})"
+
+# Detect the test table prefix from wp-tests-config.php (defaults to 'wp_')
+TEST_CFG="${WP_TESTS_DIR%/}/wp-tests-config.php"
+TABLE_PREFIX="$(grep -E "^\s*\$table_prefix\s*=" "$TEST_CFG" | sed -E "s/.*'([^']+)'.*/\1/")"
+[ -z "$TABLE_PREFIX" ] && TABLE_PREFIX="wp_"
+
+# Build the PHP array and get its serialized form for WordPress options
+SERIALIZED="$(php -r '
+  $c = [
+    "connection_type" => "internal",
+    "internal_config" => [
+      "strict"  => true,
+      "debug"   => false,
+      "baseurl" => "http://example.test",
+      "sp" => [
+        "entityId" => "urn:wp-saml-auth:test-sp",
+        "assertionConsumerService" => ["url" => "http://example.test/wp-login.php"],
+        "singleLogoutService"      => ["url" => "http://example.test/?sls"],
+      ],
+      "idp" => [
+        "entityId" => "urn:dummy-idp",
+        "singleSignOnService" => ["url" => "https://idp.invalid/sso"],
+        "singleLogoutService" => ["url" => "https://idp.invalid/slo"],
+        // Provide either x509cert OR certFingerprint; fingerprint is simplest for tests.
+        "certFingerprint" => "00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33",
+      ],
+    ],
+  ];
+  echo addslashes(serialize($c));
+')"
+
+# Upsert into both legacy and current option names to be safe
+SQL="
+REPLACE INTO \`${DB_NAME}\`.\`${TABLE_PREFIX}options\` (option_name, option_value, autoload)
+VALUES
+  ('wp_saml_auth_settings', '${SERIALIZED}', 'no'),
+  ('wp_saml_auth_options',  '${SERIALIZED}', 'no');
+"
+
+MYSQL_PWD="${DB_PASSWORD}" mysql -h "${DB_HOST}" -u "${DB_USER}" -e "$SQL"
+# --- End SAML settings into TEST DB ---
 
 log "Writing minimal WP SAML Auth settings into options table"
 # Detect the option key used by the plugin (old vs new)
