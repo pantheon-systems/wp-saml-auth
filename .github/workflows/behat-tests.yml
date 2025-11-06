@@ -72,22 +72,18 @@ jobs:
           echo "Creating database $DB_NAME"
           mysql -h 127.0.0.1 -uroot -proot -e "DROP DATABASE IF EXISTS \`$DB_NAME\`; CREATE DATABASE \`$DB_NAME\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
-      # 1) Ensure the package is required (once in CI is fine if you don't want to commit the change)
       - name: Require wpunit-helpers (if missing)
         run: |
           if ! composer show -D pantheon-systems/wpunit-helpers >/dev/null 2>&1; then
             composer require --dev pantheon-systems/wpunit-helpers:^2 --no-interaction --no-progress
           fi
 
-      # 2) Always pull the latest available version that matches ^2
       - name: Update wpunit-helpers to latest
         run: composer update pantheon-systems/wpunit-helpers --no-interaction --no-progress
 
-      # 3) (Optional) Install the rest of your deps
       - name: Install deps
         run: composer install --no-interaction --no-progress
 
-      # 4) WP-CLI (only if your runner doesn't already have it)
       - name: Install WP-CLI (if needed)
         run: |
           if ! command -v wp >/dev/null 2>&1; then
@@ -96,7 +92,6 @@ jobs:
             echo "$PWD" >> "$GITHUB_PATH"
           fi
 
-      # 5) Install the WP test framework
       - name: Install WordPress test framework
         run: |
           bash bin/install-wp-tests.sh \
@@ -106,6 +101,50 @@ jobs:
             --dbhost="$DB_HOST" \
             --version="$WP_VERSION" \
             --skip-db=true
+
+      - name: Prime WP SAML Auth options for tests (no MU-plugin)
+        run: |
+          # 1) Make sure WP is reachable for wp-cli
+          wp core is-installed --path="$WP_CORE_DIR"
+
+          # 2) Activate the plugin (if your suite needs it enabled)
+          wp plugin activate wp-saml-auth --path="$WP_CORE_DIR"
+
+          # 3) Detect the option row name and read current settings (array) as JSON
+          OPT_KEY=""
+          for k in wp_saml_auth_options wp_saml_auth_settings; do
+            if wp option get "$k" --path="$WP_CORE_DIR" >/dev/null 2>&1; then OPT_KEY="$k"; break; fi
+          done
+          if [ -z "$OPT_KEY" ]; then OPT_KEY="wp_saml_auth_options"; fi
+
+          CURRENT_JSON="$(wp option get "$OPT_KEY" --format=json --path="$WP_CORE_DIR" 2>/dev/null || echo '{}')"
+
+          # 4) Merge in minimal "internal" config so the plugin won't try SimpleSAMLphp
+          #    (no real IdP is needed for unit tests)
+          UPDATED_JSON="$(php -r '
+            $c = json_decode(stream_get_contents(STDIN), true) ?: [];
+            $c["connection_type"] = "internal";
+            $c["internal_config"] = $c["internal_config"] ?? [];
+            $c["internal_config"]["strict"]  = true;
+            $c["internal_config"]["debug"]   = false;
+            $c["internal_config"]["baseurl"] = $c["internal_config"]["baseurl"] ?? "http://example.test";
+            $c["internal_config"]["sp"]["entityId"] = $c["internal_config"]["sp"]["entityId"] ?? "urn:example";
+            $c["internal_config"]["sp"]["assertionConsumerService"]["url"] =
+                $c["internal_config"]["sp"]["assertionConsumerService"]["url"] ?? "http://example.test/wp-login.php";
+            // Put dummy IdP endpoints so the array shape matches what the plugin expects.
+            $c["internal_config"]["idp"]["entityId"] = $c["internal_config"]["idp"]["entityId"] ?? "urn:dummy-idp";
+            $c["internal_config"]["idp"]["singleSignOnService"]["url"] = $c["internal_config"]["idp"]["singleSignOnService"]["url"] ?? "https://idp.invalid/sso";
+            $c["internal_config"]["idp"]["singleLogoutService"]["url"] = $c["internal_config"]["idp"]["singleLogoutService"]["url"] ?? "https://idp.invalid/slo";
+            echo json_encode($c);
+          ' <<<"$CURRENT_JSON")"
+
+          wp option update "$OPT_KEY" "$UPDATED_JSON" --format=json --path="$WP_CORE_DIR"
+
+          # 5) (Optional) Verify the effective connection type
+          wp option get "$OPT_KEY" --format=json --path="$WP_CORE_DIR" | grep -q '"connection_type":"internal"'
+
+        env:
+          WP_CORE_DIR: /tmp/wordpress
 
       # 6) Run PHPUnit via the helper
       - name: Run PHPUnit (stable only)
