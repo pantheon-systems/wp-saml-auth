@@ -97,11 +97,14 @@ jobs:
           fi
 
       # 5) Install the WP test framework
-      - name: Install WP test framework
+      - name: Install WordPress test framework
         run: |
           bash bin/install-wp-tests.sh \
-            --dbname="$DB_NAME" --dbuser="$DB_USER" --dbpass="$DB_PASSWORD" \
-            --dbhost="$DB_HOST" --wpversion="$WP_VERSION"
+            --dbname="$DB_NAME" \
+            --dbuser="$DB_USER" \
+            --dbpass="$DB_PASSWORD" \
+            --dbhost="$DB_HOST" \
+            --version="$WP_VERSION"
 
       # 6) Run PHPUnit via the helper
       - name: Run PHPUnit (stable only)
