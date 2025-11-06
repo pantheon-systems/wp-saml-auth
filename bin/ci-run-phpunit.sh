@@ -110,6 +110,40 @@ fi
 log "Activating plugin ${PLUGIN_SLUG}"
 wp plugin activate "$PLUGIN_SLUG" --path="$WP_CORE_DIR" >/dev/null
 
+log "Writing minimal WP SAML Auth settings into options table"
+# Detect the option key used by the plugin (old vs new)
+OPT_KEY="$(wp option list --search=wp_saml_auth_ --field=option_name --path="$WP_CORE_DIR" | head -n1 || echo '')"
+[ -z "$OPT_KEY" ] && OPT_KEY="wp_saml_auth_settings"   # sensible default
+
+# Build a minimal, valid internal_config for OneLogin validator
+SETTINGS_JSON="$(php -r '
+  $c = [];
+  $c["connection_type"] = "internal";
+  $c["internal_config"] = [
+    "strict"  => true,
+    "debug"   => false,
+    "baseurl" => "http://example.test",
+    "sp" => [
+      "entityId" => "urn:wp-saml-auth:test-sp",
+      "assertionConsumerService" => ["url" => "http://example.test/wp-login.php"],
+      "singleLogoutService"      => ["url" => "http://example.test/?sls"],
+    ],
+    "idp" => [
+      "entityId" => "urn:dummy-idp",
+      "singleSignOnService" => ["url" => "https://idp.invalid/sso"],
+      "singleLogoutService" => ["url" => "https://idp.invalid/slo"],
+      // OneLogin requires either x509cert OR certFingerprint; fingerprint is simplest.
+      "certFingerprint" => "00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33",
+    ],
+  ];
+  echo json_encode($c, JSON_UNESCAPED_SLASHES);
+')"
+
+wp option update "$OPT_KEY" "$SETTINGS_JSON" --format=json --path="$WP_CORE_DIR" >/dev/null
+
+# (Optional) sanity check
+wp option get "$OPT_KEY" --format=json --path="$WP_CORE_DIR" | grep -q '"connection_type":"internal"'
+
 ### 4) PHPUnit bootstrap injection: force SAML "internal" + minimal IdP/SP config
 log "Injecting bootstrap to force internal provider w/ minimal OneLogin config"
 CI_BOOT="/tmp/ci-wpsaml-bootstrap.php"
