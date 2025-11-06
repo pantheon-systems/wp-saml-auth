@@ -1,149 +1,140 @@
 #!/usr/bin/env bash
-# bin/ci-run-phpunit.sh
-# One-shot CI runner for WordPress PHPUnit using wpunit-helpers + WP SAML Auth internal provider.
-# No MU-plugins, no repo edits; only temp files under /tmp.
-#
-# Env you may set (all have sane defaults):
-#   DB_HOST (default: 127.0.0.1)
-#   DB_USER (default: root)
-#   DB_PASSWORD (default: "")
-#   DB_NAME (dynamic if not set)
-#   WP_VERSION (default: latest)
-#   WP_CORE_DIR (default: /tmp/wordpress)
-#   WP_TESTS_DIR (default: /tmp/wordpress-tests-lib)
-#   PLUGIN_SLUG (default: basename of repo dir)
-#
-# Usage:
-#   bin/ci-run-phpunit.sh [-- any extra phpunit args...]
+# CI helper to run WordPress unit tests for wp-saml-auth without MU plugins.
+# - Installs/updates the WP unit test harness
+# - Syncs the plugin into the test WP instance
+# - Activates the plugin
+# - Writes minimal SAML settings straight into the *test* DB options table
+# - Forces internal SAML provider via options (no SimpleSAMLphp required)
+# - Runs PHPUnit
+
 set -euo pipefail
 
-# Detect wpunit-helpers install script in common locations
-INSTALLER=""
-for p in \
-  "bin/install-wp-tests.sh" \
-  "vendor/pantheon-systems/wpunit-helpers/bin/install-wp-tests.sh" \
-  "vendor/bin/install-wp-tests.sh"
-do
-  if [ -f "$p" ]; then INSTALLER="$p"; break; fi
-done
+log() { printf '>> %s\n' "$*"; }
+err() { printf '!! %s\n' "$*" >&2; }
 
-if [ -z "$INSTALLER" ]; then
-  echo "install-wp-tests.sh not found.
-Install wpunit-helpers first: composer require --dev pantheon-systems/wpunit-helpers" >&2
-  exit 1
-fi
-chmod +x "$INSTALLER"
+# -------------------------
+# Inputs & sensible defaults
+# -------------------------
+WP_VERSION="${WP_VERSION:-6.8.3}"
 
-
-### Defaults
 DB_HOST="${DB_HOST:-127.0.0.1}"
 DB_USER="${DB_USER:-root}"
-DB_PASSWORD="${DB_PASSWORD:-}"
-WP_VERSION="${WP_VERSION:-latest}"
+DB_PASSWORD="${DB_PASSWORD:-root}"
+
+# Dynamically generate DB_NAME per run if not provided
+if [[ "${DB_NAME:-}" == "" ]]; then
+  # shorten version string like 6.8.3 -> 683
+  _vshort="$(echo "$WP_VERSION" | tr -d '.')"
+  DB_NAME="wp_test_${_vshort}_$(date +%s%N | tail -c 11)_${GITHUB_RUN_ID:-$RANDOM}_"
+fi
+
+# Paths for the harness
 WP_CORE_DIR="${WP_CORE_DIR:-/tmp/wordpress}"
 WP_TESTS_DIR="${WP_TESTS_DIR:-/tmp/wordpress-tests-lib}"
-PLUGIN_SLUG="${PLUGIN_SLUG:-$(basename "$(pwd)")}"
+export WP_CORE_DIR WP_TESTS_DIR
 
-### Helpers
-require_cmd() { command -v "$1" >/dev/null 2>&1 || { echo "Missing command: $1" >&2; exit 127; }; }
-log() { printf '>> %s\n' "$*"; }
+log "Using DB_NAME=${DB_NAME}"
 
-require_cmd php
-require_cmd mysql
-require_cmd rsync
-require_cmd wp
-
-# Composer is optional: only used if plugin has composer.json
-if [ -f composer.json ]; then require_cmd composer; fi
-
-### 0) DB name (dynamic if not provided)
-if [ -z "${DB_NAME:-}" ]; then
-  PHPV="$(php -r 'echo PHP_MAJOR_VERSION.PHP_MINOR_VERSION;')"   # e.g., 83
-  RUNID="${GITHUB_RUN_ID:-0}"
-  SHORTSHA="${GITHUB_SHA:-nosha}"; SHORTSHA="${SHORTSHA:0:7}"
-  RAW="wp_test_${PHPV}_${RUNID}_${SHORTSHA}"
-  DB_NAME="$(echo "$RAW" | tr -c '[:alnum:]_' '_' | cut -c1-63)"
-  export DB_NAME
+# -------------------------------------------------------
+# Ensure wpunit-helpers is available (bin/install scripts)
+# -------------------------------------------------------
+if [[ ! -x "bin/install-wp-tests.sh" || ! -x "bin/phpunit-test.sh" ]]; then
+  log "wpunit-helpers not found; installing (composer require --dev pantheon-systems/wpunit-helpers)"
+  composer require --no-ansi --no-interaction --no-progress --dev pantheon-systems/wpunit-helpers || {
+    err "Failed to install pantheon-systems/wpunit-helpers"; exit 1;
+  }
 fi
-log "Using DB_NAME=$DB_NAME"
 
-### 1) Create/reset DB (idempotent)
-log "Creating/resetting database $DB_NAME"
-MYSQL_PWD="${DB_PASSWORD}" mysql -h "${DB_HOST}" -u "${DB_USER}" -e \
-  "DROP DATABASE IF EXISTS \`${DB_NAME}\`; CREATE DATABASE \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+# ----------------------------------
+# Create/reset the test database name
+# ----------------------------------
+log "Creating/resetting database ${DB_NAME}"
+MYSQL_PWD="${DB_PASSWORD}" mysql -h "${DB_HOST}" -u "${DB_USER}" -e "DROP DATABASE IF EXISTS \`${DB_NAME}\`; CREATE DATABASE \`${DB_NAME}\`;" || {
+  err "Cannot create/reset database ${DB_NAME}"; exit 1;
+}
 
-### 2) Install WP test harness (skip touching DB again)
+# ---------------------------------------------------------
+# Install WP core + tests harness (use --version, not --wpversion)
+# ---------------------------------------------------------
 log "Installing WP test harness (WP ${WP_VERSION})"
-set +e
-# Try wpunit-helpers flavor first (--wpversion), then classic (--version)
-bash "$INSTALLER" \
-  --dbname="${DB_NAME}" --dbuser="${DB_USER}" --dbpass="${DB_PASSWORD}" \
-  --dbhost="${DB_HOST}" --wpversion="${WP_VERSION}" --skip-db=true
-RC=$?
-if [ $RC -ne 0 ]; then
-  bash "$INSTALLER" \
-    --dbname="${DB_NAME}" --dbuser="${DB_USER}" --dbpass="${DB_PASSWORD}" \
-    --dbhost="${DB_HOST}" --version="${WP_VERSION}" --skip-db=true
-  RC=$?
-fi
-set -e
-[ $RC -eq 0 ] || { echo "install-wp-tests.sh failed" >&2; exit $RC; }
+bash bin/install-wp-tests.sh \
+  --dbname="${DB_NAME}" \
+  --dbuser="${DB_USER}" \
+  --dbpass="${DB_PASSWORD}" \
+  --dbhost="${DB_HOST}" \
+  --version="${WP_VERSION}" \
+  --tmpdir="/tmp" \
+  --skip-db=true
 
-### 3) Copy plugin-under-test into test site & activate
-PLUG_DIR="${WP_CORE_DIR%/}/wp-content/plugins/${PLUGIN_SLUG}"
-log "Syncing plugin into ${PLUG_DIR}"
-mkdir -p "$PLUG_DIR"
-rsync -a --delete ./ "$PLUG_DIR/" \
-  --exclude .git --exclude .github --exclude node_modules --exclude vendor/.cache
+# (bin/install-wp-tests.sh also downloads/sets up WP core at $WP_CORE_DIR)
 
-if [ -f "$PLUG_DIR/composer.json" ]; then
-  log "Installing plugin composer deps"
-  ( cd "$PLUG_DIR" && composer install --no-interaction --no-progress --prefer-dist )
-fi
+# -------------------------------------------
+# Sync the plugin into the test WP plugin dir
+# -------------------------------------------
+PLUGIN_SLUG="wp-saml-auth"
+PLUGIN_DST="${WP_CORE_DIR%/}/wp-content/plugins/${PLUGIN_SLUG}"
 
+log "Syncing plugin into ${PLUGIN_DST}"
+mkdir -p "$(dirname "${PLUGIN_DST}")"
+rsync -a --delete --exclude='.git/' --exclude='.github/' --exclude='vendor/' ./ "${PLUGIN_DST}/"
+
+# Install plugin composer deps in-place (the tests expect autoload ready)
+log "Installing plugin composer deps"
+(
+  cd "${PLUGIN_DST}"
+  composer install --no-ansi --no-interaction --no-progress
+)
+
+# -------------------------
+# Activate the plugin in WP
+# -------------------------
 log "Activating plugin ${PLUGIN_SLUG}"
-wp plugin activate "$PLUGIN_SLUG" --path="$WP_CORE_DIR" >/dev/null
+wp plugin activate "${PLUGIN_SLUG}" --path="${WP_CORE_DIR}" || {
+  err "Failed to activate ${PLUGIN_SLUG}"; exit 1;
+}
 
-# --- Write minimal SAML settings into the TEST DB (not the site DB) ---
+# -------------------------------------------------
+# Write minimal SAML settings directly into test DB
+# (prevents OneLogin complaining about missing IdP)
+# -------------------------------------------------
 log "Writing minimal SAML settings into TEST DB (${DB_NAME})"
 
-# Detect the test table prefix from wp-tests-config.php (defaults to 'wp_')
+# Find test table prefix from wp-tests-config.php safely; fallback to wp_
 TEST_CFG="${WP_TESTS_DIR%/}/wp-tests-config.php"
-TABLE_PREFIX="$(grep -E "^\s*\$table_prefix\s*=" "$TEST_CFG" | sed -E "s/.*'([^']+)'.*/\1/")"
-[ -z "$TABLE_PREFIX" ] && TABLE_PREFIX="wp_"
-
-# Build the PHP array and get its serialized form for WordPress options
-SERIALIZED="$(php -r '
-  $c = [
-    "connection_type" => "internal",
-    "internal_config" => [
-      "strict"  => true,
-      "debug"   => false,
-      "baseurl" => "http://example.test",
-      "sp" => [
-        "entityId" => "urn:wp-saml-auth:test-sp",
-        "assertionConsumerService" => ["url" => "http://example.test/wp-login.php"],
-        "singleLogoutService"      => ["url" => "http://example.test/?sls"],
-      ],
-      "idp" => [
-        "entityId" => "urn:dummy-idp",
-        "singleSignOnService" => ["url" => "https://idp.invalid/sso"],
-        "singleLogoutService" => ["url" => "https://idp.invalid/slo"],
-        // Provide either x509cert OR certFingerprint; fingerprint is simplest for tests.
-        "certFingerprint" => "00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33",
-      ],
-    ],
-  ];
-  echo addslashes(serialize($c));
-')"
-
-# Determine test prefix (fallback to wp_)
-TEST_CFG="${WP_TESTS_DIR%/}/wp-tests-config.php"
-TABLE_PREFIX="$(grep -E "^\s*\$table_prefix\s*=" "$TEST_CFG" | sed -E "s/.*'([^']+)'.*/\1/")"
-[ -z "$TABLE_PREFIX" ] && TABLE_PREFIX="wp_"
+TABLE_PREFIX="$({ grep -E "^\s*\$table_prefix\s*=" "$TEST_CFG" 2>/dev/null || true; } \
+  | sed -E "s/.*'([^']+)'.*/\1/")"
+[[ -z "${TABLE_PREFIX}" ]] && TABLE_PREFIX="wp_"
 log "Test table prefix: ${TABLE_PREFIX}"
 
-# Ensure `${prefix}options` exists so we can write config before PHPUnit schema install
+# Minimal-but-valid settings (internal provider + dummy IdP fingerprint)
+# NOTE: We upsert *both* historical keys the plugin may check.
+read -r -d '' PHP_SETTINGS <<'PHPJSON' || true
+<?php
+$c = [
+  "connection_type" => "internal",
+  "internal_config" => [
+    "strict"  => true,
+    "debug"   => false,
+    "baseurl" => "http://example.test",
+    "sp" => [
+      "entityId" => "urn:example",
+      "assertionConsumerService" => [ "url" => "http://example.test/wp-login.php" ]
+    ],
+    "idp" => [
+      "entityId" => "urn:dummy-idp",
+      "singleSignOnService"  => [ "url" => "https://idp.invalid/sso" ],
+      "singleLogoutService"  => [ "url" => "https://idp.invalid/slo" ],
+      // 20-byte SHA1 fingerprint format (dummy but syntactically valid)
+      "x509cert" => "",
+      "certFingerprint" => "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD"
+    ]
+  ]
+];
+echo addslashes(serialize($c));
+PHPJSON
+
+SERIALIZED="$(php -r "$PHP_SETTINGS")"
+
 DDL="
 CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;
 CREATE TABLE IF NOT EXISTS \`${DB_NAME}\`.\`${TABLE_PREFIX}options\` (
@@ -151,113 +142,26 @@ CREATE TABLE IF NOT EXISTS \`${DB_NAME}\`.\`${TABLE_PREFIX}options\` (
   option_name varchar(191) NOT NULL DEFAULT '',
   option_value longtext NOT NULL,
   autoload varchar(20) NOT NULL DEFAULT 'yes',
-  PRIMARY KEY  (option_id),
+  PRIMARY KEY (option_id),
   UNIQUE KEY option_name (option_name)
-) DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 "
-MYSQL_PWD="${DB_PASSWORD}" mysql -h "${DB_HOST}" -u "${DB_USER}" -e "$DDL"
+MYSQL_PWD="${DB_PASSWORD}" mysql -h "${DB_HOST}" -u "${DB_USER}" -e "$DDL" || {
+  err "Failed to create options table in ${DB_NAME}"; exit 1;
+}
 
-# Upsert into both legacy and current option names to be safe
-SQL="
+UPSERT="
 REPLACE INTO \`${DB_NAME}\`.\`${TABLE_PREFIX}options\` (option_name, option_value, autoload)
 VALUES
   ('wp_saml_auth_settings', '${SERIALIZED}', 'no'),
   ('wp_saml_auth_options',  '${SERIALIZED}', 'no');
 "
-
-MYSQL_PWD="${DB_PASSWORD}" mysql -h "${DB_HOST}" -u "${DB_USER}" -e "$SQL"
-# --- End SAML settings into TEST DB ---
-
-log "Writing minimal WP SAML Auth settings into options table"
-# Detect the option key used by the plugin (old vs new)
-OPT_KEY="$(wp option list --search=wp_saml_auth_ --field=option_name --path="$WP_CORE_DIR" | head -n1 || echo '')"
-[ -z "$OPT_KEY" ] && OPT_KEY="wp_saml_auth_settings"   # sensible default
-
-# Build a minimal, valid internal_config for OneLogin validator
-SETTINGS_JSON="$(php -r '
-  $c = [];
-  $c["connection_type"] = "internal";
-  $c["internal_config"] = [
-    "strict"  => true,
-    "debug"   => false,
-    "baseurl" => "http://example.test",
-    "sp" => [
-      "entityId" => "urn:wp-saml-auth:test-sp",
-      "assertionConsumerService" => ["url" => "http://example.test/wp-login.php"],
-      "singleLogoutService"      => ["url" => "http://example.test/?sls"],
-    ],
-    "idp" => [
-      "entityId" => "urn:dummy-idp",
-      "singleSignOnService" => ["url" => "https://idp.invalid/sso"],
-      "singleLogoutService" => ["url" => "https://idp.invalid/slo"],
-      // OneLogin requires either x509cert OR certFingerprint; fingerprint is simplest.
-      "certFingerprint" => "00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33",
-    ],
-  ];
-  echo json_encode($c, JSON_UNESCAPED_SLASHES);
-')"
-
-wp option update "$OPT_KEY" "$SETTINGS_JSON" --format=json --path="$WP_CORE_DIR" >/dev/null
-
-# (Optional) sanity check
-wp option get "$OPT_KEY" --format=json --path="$WP_CORE_DIR" | grep -q '"connection_type":"internal"'
-
-### 4) PHPUnit bootstrap injection: force SAML "internal" + minimal IdP/SP config
-log "Injecting bootstrap to force internal provider w/ minimal OneLogin config"
-CI_BOOT="/tmp/ci-wpsaml-bootstrap.php"
-cat > "$CI_BOOT" <<'PHP'
-<?php
-// Loaded by WP's PHPUnit bootstrap; run before regular plugins load.
-if (function_exists('tests_add_filter')) {
-  tests_add_filter('muplugins_loaded', function () {
-    // Force OneLogin internal provider
-    add_filter('wp_saml_auth_option', function ($value, $name) {
-      return ($name === 'connection_type') ? 'internal' : $value;
-    }, 10, 2);
-
-    // Minimal internal_config required by OneLogin validator
-    add_filter('wp_saml_auth_option', function ($value, $name) {
-      if ($name !== 'internal_config') { return $value; }
-      $cfg = is_array($value) ? $value : [];
-      $cfg['strict']  = $cfg['strict']  ?? true;
-      $cfg['debug']   = $cfg['debug']   ?? false;
-      $cfg['baseurl'] = $cfg['baseurl'] ?? 'http://example.test';
-
-      $cfg['sp'] = $cfg['sp'] ?? [];
-      $cfg['sp']['entityId'] = $cfg['sp']['entityId'] ?? 'urn:wp-saml-auth:test-sp';
-      $cfg['sp']['assertionConsumerService']['url'] =
-        $cfg['sp']['assertionConsumerService']['url'] ?? 'http://example.test/wp-login.php';
-      $cfg['sp']['singleLogoutService']['url'] =
-        $cfg['sp']['singleLogoutService']['url'] ?? 'http://example.test/?sls';
-
-      $cfg['idp'] = $cfg['idp'] ?? [];
-      $cfg['idp']['entityId'] = $cfg['idp']['entityId'] ?? 'urn:dummy-idp';
-      $cfg['idp']['singleSignOnService']['url'] =
-        $cfg['idp']['singleSignOnService']['url'] ?? 'https://idp.invalid/sso';
-      $cfg['idp']['singleLogoutService']['url'] =
-        $cfg['idp']['singleLogoutService']['url'] ?? 'https://idp.invalid/slo';
-      // Provide either x509cert OR certFingerprint; fingerprint is simplest for tests.
-      $cfg['idp']['certFingerprint'] =
-        $cfg['idp']['certFingerprint'] ?? '00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33';
-
-      return $cfg;
-    }, 10, 2);
-  });
+MYSQL_PWD="${DB_PASSWORD}" mysql -h "${DB_HOST}" -u "${DB_USER}" -e "$UPSERT" || {
+  err "Failed to upsert minimal SAML settings into ${DB_NAME}.${TABLE_PREFIX}options"; exit 1;
 }
-PHP
 
-CFG="${WP_TESTS_DIR%/}/wp-tests-config.php"
-grep -q "ci-wpsaml-bootstrap.php" "$CFG" || \
-  printf "\n// CI: force WP SAML Auth internal provider + minimal OneLogin config\nrequire '%s';\n" "$CI_BOOT" >> "$CFG"
-
-### 5) Run PHPUnit (pass through any args after --)
+# -------------------------------------------------
+# Finally, run PHPUnit from the project under test
+# -------------------------------------------------
 log "Running PHPUnit"
-# Split args after a standalone "--"
-PHPUNIT_ARGS=()
-seen_ddash="no"
-for a in "$@"; do
-  if [ "$a" = "--" ]; then seen_ddash="yes"; continue; fi
-  if [ "$seen_ddash" = "yes" ]; then PHPUNIT_ARGS+=("$a"); fi
-done
-
-exec vendor/bin/phpunit --do-not-cache-result "${PHPUNIT_ARGS[@]}"
+vendor/bin/phpunit --do-not-cache-result
