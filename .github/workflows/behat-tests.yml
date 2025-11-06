@@ -122,23 +122,48 @@ jobs:
           WP_CORE_DIR: /tmp/wordpress
         run: |
           set -euo pipefail
-          OPT_KEY="$(wp option list --search=wp_saml_auth_ --field=option_name --path="$WP_CORE_DIR" | head -n1 || echo wp_saml_auth_options)"
+          
+          # 0) Ensure the plugin is active (will no-op if already active)
+          wp plugin activate wp-saml-auth --path="$WP_CORE_DIR" >/dev/null 2>&1 || true
+          
+          # 1) Resolve the option key safely
+          OPT_KEY="$(wp option list --search=wp_saml_auth_ --field=option_name --path="$WP_CORE_DIR" | head -n1 || true)"
+          if [ -z "${OPT_KEY:-}" ]; then
+          OPT_KEY="wp_saml_auth_options"
+          fi
+          
+          # 2) Ensure the option exists as a serialized array
+          if ! wp option get "$OPT_KEY" --path="$WP_CORE_DIR" >/dev/null 2>&1; then
+          wp option add "$OPT_KEY" '{}' --format=json --path="$WP_CORE_DIR"
+          fi
+          
+          # 3) Read current settings (JSON), merge desired bits, write back
           CUR="$(wp option get "$OPT_KEY" --format=json --path="$WP_CORE_DIR" 2>/dev/null || echo '{}')"
+            
           NEW="$(php -r '
-            $c=json_decode(stream_get_contents(STDIN),true)?:[];
+            $c=json_decode(stream_get_contents(STDIN), true) ?: [];
             $c["connection_type"]="internal";
             $c["internal_config"]=$c["internal_config"]??[];
             $c["internal_config"]["strict"]=true;
             $c["internal_config"]["debug"]=false;
-            $c["internal_config"]["baseurl"]="http://example.test";
-            $c["internal_config"]["sp"]["entityId"]="urn:example";
-            $c["internal_config"]["sp"]["assertionConsumerService"]["url"]="http://example.test/wp-login.php";
-            $c["internal_config"]["idp"]["entityId"]="urn:dummy-idp";
-            $c["internal_config"]["idp"]["singleSignOnService"]["url"]="https://idp.invalid/sso";
-            $c["internal_config"]["idp"]["singleLogoutService"]["url"]="https://idp.invalid/slo";
+            $c["internal_config"]["baseurl"]=$c["internal_config"]["baseurl"]??"http://example.test";
+            $c["internal_config"]["sp"]["entityId"]=$c["internal_config"]["sp"]["entityId"]??"urn:example";
+            $c["internal_config"]["sp"]["assertionConsumerService"]["url"]=
+            $c["internal_config"]["sp"]["assertionConsumerService"]["url"]??"http://example.test/wp-login.php";
+            // Dummy IdP endpoints to satisfy structure during unit tests
+            $c["internal_config"]["idp"]["entityId"]=$c["internal_config"]["idp"]["entityId"]??"urn:dummy-idp";
+            $c["internal_config"]["idp"]["singleSignOnService"]["url"]=
+            $c["internal_config"]["idp"]["singleSignOnService"]["url"]??"https://idp.invalid/sso";
+            $c["internal_config"]["idp"]["singleLogoutService"]["url"]=
+            $c["internal_config"]["idp"]["singleLogoutService"]["url"]??"https://idp.invalid/slo";
             echo json_encode($c);
-          ' <<<"$CUR")"
+            ' <<<"$CUR")"
+          
           wp option update "$OPT_KEY" "$NEW" --format=json --path="$WP_CORE_DIR"
+          
+          # 4) Verify
+          wp option get "$OPT_KEY" --format=json --path="$WP_CORE_DIR" | grep -q '"connection_type":"internal"'
+
 
       - name: PHPUnit
         run: vendor/bin/phpunit --do-not-cache-result
