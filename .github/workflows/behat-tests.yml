@@ -61,17 +61,23 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y mysql-client
 
-      - name: Compute DB name per PHP
+      - name: Compute dynamic DB name
         run: |
-          PV="${{ matrix.php }}"
-          SAFE="${PV/./}"
-          echo "DB_NAME=wp_test_${SAFE}" >> "$GITHUB_ENV"
+          set -euo pipefail
+          PHPV=$(php -r 'echo PHP_MAJOR_VERSION.PHP_MINOR_VERSION;')
+          SHORTSHA="${GITHUB_SHA:-nosha}"; SHORTSHA="${SHORTSHA:0:7}"
+          RUNID="${GITHUB_RUN_ID:-0}"
+          RAW="wp_test_${PHPV}_${RUNID}_${SHORTSHA}"
+          SAFE=$(echo "$RAW" | tr -c '[:alnum:]_' '_' | cut -c1-63)
+          echo "DB_NAME=$SAFE" >> "$GITHUB_ENV"
+          echo "Using DB_NAME=$SAFE"
 
-      - name: Create database
+      - name: Create/reset DB
+        env:
+          MYSQL_PWD: ${{ env.DB_PASSWORD }}
         run: |
-          echo "Creating database $DB_NAME"
-          mysql -h 127.0.0.1 -uroot -proot -e "DROP DATABASE IF EXISTS \`$DB_NAME\`; CREATE DATABASE \`$DB_NAME\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-
+          mysql -h "${DB_HOST}" -u "${DB_USER}" -e "DROP DATABASE IF EXISTS \`${DB_NAME}\`;
+            CREATE DATABASE \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
       - name: Require wpunit-helpers (if missing)
         run: |
@@ -118,33 +124,26 @@ jobs:
           fi
           wp plugin activate "$PLUGIN_SLUG" --path="$WP_CORE_DIR"
 
-      - name: Force internal provider (no MU-plugin; safe under WP-CLI & PHPUnit)
+      - name: Force internal provider for PHPUnit (bootstrap-safe)
         env:
-          WP_CORE_DIR: /tmp/wordpress
+          WP_TESTS_DIR: /tmp/wordpress-tests-lib
         run: |
           set -euo pipefail
-          cat > /tmp/ci-wpsaml-config.php <<'PHP'
+          cat > /tmp/ci-wpsaml-bootstrap.php <<'PHP'
           <?php
-          // Defer safely depending on runtime (WP-CLI vs PHPUnit).
-          $installer = function () {
-            add_filter('wp_saml_auth_option', function ($v, $name) {
-              return $name === 'connection_type' ? 'internal' : $v;
-            }, 10, 2);
-          };
-      
-          if (defined('WP_CLI') && WP_CLI && class_exists('WP_CLI')) {
-            // WP-CLI: wait until WordPress is fully loaded.
-            WP_CLI::add_hook('after_wp_load', $installer);
-          } elseif (function_exists('tests_add_filter')) {
-            // PHPUnit WP test suite: install during bootstrap, before plugins run.
-            tests_add_filter('plugins_loaded', $installer);
+          // Loaded by wp-tests-config.php during PHPUnit bootstrap.
+          if (function_exists('tests_add_filter')) {
+            tests_add_filter('plugins_loaded', function () {
+              add_filter('wp_saml_auth_option', function ($v, $name) {
+                return $name === 'connection_type' ? 'internal' : $v;
+              }, 10, 2);
+            });
           }
           PHP
-      
-          # Append include to wp-config.php (idempotent)
-          if ! grep -q "ci-wpsaml-config.php" "$WP_CORE_DIR/wp-config.php"; then
-            printf "\n// CI: force WP SAML Auth internal provider (no MU plugin)\n@include '/tmp/ci-wpsaml-config.php';\n" >> "$WP_CORE_DIR/wp-config.php"
-          fi
+          # Include it from the test bootstrap exactly once (idempotent)
+          CFG="${WP_TESTS_DIR%/}/wp-tests-config.php"
+          grep -q "ci-wpsaml-bootstrap.php" "$CFG" || \
+            printf "\n// CI: force WP SAML Auth internal provider\nrequire '/tmp/ci-wpsaml-bootstrap.php';\n" >> "$CFG"
 
       - name: Run upstream phpunit-test.sh
         env:
@@ -158,7 +157,7 @@ jobs:
             --dbuser="${DB_USER}" \
             --dbpass="${DB_PASSWORD}" \
             --dbhost="${DB_HOST}" \
-            --version="${WP_VERSION}"
+            --wpversion="${WP_VERSION}"
 
   behat:
     name: Behat (SSP ${{ matrix.ssp }})
