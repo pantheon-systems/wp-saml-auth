@@ -102,25 +102,42 @@ jobs:
             --version="$WP_VERSION" \
             --skip-db=true
 
-      - name: Prime WP SAML Auth options for tests (no MU-plugin)
+      - name: Install plugin-under-test into WP & configure
+        env:
+          WP_CORE_DIR: /tmp/wordpress
+          PLUGIN_SLUG: wp-saml-auth
         run: |
-          # 1) Make sure WP is reachable for wp-cli
+          set -euo pipefail
+      
+          # 0) Sanity
           wp core is-installed --path="$WP_CORE_DIR"
-
-          # 2) Activate the plugin (if your suite needs it enabled)
-          wp plugin activate wp-saml-auth --path="$WP_CORE_DIR"
-
-          # 3) Detect the option row name and read current settings (array) as JSON
+      
+          # 1) Put the plugin code into the WP test instance
+          PLUGINS_DIR="$WP_CORE_DIR/wp-content/plugins"
+          mkdir -p "$PLUGINS_DIR/$PLUGIN_SLUG"
+      
+          # Prefer a clean copy (symlinks can confuse some tooling)
+          rsync -a --delete ./ "$PLUGINS_DIR/$PLUGIN_SLUG/" \
+            --exclude .git --exclude .github --exclude node_modules --exclude vendor/.cache
+      
+          # If your plugin needs Composer autoload, install deps in the copied plugin
+          if [ -f "$PLUGINS_DIR/$PLUGIN_SLUG/composer.json" ]; then
+            ( cd "$PLUGINS_DIR/$PLUGIN_SLUG" && composer install --no-interaction --no-progress )
+          fi
+      
+          # 2) Activate the plugin
+          wp plugin activate "$PLUGIN_SLUG" --path="$WP_CORE_DIR"
+      
+          # 3) Force WP SAML Auth to use OneLogin ("internal") instead of SimpleSAMLphp
+          #    (no MU-plugin needed; write options directly)
           OPT_KEY=""
           for k in wp_saml_auth_options wp_saml_auth_settings; do
             if wp option get "$k" --path="$WP_CORE_DIR" >/dev/null 2>&1; then OPT_KEY="$k"; break; fi
           done
-          if [ -z "$OPT_KEY" ]; then OPT_KEY="wp_saml_auth_options"; fi
-
+          [ -n "$OPT_KEY" ] || OPT_KEY="wp_saml_auth_options"
+      
           CURRENT_JSON="$(wp option get "$OPT_KEY" --format=json --path="$WP_CORE_DIR" 2>/dev/null || echo '{}')"
-
-          # 4) Merge in minimal "internal" config so the plugin won't try SimpleSAMLphp
-          #    (no real IdP is needed for unit tests)
+      
           UPDATED_JSON="$(php -r '
             $c = json_decode(stream_get_contents(STDIN), true) ?: [];
             $c["connection_type"] = "internal";
@@ -131,22 +148,18 @@ jobs:
             $c["internal_config"]["sp"]["entityId"] = $c["internal_config"]["sp"]["entityId"] ?? "urn:example";
             $c["internal_config"]["sp"]["assertionConsumerService"]["url"] =
                 $c["internal_config"]["sp"]["assertionConsumerService"]["url"] ?? "http://example.test/wp-login.php";
-            // Put dummy IdP endpoints so the array shape matches what the plugin expects.
+            // Dummy IdP endpoints just to satisfy structure during unit tests
             $c["internal_config"]["idp"]["entityId"] = $c["internal_config"]["idp"]["entityId"] ?? "urn:dummy-idp";
             $c["internal_config"]["idp"]["singleSignOnService"]["url"] = $c["internal_config"]["idp"]["singleSignOnService"]["url"] ?? "https://idp.invalid/sso";
             $c["internal_config"]["idp"]["singleLogoutService"]["url"] = $c["internal_config"]["idp"]["singleLogoutService"]["url"] ?? "https://idp.invalid/slo";
             echo json_encode($c);
           ' <<<"$CURRENT_JSON")"
-
+      
           wp option update "$OPT_KEY" "$UPDATED_JSON" --format=json --path="$WP_CORE_DIR"
-
-          # 5) (Optional) Verify the effective connection type
+      
+          # 4) Verify
           wp option get "$OPT_KEY" --format=json --path="$WP_CORE_DIR" | grep -q '"connection_type":"internal"'
 
-        env:
-          WP_CORE_DIR: /tmp/wordpress
-
-      # 6) Run PHPUnit via the helper
       - name: Run PHPUnit (stable only)
         run: bash bin/phpunit-test.sh --skip-nightly
 
