@@ -133,7 +133,7 @@ jobs:
 
       - name: Run upstream phpunit-test.sh (stable only)
         run: |
-          bin/phpunit-test.sh \
+          bash bin/phpunit-test.sh \
             --skip-nightly \
             --skip-db=true \
             --dbname="${DB_NAME}" \
