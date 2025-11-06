@@ -141,22 +141,19 @@ jobs:
           grep -q "ci-wpsaml-bootstrap.php" "$CFG" || \
             printf "\n// CI: force WP SAML Auth internal provider\nrequire '/tmp/ci-wpsaml-bootstrap.php';\n" >> "$CFG"
 
-      - name: PHPUnit
-        run: vendor/bin/phpunit --do-not-cache-result
+#      - name: PHPUnit
+#        run: vendor/bin/phpunit --do-not-cache-result
 
-#      - name: Run upstream phpunit-test.sh
-#        env:
-#          WP_VERSION: 6.8.3
-#        run: |
-#          export DB_NAME DB_USER DB_PASSWORD DB_HOST WP_VERSION
-#          bash bin/phpunit-test.sh \
-#          --skip-nightly \
-#          --skip-db=true \
-#          --dbname="${DB_NAME}" \
-#          --dbuser="${DB_USER}" \
-#          --dbpass="${DB_PASSWORD}" \
-#          --dbhost="${DB_HOST}" \
-#          --wpversion="${WP_VERSION}"
+      - name: Run upstream phpunit-test.sh (honor our setup)
+        run: |
+          export DB_NAME DB_USER DB_PASSWORD DB_HOST WP_VERSION
+          # Do not let it manage DB again; we already installed and injected bootstrap.
+          bash bin/phpunit-test.sh --skip-nightly --skip-db=true \
+            --dbname="${DB_NAME}" \
+            --dbuser="${DB_USER}" \
+            --dbpass="${DB_PASSWORD}" \
+            --dbhost="${DB_HOST}" \
+            --version="${WP_VERSION}"
 
   behat:
     name: Behat (SSP ${{ matrix.ssp }})
