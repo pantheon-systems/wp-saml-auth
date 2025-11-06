@@ -72,6 +72,7 @@ jobs:
           echo "Creating database $DB_NAME"
           mysql -h 127.0.0.1 -uroot -proot -e "DROP DATABASE IF EXISTS \`$DB_NAME\`; CREATE DATABASE \`$DB_NAME\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
+
       - name: Require wpunit-helpers (if missing)
         run: |
           if ! composer show -D pantheon-systems/wpunit-helpers >/dev/null 2>&1; then
@@ -145,15 +146,10 @@ jobs:
             printf "\n// CI: force WP SAML Auth internal provider (no MU plugin)\n@include '/tmp/ci-wpsaml-config.php';\n" >> "$WP_CORE_DIR/wp-config.php"
           fi
 
-      - name: Run upstream phpunit-test.sh (stable only)
+      - name: Run upstream phpunit-test.sh
         env:
-          DB_NAME: wordpress_test
-          DB_USER: root
-          DB_PASSWORD: root
-          DB_HOST: 127.0.0.1
           WP_VERSION: 6.8.3
         run: |
-          # Belt & suspenders: export env AND pass args (some scripts read one or the other)
           export DB_NAME DB_USER DB_PASSWORD DB_HOST
           bash bin/phpunit-test.sh \
             --skip-nightly \
