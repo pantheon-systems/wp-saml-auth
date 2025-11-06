@@ -17,6 +17,24 @@
 #   bin/ci-run-phpunit.sh [-- any extra phpunit args...]
 set -euo pipefail
 
+# Detect wpunit-helpers install script in common locations
+INSTALLER=""
+for p in \
+  "bin/install-wp-tests.sh" \
+  "vendor/pantheon-systems/wpunit-helpers/bin/install-wp-tests.sh" \
+  "vendor/bin/install-wp-tests.sh"
+do
+  if [ -f "$p" ]; then INSTALLER="$p"; break; fi
+done
+
+if [ -z "$INSTALLER" ]; then
+  echo "install-wp-tests.sh not found.
+Install wpunit-helpers first: composer require --dev pantheon-systems/wpunit-helpers" >&2
+  exit 1
+fi
+chmod +x "$INSTALLER"
+
+
 ### Defaults
 DB_HOST="${DB_HOST:-127.0.0.1}"
 DB_USER="${DB_USER:-root}"
@@ -39,8 +57,8 @@ require_cmd wp
 if [ -f composer.json ]; then require_cmd composer; fi
 
 # Detect wpunit-helpers install script
-if [ ! -x ./install-wp-tests.sh ]; then
-  echo "./install-wp-tests.sh not found. Install wpunit-helpers first: composer require --dev pantheon-systems/wpunit-helpers" >&2
+if [ ! -x bin/install-wp-tests.sh ]; then
+  echo "bin/install-wp-tests.sh not found. Install wpunit-helpers first: composer require --dev pantheon-systems/wpunit-helpers" >&2
   exit 1
 fi
 
@@ -64,12 +82,12 @@ MYSQL_PWD="${DB_PASSWORD}" mysql -h "${DB_HOST}" -u "${DB_USER}" -e \
 log "Installing WP test harness (WP ${WP_VERSION})"
 set +e
 # Try wpunit-helpers flavor first (--wpversion), then classic (--version)
-bash ./install-wp-tests.sh \
+bash "$INSTALLER" \
   --dbname="${DB_NAME}" --dbuser="${DB_USER}" --dbpass="${DB_PASSWORD}" \
   --dbhost="${DB_HOST}" --wpversion="${WP_VERSION}" --skip-db=true
 RC=$?
 if [ $RC -ne 0 ]; then
-  bash ./install-wp-tests.sh \
+  bash "$INSTALLER" \
     --dbname="${DB_NAME}" --dbuser="${DB_USER}" --dbpass="${DB_PASSWORD}" \
     --dbhost="${DB_HOST}" --version="${WP_VERSION}" --skip-db=true
   RC=$?
