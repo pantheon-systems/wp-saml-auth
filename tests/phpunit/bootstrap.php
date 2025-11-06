@@ -10,111 +10,58 @@ if ( ! $_tests_dir ) {
 	$_tests_dir = '/tmp/wordpress-tests-lib';
 }
 
-/**
- * Ensure Yoast PHPUnit Polyfills is available (path provided by CI or vendor).
- */
-if (! defined('WP_TESTS_PHPUNIT_POLYFILLS_PATH')) {
-    $polyfills = getenv('WP_TESTS_PHPUNIT_POLYFILLS_PATH');
-    if ($polyfills) {
-        define('WP_TESTS_PHPUNIT_POLYFILLS_PATH', $polyfills);
-    } else {
-        define('WP_TESTS_PHPUNIT_POLYFILLS_PATH', __DIR__ . '/../../vendor/yoast/phpunit-polyfills/phpunitpolyfills-autoload.php');
-    }
-}
+define( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH', __DIR__ . '/../../vendor/yoast/phpunit-polyfills/phpunitpolyfills-autoload.php' );
 
 // Give access to tests_add_filter() function.
 require_once $_tests_dir . '/includes/functions.php';
 
 /**
- * Provide deterministic default options for the plugin under test.
- * IMPORTANT: Always return our autoload path for 'simplesamlphp_autoload'.
- *
- * These defaults are aligned with your test expectations:
- *  - auto_provision: true
- *  - permit_wp_login: true
- *  - get_user_by: 'email'
- *  - default_role: 'subscriber'
- */
-function _wp_saml_auth_filter_option($value, $option_name) {
-    switch ($option_name) {
-        case 'simplesamlphp_autoload':
-            return realpath(__DIR__ . '/simplesamlphp-stubs/autoload.php');
-
-        // Defaults to keep tests deterministic and in line with assertions.
-        case 'permit_wp_login':
-            return true;
-
-        case 'auto_provision':
-            return true;
-
-        case 'allow_slo':
-            return false;
-
-        case 'get_user_by':
-            return 'email';
-
-        case 'user_login_attribute':
-            return 'uid';
-
-        case 'user_email_attribute':
-            return 'mail';
-
-        case 'user_role_attribute':
-            return 'eduPersonAffiliation';
-
-        case 'default_role':
-            return 'subscriber';
-    }
-    return $value;
-}
-
-/**
- * Register test filters first, then load the plugin.
- */
-function _wp_saml_auth_register_test_filters() {
-    add_filter('wp_saml_auth_option', '_wp_saml_auth_filter_option', 1, 2);
-
-    // Some codepaths query this filter directly; provide it as well.
-    add_filter('wp_saml_auth_autoload', function () {
-        return realpath(__DIR__ . '/simplesamlphp-stubs/autoload.php');
-    });
-}
-tests_add_filter('muplugins_loaded', '_wp_saml_auth_register_test_filters');
-
-/**
- * Load the plugin and test CLI helpers.
+ * Manually load the plugin being tested.
  */
 function _manually_load_plugin() {
-    $root = dirname(dirname(dirname(__FILE__))); // repo root
-    require $root . '/wp-saml-auth.php';
-    require $root . '/inc/class-wp-saml-auth-cli.php';
-    require __DIR__ . '/class-wp-saml-auth-test-cli.php';
+	require dirname( dirname( dirname( __FILE__ ) ) ) . '/wp-saml-auth.php';
+	require dirname( dirname( dirname( __FILE__ ) ) ) . '/inc/class-wp-saml-auth-cli.php';
+	require dirname( __FILE__ ) . '/class-wp-saml-auth-test-cli.php';
+
+	add_filter( 'wp_saml_auth_option', '_wp_saml_auth_filter_option', 10, 2 );
 }
-tests_add_filter('muplugins_loaded', '_manually_load_plugin');
+tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
+
+function _wp_saml_auth_filter_option( $value, $option_name ) {
+	switch ( $option_name ) {
+		case 'simplesamlphp_autoload':
+			$value = dirname( __FILE__ ) . '/class-simplesaml-auth-simple.php';
+			break;
+	}
+	return $value;
+}
+
+/**
+ * Log in a user by setting authentication cookies.
+ *
+ * @since 2.5.0
+ */
+function wp_set_auth_cookie( $user_id, $remember = false, $secure = '', $token = '' ) {
+	wp_set_current_user( $user_id );
+	return true;
+}
 
 /**
  * Log the current user out.
  *
  * @since 2.5.0
- * Cookie shims for unit tests.
  */
-function wp_set_auth_cookie($user_id, $remember = false, $secure = '', $token = '') {
-    wp_set_current_user($user_id);
-    return true;
-}
 function wp_logout() {
-    wp_destroy_current_session();
-    wp_set_current_user(0);
+	wp_destroy_current_session();
+	wp_set_current_user( 0 );
 
-    /**
-     * Fires after a user is logged-out.
-     *
-     * @since 1.5.0
-     */
-    do_action('wp_logout');
+	/**
+	 * Fires after a user is logged-out.
+	 *
+	 * @since 1.5.0
+	 */
+	do_action( 'wp_logout' );
 }
 
-/**
- * Boot the WordPress testing environment
- */
+// Start up the WP testing environment.
 require $_tests_dir . '/includes/bootstrap.php';
