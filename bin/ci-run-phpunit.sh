@@ -137,6 +137,26 @@ SERIALIZED="$(php -r '
   echo addslashes(serialize($c));
 ')"
 
+# Determine test prefix (fallback to wp_)
+TEST_CFG="${WP_TESTS_DIR%/}/wp-tests-config.php"
+TABLE_PREFIX="$(grep -E "^\s*\$table_prefix\s*=" "$TEST_CFG" | sed -E "s/.*'([^']+)'.*/\1/")"
+[ -z "$TABLE_PREFIX" ] && TABLE_PREFIX="wp_"
+log "Test table prefix: ${TABLE_PREFIX}"
+
+# Ensure `${prefix}options` exists so we can write config before PHPUnit schema install
+DDL="
+CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;
+CREATE TABLE IF NOT EXISTS \`${DB_NAME}\`.\`${TABLE_PREFIX}options\` (
+  option_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  option_name varchar(191) NOT NULL DEFAULT '',
+  option_value longtext NOT NULL,
+  autoload varchar(20) NOT NULL DEFAULT 'yes',
+  PRIMARY KEY  (option_id),
+  UNIQUE KEY option_name (option_name)
+) DEFAULT CHARSET=utf8mb4;
+"
+MYSQL_PWD="${DB_PASSWORD}" mysql -h "${DB_HOST}" -u "${DB_USER}" -e "$DDL"
+
 # Upsert into both legacy and current option names to be safe
 SQL="
 REPLACE INTO \`${DB_NAME}\`.\`${TABLE_PREFIX}options\` (option_name, option_value, autoload)
