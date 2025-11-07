@@ -13,7 +13,7 @@ WP_CORE_DIR="${WP_CORE_DIR:-/tmp/wordpress}"
 WP_TESTS_DIR="${WP_TESTS_DIR:-/tmp/wordpress-tests-lib}"
 BOOTSTRAP="/tmp/wpsa-phpunit-bootstrap.php"
 
-# Derive a per-run DB name (stable prefix keeps logs tidy)
+# Per-run DB name (stable prefix keeps logs tidy)
 DB_NAME="${DB_NAME:-wp_test_$(echo "${WP_VERSION//./}" | cut -c1-3)_$((RANDOM%99999))}"
 
 echo ">> Using DB_HOST=${DB_HOST} DB_USER=${DB_USER}"
@@ -55,20 +55,8 @@ echo ">> Resolving WP version"
 RESOLVED_WP_VERSION="$(wp core version --path="${WP_CORE_DIR}")"
 echo ">> Resolved WP version: ${RESOLVED_WP_VERSION}"
 
-echo ">> Seeding minimal SAML settings (idempotent)"
-wp --path="$WP_CORE_DIR" eval '
-$opts = get_option("wp_saml_auth_settings", []);
-if (!is_array($opts)) { $opts = []; }
-$opts["provider"] = "onelogin";              // forces the non-SimpleSAML provider used by tests
-$opts["connection_type"] = "internal";       // avoid external redirects in CI
-$opts["permit_wp_login"] = true;             // allow username/password
-$opts["auto_provision"] = true;              // create user on first login
-$opts["default_role"] = "subscriber";        // harmless default
-update_option("wp_saml_auth_settings", $opts);
-';
-
 ###
-# Prepare WP test suite (download just what we need)
+# Prepare WP test suite (download from tarball, no svn)
 ###
 echo ">> Preparing WP test suite (without svn)"
 mkdir -p "${WP_TESTS_DIR}/includes" "${WP_TESTS_DIR}/data"
@@ -76,28 +64,19 @@ mkdir -p "${WP_TESTS_DIR}/includes" "${WP_TESTS_DIR}/data"
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
 
-# Download the exact WP tag as a tarball from the GitHub mirror
 echo ">> Fetching wordpress-develop tag ${RESOLVED_WP_VERSION} tarball"
 curl -fsSL \
   "https://github.com/WordPress/wordpress-develop/archive/refs/tags/${RESOLVED_WP_VERSION}.tar.gz" \
   -o "${tmpdir}/wp-dev.tar.gz"
 
-# Extract it
 tar -xzf "${tmpdir}/wp-dev.tar.gz" -C "${tmpdir}"
-
 src="${tmpdir}/wordpress-develop-${RESOLVED_WP_VERSION}/tests/phpunit"
-
-# Copy only what we need
 cp -R "${src}/includes/." "${WP_TESTS_DIR}/includes/"
 cp -R "${src}/data/."     "${WP_TESTS_DIR}/data/"
 
-# Done; tmpdir cleaned by trap
-
-# Write wp-tests-config.php with all required constants
 echo ">> Writing ${WP_TESTS_DIR}/wp-tests-config.php"
 cat > "${WP_TESTS_DIR}/wp-tests-config.php" <<PHP
 <?php
-// Database settings
 define( 'DB_NAME',     '${DB_NAME}' );
 define( 'DB_USER',     '${DB_USER}' );
 define( 'DB_PASSWORD', '${DB_PASSWORD}' );
@@ -105,27 +84,20 @@ define( 'DB_HOST',     '${DB_HOST}' );
 define( 'DB_CHARSET',  'utf8' );
 define( 'DB_COLLATE',  '' );
 
-// Custom test constants required by the test bootstrap
 define( 'WP_TESTS_DOMAIN', 'example.org' );
 define( 'WP_TESTS_EMAIL',  'admin@example.org' );
 define( 'WP_TESTS_TITLE',  'WP SAML Auth Tests' );
 define( 'WP_PHP_BINARY',   PHP_BINARY );
 
-// Point WordPress at the core installation we prepared
 define( 'ABSPATH', rtrim('${WP_CORE_DIR}', '/') . '/' );
-
-// Prevent sending mail during tests
 define( 'DISABLE_WP_CRON', true );
 
-// Table prefix used by the test suite
 \$table_prefix = 'wptests_';
-
-// Tell the test suite not to install into ABSPATH (we already installed core).
 define( 'WP_TESTS_FORCE_KNOWN_BUGS', false );
 PHP
 
 ###
-# Sync plugin into the test site and install its dev deps (for autoloaders)
+# Sync plugin and install dev deps (autoloaders)
 ###
 PLUGIN_SLUG="wp-saml-auth"
 PLUGIN_DIR="${WP_CORE_DIR}/wp-content/plugins/${PLUGIN_SLUG}"
@@ -133,87 +105,66 @@ PLUGIN_DIR="${WP_CORE_DIR}/wp-content/plugins/${PLUGIN_SLUG}"
 echo ">> Syncing plugin into ${PLUGIN_DIR}"
 rm -rf "${PLUGIN_DIR}"
 mkdir -p "$(dirname "${PLUGIN_DIR}")"
-# Copy the repo contents except the .git directory
 rsync -a --delete --exclude ".git" ./ "${PLUGIN_DIR}/"
 
 echo ">> Installing plugin composer deps (for dev-only autoloaders)"
 ( cd "${PLUGIN_DIR}" && composer install --no-interaction --prefer-dist )
 
-# Ensure the plugin's autoloader exists (primary source for classes)
 if [[ ! -f "${PLUGIN_DIR}/vendor/autoload.php" ]]; then
   echo "ERROR: ${PLUGIN_DIR}/vendor/autoload.php is missing" >&2
   exit 1
 fi
 
 ###
-# Activate plugin and set minimal options in DB
+# Activate plugin and seed options (idempotent and atomic)
 ###
 echo ">> Activating plugin ${PLUGIN_SLUG}"
 wp plugin activate "${PLUGIN_SLUG}" --path="${WP_CORE_DIR}"
 
-echo ">> Writing minimal SAML settings into TEST DB (${DB_NAME})"
-# Make sure provider is 'onelogin' so SimpleSAMLphp is never required in CI
-wp option patch update wp_saml_auth_settings provider onelogin --path="${WP_CORE_DIR}"
-# Enable auto-provision in tests unless a test overrides
-wp option patch update wp_saml_auth_settings auto_provision 1 --path="${WP_CORE_DIR}"
+echo ">> Seeding SAML settings"
+# Start with an object to avoid “key missing”
+wp --path="${WP_CORE_DIR}" option update wp_saml_auth_settings '{}' --format=json
+# Patch all required keys
+wp --path="${WP_CORE_DIR}" option patch insert wp_saml_auth_settings provider onelogin           --type=string
+wp --path="${WP_CORE_DIR}" option patch insert wp_saml_auth_settings connection_type internal   --type=string || wp --path="${WP_CORE_DIR}" option patch update wp_saml_auth_settings connection_type internal --type=string
+wp --path="${WP_CORE_DIR}" option patch insert wp_saml_auth_settings permit_wp_login 1          --type=boolean || wp --path="${WP_CORE_DIR}" option patch update wp_saml_auth_settings permit_wp_login 1 --type=boolean
+wp --path="${WP_CORE_DIR}" option patch insert wp_saml_auth_settings auto_provision 1           --type=boolean || wp --path="${WP_CORE_DIR}" option patch update wp_saml_auth_settings auto_provision 1 --type=boolean
+wp --path="${WP_CORE_DIR}" option patch insert wp_saml_auth_settings default_role subscriber    --type=string || wp --path="${WP_CORE_DIR}" option patch update wp_saml_auth_settings default_role subscriber --type=string
 
 ###
-# Prepare deterministic PHPUnit bootstrap that:
-#  - uses the plugin's composer autoloader first
-#  - stubs CLI helper if missing
-#  - loads WP test framework and the plugin under test
+# Deterministic bootstrap that ensures:
+#  - plugin autoloader is present
+#  - provider=onelogin (so SimpleSAMLphp is never required)
+#  - WordPress test framework is loaded
 ###
 echo ">> Preparing PHPUnit bootstrap: ${BOOTSTRAP}"
 cat > "${BOOTSTRAP}" <<'PHP'
 <?php
-/**
- * Deterministic bootstrap for wp-saml-auth tests.
- */
-$pluginDir = getenv('WP_PLUGIN_DIR');       // e.g. /tmp/wordpress/wp-content/plugins/wp-saml-auth
+$pluginDir = getenv('WP_PLUGIN_DIR');
 $repoRoot  = getenv('REPO_ROOT') ?: getcwd();
 $checked   = [];
 
-// 1) Prefer the plugin's composer autoloader (CI guarantees it's present).
+// Prefer plugin autoloader
 if ($pluginDir) {
     $pluginAutoload = rtrim($pluginDir, '/').'/vendor/autoload.php';
     $checked[] = $pluginAutoload;
-    if (is_file($pluginAutoload)) {
-        require_once $pluginAutoload;
-    }
+    if (is_file($pluginAutoload)) { require_once $pluginAutoload; }
 }
-
-// 2) Fall back to repo root autoloader if not yet loaded (local runs).
+// Fallback to repo autoloader (local dev)
 if (!class_exists(\Composer\Autoload\ClassLoader::class, false)) {
     $repoAutoload = rtrim($repoRoot, '/').'/vendor/autoload.php';
     $checked[] = $repoAutoload;
-    if (is_file($repoAutoload)) {
-        require_once $repoAutoload;
-    }
+    if (is_file($repoAutoload)) { require_once $repoAutoload; }
 }
-
 if (!class_exists(\Composer\Autoload\ClassLoader::class, false)) {
     fwrite(STDERR, "Composer autoload not found. Checked:\n - " . implode("\n - ", $checked) . "\n");
     exit(1);
 }
 
-/**
- * Force provider=onelogin via filters so SimpleSAMLphp is never required in CI.
- */
-add_filter('wp_saml_auth_default_options', function(array $defaults) {
-    $defaults['provider'] = 'onelogin';
-    return $defaults;
-}, 0);
+add_filter('wp_saml_auth_default_options', function(array $defaults){ $defaults['provider']='onelogin'; return $defaults; }, 0);
+add_filter('wp_saml_auth_option', function($v,$opt){ return $opt==='provider' ? 'onelogin' : $v; }, 0, 2);
 
-add_filter('wp_saml_auth_option', function($value, $option) {
-    if ($option === 'provider') {
-        return 'onelogin';
-    }
-    return $value;
-}, 0, 2);
-
-/**
- * Load the test CLI helper if present; otherwise provide a minimal stub.
- */
+// CLI helper stub if tests don't ship it
 $testCliHelper = $pluginDir ? $pluginDir . '/tests/phpunit/class-wp-saml-auth-test-cli.php' : null;
 if ($testCliHelper && is_file($testCliHelper)) {
     require_once $testCliHelper;
@@ -224,9 +175,6 @@ if ($testCliHelper && is_file($testCliHelper)) {
     }
 }
 
-/**
- * Load WordPress testing framework and the plugin under test.
- */
 $testsDir = getenv('WP_TESTS_DIR');
 if (!$testsDir || !is_dir($testsDir)) {
     fwrite(STDERR, "WP_TESTS_DIR not set or invalid: " . var_export($testsDir, true) . "\n");
@@ -234,42 +182,36 @@ if (!$testsDir || !is_dir($testsDir)) {
 }
 
 require $testsDir . '/includes/functions.php';
-
-// Ensure plugin is loaded during MU plugins phase
 tests_add_filter('muplugins_loaded', function () use ($pluginDir) {
     require $pluginDir . '/wp-saml-auth.php';
 });
-
 require $testsDir . '/includes/bootstrap.php';
 PHP
 
-###
-# Run PHPUnit
-###
-echo ">> Running PHPUnit"
-
-###
-# Prepare deterministic PHPUnit bootstrap that we already wrote to $BOOTSTRAP
-# Also create a shim in tests/phpunit/bootstrap.php so existing phpunit.xml(.dist)
-# that expects that path will still work.
-###
-echo ">> Ensuring tests/phpunit/bootstrap.php shim points to ${BOOTSTRAP}"
+# Local shim so any phpunit.xml that expects this path still works
+echo ">> Ensuring tests/phpunit/bootstrap.php shim"
 mkdir -p "${PLUGIN_DIR}/tests/phpunit"
 cat > "${PLUGIN_DIR}/tests/phpunit/bootstrap.php" <<PHP
 <?php
-// Project-local shim to ensure WordPress test framework loads consistently in CI.
 \$alt = getenv('WPSA_BOOTSTRAP') ?: '${BOOTSTRAP}';
-if (!is_file(\$alt)) {
-    fwrite(STDERR, "Bootstrap not found: {\$alt}\n");
-    exit(1);
-}
+if (!is_file(\$alt)) { fwrite(STDERR, "Bootstrap not found: {\$alt}\n"); exit(1); }
 require \$alt;
 PHP
 
 ###
-# Run PHPUnit
+# Run PHPUnit — force only the plugin test directory to be collected
+# (avoids bad suites from phpunit.xml that point at repo root)
 ###
 echo ">> Running PHPUnit"
+export WP_TESTS_DIR="${WP_TESTS_DIR}"
+export WP_PLUGIN_DIR="${PLUGIN_DIR}"
+export REPO_ROOT="${GITHUB_WORKSPACE:-$PWD}"
+export WPSA_BOOTSTRAP="${BOOTSTRAP}"
+
+PHPUNIT_BIN="vendor/bin/phpunit"
+[[ -x "$PHPUNIT_BIN" ]] || PHPUNIT_BIN="${PLUGIN_DIR}/vendor/bin/phpunit"
+
+# If a config exists we still allow it, but we ALWAYS pass the tests dir.
 PHPUNIT_CFG=""
 if [[ -f "phpunit.xml" ]]; then
   PHPUNIT_CFG="-c phpunit.xml"
@@ -277,15 +219,6 @@ elif [[ -f "phpunit.xml.dist" ]]; then
   PHPUNIT_CFG="-c phpunit.xml.dist"
 fi
 
-# Env for bootstrap
-export WP_PLUGIN_DIR="${PLUGIN_DIR}"
-export REPO_ROOT="${GITHUB_WORKSPACE:-$PWD}"
-export WPSA_BOOTSTRAP="${BOOTSTRAP}"
-
-# Prefer running exactly the tests directory to avoid repo-root scans
-PHPUNIT_BIN="vendor/bin/phpunit"
-[[ -x "$PHPUNIT_BIN" ]] || PHPUNIT_BIN="${PLUGIN_DIR}/vendor/bin/phpunit"
-
 set -x
-$PHPUNIT_BIN ${PHPUNIT_CFG:+$PHPUNIT_CFG} --bootstrap "${BOOTSTRAP}" "${PLUGIN_DIR}/tests/phpunit"
+"$PHPUNIT_BIN" ${PHPUNIT_CFG:+$PHPUNIT_CFG} --bootstrap "${BOOTSTRAP}" "${PLUGIN_DIR}/tests/phpunit"
 set +x
