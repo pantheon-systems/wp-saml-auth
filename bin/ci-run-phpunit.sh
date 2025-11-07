@@ -9,10 +9,8 @@ set -euo pipefail
 : "${WP_TESTS_PHPUNIT_POLYFILLS_PATH:=/tmp/phpunit-deps}"
 : "${WP_VERSION:=6.8.3}"
 
-# Ensure bootstrap is a FILE; default to repo tests bootstrap
 REPO_DIR="${GITHUB_WORKSPACE:-$PWD}"
 : "${BOOTSTRAP:=${REPO_DIR}/tests/phpunit/bootstrap.php}"
-
 PLUGIN_DIR="$REPO_DIR"
 
 log(){ printf '>> %s\n' "$*"; }
@@ -21,7 +19,6 @@ need(){ command -v "$1" >/dev/null 2>&1 || die "Missing dependency: $1"; }
 
 need php; need curl; need tar; need wp
 command -v composer >/dev/null 2>&1 || die "composer is required"
-
 [[ -f "$BOOTSTRAP" ]] || die "Bootstrap not found: $BOOTSTRAP"
 
 DB_NAME="wp_test_${RANDOM}"
@@ -67,6 +64,8 @@ define( 'WP_TESTS_TITLE', 'Test Blog' );
 \$table_prefix = 'wptests_';
 define( 'ABSPATH', '${WP_CORE_DIR}/' );
 define( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH', '${WP_TESTS_PHPUNIT_POLYFILLS_PATH}' );
+define( 'WP_PHP_BINARY', PHP_BINARY );
+define( 'WP_RUN_CORE_TESTS', false );
 PHP
 
 log "Sync plugin to WP"
