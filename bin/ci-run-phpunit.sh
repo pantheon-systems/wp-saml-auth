@@ -248,7 +248,28 @@ PHP
 ###
 echo ">> Running PHPUnit"
 
-# Prefer repo phpunit.xml/.dist if present (keeps your existing behavior)
+###
+# Prepare deterministic PHPUnit bootstrap that we already wrote to $BOOTSTRAP
+# Also create a shim in tests/phpunit/bootstrap.php so existing phpunit.xml(.dist)
+# that expects that path will still work.
+###
+echo ">> Ensuring tests/phpunit/bootstrap.php shim points to ${BOOTSTRAP}"
+mkdir -p "${PLUGIN_DIR}/tests/phpunit"
+cat > "${PLUGIN_DIR}/tests/phpunit/bootstrap.php" <<PHP
+<?php
+// Project-local shim to ensure WordPress test framework loads consistently in CI.
+\$alt = getenv('WPSA_BOOTSTRAP') ?: '${BOOTSTRAP}';
+if (!is_file(\$alt)) {
+    fwrite(STDERR, "Bootstrap not found: {\$alt}\n");
+    exit(1);
+}
+require \$alt;
+PHP
+
+###
+# Run PHPUnit
+###
+echo ">> Running PHPUnit"
 PHPUNIT_CFG=""
 if [[ -f "phpunit.xml" ]]; then
   PHPUNIT_CFG="-c phpunit.xml"
@@ -256,12 +277,15 @@ elif [[ -f "phpunit.xml.dist" ]]; then
   PHPUNIT_CFG="-c phpunit.xml.dist"
 fi
 
-# Pass env for the bootstrap
+# Env for bootstrap
 export WP_PLUGIN_DIR="${PLUGIN_DIR}"
 export REPO_ROOT="${GITHUB_WORKSPACE:-$PWD}"
+export WPSA_BOOTSTRAP="${BOOTSTRAP}"
 
-if [[ -n "${PHPUNIT_CFG}" ]]; then
-  vendor/bin/phpunit ${PHPUNIT_CFG} --bootstrap "${BOOTSTRAP}"
-else
-  vendor/bin/phpunit --bootstrap "${BOOTSTRAP}"
-fi
+# Prefer running exactly the tests directory to avoid repo-root scans
+PHPUNIT_BIN="vendor/bin/phpunit"
+[[ -x "$PHPUNIT_BIN" ]] || PHPUNIT_BIN="${PLUGIN_DIR}/vendor/bin/phpunit"
+
+set -x
+$PHPUNIT_BIN ${PHPUNIT_CFG:+$PHPUNIT_CFG} --bootstrap "${BOOTSTRAP}" "${PLUGIN_DIR}/tests/phpunit"
+set +x
