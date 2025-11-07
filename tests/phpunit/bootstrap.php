@@ -2,9 +2,10 @@
 /**
  * PHPUnit bootstrap for wp-saml-auth.
  * - Auto-installs WP test suite if missing (so early phpunit calls don’t fail).
+ * - Ensures the test database exists before WP tries to select it.
  * - Loads Yoast PHPUnit Polyfills early.
+ * - Uses wordpress-develop /src as ABSPATH if /tmp/wordpress isn't ready yet.
  * - Preserves your plugin/CLI loading, option defaults, and wp_logout shim.
- * - NEW: Uses wordpress-develop /src as ABSPATH if /tmp/wordpress is not ready yet.
  */
 
 $env = fn($k, $d=null) => getenv($k) !== false ? getenv($k) : $d;
@@ -19,7 +20,7 @@ $DB_USER = $env('DB_USER', 'root');
 $DB_PASS = $env('DB_PASSWORD', 'root');
 $DB_NAME = $env('DB_NAME', 'wp_test_boot');
 
-// ---------- Polyfills (load early) ----------
+/** ---------- Polyfills (load early) ---------- */
 if (is_file($POLY_DIR . '/vendor/autoload.php')) {
 	require_once $POLY_DIR . '/vendor/autoload.php';
 } else {
@@ -29,10 +30,18 @@ if (is_file($POLY_DIR . '/vendor/autoload.php')) {
 	}
 }
 
-// We'll determine ABSPATH after (depends on whether /tmp/wordpress exists yet)
+/** ---------- Ensure test DB exists (for early phpunit runs) ---------- */
+$mysqli = @mysqli_init();
+if ($mysqli && @$mysqli->real_connect($DB_HOST, $DB_USER, $DB_PASS)) {
+	// Create DB if missing; use utf8mb4 for parity with CI script.
+	@$mysqli->query("CREATE DATABASE IF NOT EXISTS `{$DB_NAME}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+	@$mysqli->close();
+}
+
+/** We'll decide ABSPATH dynamically */
 $DEVDIR_SRC = null;
 
-// ---------- Ensure WP test suite exists ----------
+/** ---------- Ensure WP test suite exists ---------- */
 $includes_bootstrap = $_tests_dir . '/includes/bootstrap.php';
 if (! is_file($includes_bootstrap)) {
 	// Fetch wordpress-develop tarball and extract tests/phpunit into $_tests_dir
@@ -52,12 +61,12 @@ if (! is_file($includes_bootstrap)) {
 			new RecursiveDirectoryIterator($extract, FilesystemIterator::SKIP_DOTS),
 			RecursiveIteratorIterator::CHILD_FIRST
 		);
-		foreach ($iter as $f) { $f->isDir() ? rmdir($f) : unlink($f); }
-		rmdir($extract);
+		foreach ($iter as $f) { $f->isDir() ? @rmdir($f) : @unlink($f); }
+		@rmdir($extract);
 	}
-	mkdir($extract, 0777, true);
+	@mkdir($extract, 0777, true);
 
-	// Extract tarball (works on GH runners)
+	// Extract
 	$phar = new PharData($tgz);
 	$phar->decompress(); // creates .tar next to .tar.gz
 	$tar = str_replace('.gz', '', $tgz);
@@ -80,7 +89,7 @@ if (! is_file($includes_bootstrap)) {
 	}
 
 	if (! is_dir($_tests_dir)) {
-		mkdir($_tests_dir, 0777, true);
+		@mkdir($_tests_dir, 0777, true);
 	}
 
 	// Copy tests/phpunit/* -> $_tests_dir
@@ -92,20 +101,18 @@ if (! is_file($includes_bootstrap)) {
 		$rel = substr($src->getPathname(), strlen($devDir . '/tests/phpunit'));
 		$dst = $_tests_dir . $rel;
 		if ($src->isDir()) {
-			if (! is_dir($dst)) mkdir($dst, 0777, true);
+			if (! is_dir($dst)) @mkdir($dst, 0777, true);
 		} else {
-			copy($src->getPathname(), $dst);
+			@copy($src->getPathname(), $dst);
 		}
 	}
 
-	// Decide ABSPATH:
-	// - If WP core is already downloaded to $WP_CORE_DIR and has wp-settings.php, use it.
-	// - Else use the wordpress-develop /src path so early phpunit runs don't crash.
+	// Decide ABSPATH for early run:
 	$ABSPATH = (is_file($WP_CORE_DIR . '/wp-settings.php'))
 		? rtrim($WP_CORE_DIR, '/') . '/'
-		: ($DEVDIR_SRC ?: rtrim($WP_CORE_DIR, '/') . '/'); // fallback if src missing (unlikely)
+		: ($DEVDIR_SRC ?: rtrim($WP_CORE_DIR, '/') . '/');
 
-	// Write wp-tests-config.php
+	// Write wp-tests-config.php (NOTE: we DO NOT define WP_PHP_BINARY here to avoid "already defined" warnings)
 	$cfg = <<<PHP
 <?php
 define( 'DB_NAME', '{$DB_NAME}' );
@@ -120,8 +127,6 @@ define( 'WP_TESTS_TITLE', 'Test Blog' );
 \$table_prefix = 'wptests_';
 define( 'ABSPATH', '{$ABSPATH}' );
 define( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH', '{$POLY_DIR}' );
-define( 'WP_PHP_BINARY', PHP_BINARY );
-define( 'WP_RUN_CORE_TESTS', false );
 PHP;
 	file_put_contents($_tests_dir . '/wp-tests-config.php', $cfg);
 
@@ -131,35 +136,37 @@ PHP;
 		exit(1);
 	}
 } else {
-	// tests already present; still ensure ABSPATH is sensible for early runs
+	// tests already present; if ABSPATH points to /tmp/wordpress but core isn't there, use /src
+	$core_has_settings = is_file($WP_CORE_DIR . '/wp-settings.php');
+	if (! $core_has_settings && !defined('ABSPATH')) {
+		foreach (glob('/tmp/wp-develop-*', GLOB_ONLYDIR) as $ex) {
+			if (is_dir($ex . '/wordpress-develop-' . $WP_VERSION . '/src')) {
+				$DEVDIR_SRC = rtrim($ex . '/wordpress-develop-' . $WP_VERSION . '/src', '/') . '/';
+				break;
+			}
+			if (is_dir($ex . '/src')) {
+				$DEVDIR_SRC = rtrim($ex . '/src', '/') . '/';
+				break;
+			}
+		}
+		if ($DEVDIR_SRC) {
+			define('ABSPATH', $DEVDIR_SRC);
+		}
+	}
+
+	// Also sanitize an old wp-tests-config.php that may define WP_PHP_BINARY / WP_RUN_CORE_TESTS
 	$config_file = $_tests_dir . '/wp-tests-config.php';
-	if (is_file($config_file) && is_readable($config_file)) {
-		// If ABSPATH points to /tmp/wordpress but core isn't there, patch in-memory ABSPATH before bootstrap loads it.
-		$core_has_settings = is_file($WP_CORE_DIR . '/wp-settings.php');
-		if (! $core_has_settings) {
-			// Try to find an adjacent devDir/src from prior extraction:
-			foreach (glob('/tmp/wp-develop-*', GLOB_ONLYDIR) as $ex) {
-				if (is_dir($ex . '/wordpress-develop-' . $WP_VERSION . '/src')) {
-					$DEVDIR_SRC = rtrim($ex . '/wordpress-develop-' . $WP_VERSION . '/src', '/') . '/';
-					break;
-				}
-				// generic catch-all
-				if (is_dir($ex . '/src')) {
-					$DEVDIR_SRC = rtrim($ex . '/src', '/') . '/';
-					break;
-				}
-			}
-			if ($DEVDIR_SRC) {
-				// Define it before including bootstrap (bootstrap reads constants from the config).
-				if (!defined('ABSPATH')) {
-					define('ABSPATH', $DEVDIR_SRC);
-				}
-			}
+	if (is_file($config_file) && is_writable($config_file)) {
+		$cfg = file_get_contents($config_file);
+		$cfg2 = preg_replace('/^\s*define\(\s*[\'"]WP_PHP_BINARY[\'"].*?\);\s*$/m', '', $cfg);
+		$cfg2 = preg_replace('/^\s*define\(\s*[\'"]WP_RUN_CORE_TESTS[\'"].*?\);\s*$/m', '', $cfg2);
+		if ($cfg2 !== null && $cfg2 !== $cfg) {
+			file_put_contents($config_file, $cfg2);
 		}
 	}
 }
 
-// ---------- Ensure required constants even if config predates new ones ----------
+/** ---------- Ensure required constants even if config predates new ones ---------- */
 if (!defined('WP_PHP_BINARY')) {
 	define('WP_PHP_BINARY', PHP_BINARY ?: 'php');
 }
@@ -167,10 +174,10 @@ if (!defined('WP_RUN_CORE_TESTS')) {
 	define('WP_RUN_CORE_TESTS', false);
 }
 
-// ---------- Provide tests_add_filter ----------
+/** ---------- Provide tests_add_filter ---------- */
 require_once $_tests_dir . '/includes/functions.php';
 
-// ---------- Load plugin & CLI (preserving your logic) ----------
+/** ---------- Load plugin & CLI (preserving your logic) ---------- */
 function _manually_load_plugin() {
 	$root = dirname(__DIR__, 2);
 
@@ -189,7 +196,7 @@ function _manually_load_plugin() {
 }
 tests_add_filter('muplugins_loaded', '_manually_load_plugin');
 
-// ---------- Option defaults preserved ----------
+/** ---------- Option defaults preserved ---------- */
 function _wp_saml_auth_filter_option($value, $name) {
 	if ($name === 'simplesamlphp_autoload') {
 		$autoload = getenv('SIMPLESAMLPHP_AUTOLOAD');
@@ -202,7 +209,7 @@ function _wp_saml_auth_filter_option($value, $name) {
 	return $value;
 }
 
-// ---------- wp_logout shim (as before) ----------
+/** ---------- wp_logout shim (as before) ---------- */
 if (! function_exists('wp_logout')) {
 	function wp_logout() {
 		if (function_exists('wp_destroy_current_session')) wp_destroy_current_session();
@@ -211,5 +218,5 @@ if (! function_exists('wp_logout')) {
 	}
 }
 
-// ---------- Finally load the WP tests bootstrap (defines WP_UnitTestCase) ----------
+/** ---------- Finally load the WP tests bootstrap (defines WP_UnitTestCase) ---------- */
 require $_tests_dir . '/includes/bootstrap.php';
