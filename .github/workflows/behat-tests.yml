@@ -96,6 +96,7 @@ jobs:
         run: |
           PHPUNIT_BIN="vendor/bin/phpunit"
           [[ -x "$PHPUNIT_BIN" ]] || PHPUNIT_BIN="${PLUGIN_DIR}/vendor/bin/phpunit"
+          export BOOTSTRAP=tests/phpunit/bootstrap.php
           $PHPUNIT_BIN ${PHPUNIT_CFG:+$PHPUNIT_CFG} --bootstrap "${BOOTSTRAP}"
           bash bin/ci-run-phpunit.sh
 
