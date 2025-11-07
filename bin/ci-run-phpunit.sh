@@ -1,193 +1,137 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
-# ---- Inputs / Defaults -------------------------------------------------------
-: "${DB_HOST:=127.0.0.1}"
-: "${DB_USER:=root}"
-: "${DB_PASSWORD:=root}"
-: "${WP_CORE_DIR:=/tmp/wordpress}"
-: "${WP_TESTS_DIR:=/tmp/wordpress-tests-lib}"
-: "${WP_VERSION:=latest}"
-: "${WP_TESTS_PHPUNIT_POLYFILLS_PATH:=/tmp/phpunit-deps}"
+# ---------- Config / Inputs ----------
+: "${DB_HOST:?DB_HOST required}"
+: "${DB_USER:?DB_USER required}"
+: "${DB_PASSWORD:?DB_PASSWORD required}"
+: "${WP_CORE_DIR:?WP_CORE_DIR required}"           # e.g. /tmp/wordpress
+: "${WP_TESTS_DIR:?WP_TESTS_DIR required}"         # e.g. /tmp/wordpress-tests-lib
+: "${WP_VERSION:?WP_VERSION required}"             # e.g. 6.8.3
 
+REPO_DIR="$(pwd)"
 PLUGIN_SLUG="wp-saml-auth"
-PLUGIN_DIR="$(pwd)"
-
-# Random, short db name to avoid collisions across runners
-RND="$(date +%s)$$"
-DB_NAME="wp_test_${RND}"
+WP_PATH="${WP_CORE_DIR}"
+PLUGIN_DST="${WP_PATH}/wp-content/plugins/${PLUGIN_SLUG}"
+TABLE_PREFIX="wptests_"
+DB_NAME="${DB_NAME:-wp_test_${WP_VERSION//./}_${RANDOM}${RANDOM}}"
 
 echo ">> Using DB_NAME=${DB_NAME}"
 
-# ---- Sanity checks -----------------------------------------------------------
-command -v php >/dev/null 2>&1 || { echo "php not found"; exit 1; }
-command -v composer >/dev/null 2>&1 || { echo "composer not found"; exit 1; }
-command -v mysql >/dev/null 2>&1 || { echo "mysql client not found"; exit 1; }
-if ! command -v wp >/dev/null 2>&1; then
-  echo "wp (WP-CLI) not found; installing locally ..."
-  curl -fsSL https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o wp
-  chmod +x wp
-  WP="./wp"
-else
-  WP="wp"
-fi
-
+# ---------- System prerequisites ----------
 echo ">> Ensuring required packages (svn) exist"
-sudo apt-get update -y -qq
-sudo apt-get install -y -qq subversion
+sudo apt-get update -y
+sudo apt-get install -y --no-install-recommends subversion
 
+# ---------- Composer (dev) deps for this repo ----------
 echo ">> Ensuring Composer dev deps are installed"
-composer install --no-interaction --no-progress
+composer install --no-interaction --no-progress --prefer-dist
 
-# ---- Database prep -----------------------------------------------------------
+# ---------- Database ----------
 echo ">> Creating/resetting database ${DB_NAME}"
-mysql --protocol=tcp -h "${DB_HOST}" -u"${DB_USER}" -p"${DB_PASSWORD}" -e "DROP DATABASE IF EXISTS \`${DB_NAME}\`;"
-mysql --protocol=tcp -h "${DB_HOST}" -u"${DB_USER}" -p"${DB_PASSWORD}" -e "CREATE DATABASE \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+mysql --host="${DB_HOST}" --user="${DB_USER}" --password="${DB_PASSWORD}" -e "DROP DATABASE IF EXISTS \`${DB_NAME}\`;"
+mysql --host="${DB_HOST}" --user="${DB_USER}" --password="${DB_PASSWORD}" -e "CREATE DATABASE \`${DB_NAME}\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
-# ---- WordPress core ----------------------------------------------------------
+# ---------- WordPress core ----------
 echo ">> Installing WP core (${WP_VERSION})"
-mkdir -p "${WP_CORE_DIR}"
-${WP} core download --path="${WP_CORE_DIR}" --version="${WP_VERSION}" --locale=en_US --force
-
+wp core download --path="${WP_PATH}" --version="${WP_VERSION}" --locale=en_US --force
 echo ">> Creating wp-config.php"
-${WP} config create \
-  --path="${WP_CORE_DIR}" \
+wp config create \
+  --path="${WP_PATH}" \
   --dbname="${DB_NAME}" \
   --dbuser="${DB_USER}" \
   --dbpass="${DB_PASSWORD}" \
-  --dbhost="${DB_HOST}"
-
+  --dbhost="${DB_HOST}" \
+  --dbprefix="${TABLE_PREFIX}" \
+  --skip-check \
+  --force
 echo ">> Installing WordPress"
-${WP} core install \
-  --path="${WP_CORE_DIR}" \
+wp core install \
+  --path="${WP_PATH}" \
   --url="http://example.test" \
   --title="Test Blog" \
   --admin_user="admin" \
   --admin_password="password" \
-  --admin_email="admin@example.org"
+  --admin_email="admin@example.org" \
+  --skip-email
 
-# Resolve actual version tag for tests checkout
-RESOLVED_WP_VERSION="$(${WP} core version --path="${WP_CORE_DIR}")"
-echo ">> Resolved WP version: ${RESOLVED_WP_VERSION}"
-
-# ---- WP test suite -----------------------------------------------------------
+# ---------- WP test suite (manual, version-matched) ----------
+echo ">> Resolved WP version: $(wp core version --path="${WP_PATH}")"
 echo ">> Preparing WP test suite"
-mkdir -p "${WP_TESTS_DIR}"
-svn --quiet co "https://develop.svn.wordpress.org/tags/${RESOLVED_WP_VERSION}/tests/phpunit/includes/" "${WP_TESTS_DIR}/includes"
-svn --quiet co "https://develop.svn.wordpress.org/tags/${RESOLVED_WP_VERSION}/tests/phpunit/data/" "${WP_TESTS_DIR}/data"
+mkdir -p "${WP_TESTS_DIR}/includes" "${WP_TESTS_DIR}/data"
 
-# Create wp-tests-config.php (not using the legacy script)
+svn co --quiet "https://develop.svn.wordpress.org/tags/$(wp core version --path="${WP_PATH}")/tests/phpunit/includes/" "${WP_TESTS_DIR}/includes"
+svn co --quiet "https://develop.svn.wordpress.org/tags/$(wp core version --path="${WP_PATH}")/tests/phpunit/data/" "${WP_TESTS_DIR}/data"
+
 echo ">> Writing ${WP_TESTS_DIR}/wp-tests-config.php"
 cat > "${WP_TESTS_DIR}/wp-tests-config.php" <<PHP
 <?php
-/* Auto-generated for CI */
 define( 'DB_NAME',     '${DB_NAME}' );
 define( 'DB_USER',     '${DB_USER}' );
 define( 'DB_PASSWORD', '${DB_PASSWORD}' );
 define( 'DB_HOST',     '${DB_HOST}' );
 define( 'DB_CHARSET',  'utf8' );
 define( 'DB_COLLATE',  '' );
-\$table_prefix = 'wptests_';
-
-define( 'WP_TESTS_DOMAIN', 'example.org' );
+\$table_prefix = '${TABLE_PREFIX}';
+define( 'WP_DEBUG', true );
+define( 'ABSPATH', '${WP_PATH}/' );
+define( 'WP_PHP_BINARY', 'php' );
+define( 'WP_TESTS_DOMAIN', 'example.test' );
 define( 'WP_TESTS_EMAIL',  'admin@example.org' );
 define( 'WP_TESTS_TITLE',  'Test Blog' );
-define( 'WPLANG', '' );
-define( 'ABSPATH', '${WP_CORE_DIR}/' );
-define( 'WP_DEBUG', true );
-define( 'WP_PHP_BINARY', PHP_BINARY );
 PHP
 
-# ---- Sync plugin into core sandbox ------------------------------------------
-TARGET_PLUGIN_DIR="${WP_CORE_DIR}/wp-content/plugins/${PLUGIN_SLUG}"
-echo ">> Syncing plugin into ${TARGET_PLUGIN_DIR}"
-rm -rf "${TARGET_PLUGIN_DIR}"
-mkdir -p "${TARGET_PLUGIN_DIR}"
-# Use tar|tar to preserve perms and avoid requiring rsync
-tar -C "${PLUGIN_DIR}" -cf - . | tar -C "${TARGET_PLUGIN_DIR}" -xf -
+# ---------- Sync plugin into WP and install plugin deps (inside plugin copy) ----------
+echo ">> Syncing plugin into ${PLUGIN_DST}"
+rm -rf "${PLUGIN_DST}"
+mkdir -p "$(dirname "${PLUGIN_DST}")"
+rsync -a --delete --exclude ".git" --exclude ".github" --exclude "node_modules" --exclude ".cache" "${REPO_DIR}/" "${PLUGIN_DST}/"
 
-# Install plugin composer deps inside the synced copy (ensures autoload in place)
-if [ -f "${TARGET_PLUGIN_DIR}/composer.json" ]; then
-  echo ">> Installing plugin composer deps"
-  (cd "${TARGET_PLUGIN_DIR}" && composer install --no-interaction --no-progress)
-fi
+echo ">> Installing plugin composer deps"
+pushd "${PLUGIN_DST}" >/dev/null
+composer install --no-interaction --no-progress --prefer-dist
+popd >/dev/null
 
-# ---- Activate plugin & write minimal settings --------------------------------
+# ---------- Activate plugin & write minimal settings ----------
 echo ">> Activating plugin ${PLUGIN_SLUG}"
-${WP} plugin activate "${PLUGIN_SLUG}" --path="${WP_CORE_DIR}"
+wp plugin activate "${PLUGIN_SLUG}" --path="${WP_PATH}"
 
 echo ">> Writing minimal SAML settings into TEST DB (${DB_NAME})"
-${WP} option update wp_saml_auth_settings \
-  '{"provider":"internal","get_user_by":"email","default_role":"subscriber","permit_wp_login":true}' \
-  --format=json \
-  --path="${WP_CORE_DIR}"
+# IMPORTANT: use OneLogin provider to avoid SimpleSAMLphp autoloader in CI.
+wp option update wp_saml_auth_settings "$(cat <<'JSON'
+{
+  "provider": "onelogin",
+  "strict": false,
+  "auto_provision": true,
+  "auto_provision_email": "mail",
+  "auto_provision_first_name": "first_name",
+  "auto_provision_last_name": "last_name",
+  "name": "name",
+  "email": "mail",
+  "external_user_login": "uid",
+  "default_role": "subscriber",
+  "get_user_by": "email",
+  "prevent_reauth": false,
+  "require_domain": "",
+  "append_domain": "",
+  "use_wp_login_form": true,
+  "debug": false
+}
+JSON
+)" --format=json --path="${WP_PATH}"
 
-# ---- Patch tests bootstrap to avoid SimpleSAML autoloader --------------------
-# We DO NOT write any mu-plugins. We only alter bootstrap for test runtime.
-BOOTSTRAP_DIR="tests/phpunit"
-BOOTSTRAP_FILE="${BOOTSTRAP_DIR}/bootstrap.php"
-XML_DIST="tests/phpunit/phpunit.xml.dist"
-
-if [ ! -d "${BOOTSTRAP_DIR}" ] || [ ! -f "${XML_DIST}" ]; then
-  echo "tests/phpunit/ directory or phpunit.xml.dist missing."
+# ---------- PHPUnit config (root-level) ----------
+ROOT_XML="phpunit.xml.dist"
+if [[ ! -f "${ROOT_XML}" ]]; then
+  echo "ERROR: ${ROOT_XML} not found at repo root."
   exit 1
 fi
 
-echo ">> Patching ${BOOTSTRAP_FILE} with provider override"
-cat > "${BOOTSTRAP_FILE}" <<'PHP'
-<?php
-/**
- * PHPUnit bootstrap for wp-saml-auth (CI).
- * We register an option override so the plugin NEVER tries to load SimpleSAML.
- */
-
-$tests_dir = getenv( 'WP_TESTS_DIR' );
-if ( ! $tests_dir || ! is_dir( $tests_dir ) ) {
-    fwrite(STDERR, "WP_TESTS_DIR is not set or invalid\n");
-    exit(1);
-}
-
-require_once $tests_dir . '/includes/functions.php';
-
-/**
- * Hook after WordPress loads to install our option override.
- */
-function wpsa_register_test_overrides() {
-    // Force internal provider and disable SimpleSAML autoload path.
-    add_filter( 'wp_saml_auth_option', function( $value, $option ) {
-        switch ( $option ) {
-            case 'provider':
-                return 'internal';
-            case 'simplesamlphp_autoload':
-                // Return an empty string to ensure the plugin does not attempt to include it.
-                return '';
-            case 'permit_wp_login':
-                return true;
-            case 'get_user_by':
-                // Tests expect email-based matching in most cases.
-                return 'email';
-            default:
-                return $value;
-        }
-    }, 10, 2 );
-}
-tests_add_filter( 'plugins_loaded', 'wpsa_register_test_overrides' );
-
-// Load the plugin under test.
-function _manually_load_plugin() {
-    require dirname( __DIR__, 2 ) . '/wp-saml-auth.php';
-}
-tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
-
-// Boot the WordPress testing environment.
-require $tests_dir . '/includes/bootstrap.php';
-PHP
-
-# ---- Run PHPUnit -------------------------------------------------------------
-echo ">> Test table prefix: wptests_"
-export WP_TESTS_DIR="${WP_TESTS_DIR}"
-export WP_TESTS_PHPUNIT_POLYFILLS_PATH="${WP_TESTS_PHPUNIT_POLYFILLS_PATH}"
-
+echo ">> Test table prefix: ${TABLE_PREFIX}"
 echo ">> Running PHPUnit"
-# Use the phpunit.xml.dist shipped by the repo to keep groups & config identical to CircleCI
-composer run --quiet phpunit -- -c "${XML_DIST}"
+# Make sure the env WP_TESTS_DIR & WP_CORE_DIR are visible to the test bootstrap.
+export WP_TESTS_DIR
+export WP_CORE_DIR="${WP_PATH}"
+
+# Run from repo root, use root phpunit.xml.dist
+composer run -- phpunit -c "${ROOT_XML}"
