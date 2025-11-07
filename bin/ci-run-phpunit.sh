@@ -1,69 +1,67 @@
 #!/usr/bin/env bash
-set -Eeuo pipefail
+set -euo pipefail
 
-# ---------- Config / Inputs ----------
-: "${DB_HOST:?DB_HOST required}"
-: "${DB_USER:?DB_USER required}"
-: "${DB_PASSWORD:?DB_PASSWORD required}"
-: "${WP_CORE_DIR:?WP_CORE_DIR required}"           # e.g. /tmp/wordpress
-: "${WP_TESTS_DIR:?WP_TESTS_DIR required}"         # e.g. /tmp/wordpress-tests-lib
-: "${WP_VERSION:?WP_VERSION required}"             # e.g. 6.8.3
+# ---- required env (provided by the workflow) ----
+: "${DB_HOST:?Missing DB_HOST}"
+: "${DB_USER:?Missing DB_USER}"
+: "${DB_PASSWORD:?Missing DB_PASSWORD}"
+: "${WP_CORE_DIR:?Missing WP_CORE_DIR}"
+: "${WP_TESTS_DIR:?Missing WP_TESTS_DIR}"
+: "${WP_TESTS_PHPUNIT_POLYFILLS_PATH:?Missing WP_TESTS_PHPUNIT_POLYFILLS_PATH}"
+: "${WP_VERSION:?Missing WP_VERSION}"
 
-REPO_DIR="$(pwd)"
-PLUGIN_SLUG="wp-saml-auth"
-WP_PATH="${WP_CORE_DIR}"
-PLUGIN_DST="${WP_PATH}/wp-content/plugins/${PLUGIN_SLUG}"
-TABLE_PREFIX="wptests_"
-DB_NAME="${DB_NAME:-wp_test_${WP_VERSION//./}_${RANDOM}${RANDOM}}"
-
+echo ">> Using DB_HOST=${DB_HOST} DB_USER=${DB_USER}"
+DB_NAME="wp_test_${WP_VERSION//./}_${RANDOM}"
 echo ">> Using DB_NAME=${DB_NAME}"
 
-# ---------- System prerequisites ----------
+# ---- ensure svn for fetching WP test suite ----
 echo ">> Ensuring required packages (svn) exist"
 sudo apt-get update -y
-sudo apt-get install -y --no-install-recommends subversion
+sudo apt-get install -y subversion
 
-# ---------- Composer (dev) deps for this repo ----------
+# ---- composer (project) ----
 echo ">> Ensuring Composer dev deps are installed"
-composer install --no-interaction --no-progress --prefer-dist
+composer install --prefer-dist --no-progress --no-interaction
 
-# ---------- Database ----------
+# ---- create/reset database ----
 echo ">> Creating/resetting database ${DB_NAME}"
-mysql --host="${DB_HOST}" --user="${DB_USER}" --password="${DB_PASSWORD}" -e "DROP DATABASE IF EXISTS \`${DB_NAME}\`;"
-mysql --host="${DB_HOST}" --user="${DB_USER}" --password="${DB_PASSWORD}" -e "CREATE DATABASE \`${DB_NAME}\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+mysql --protocol=TCP -h "${DB_HOST}" -u "${DB_USER}" -p"${DB_PASSWORD}" -e "DROP DATABASE IF EXISTS \`${DB_NAME}\`;"
+mysql --protocol=TCP -h "${DB_HOST}" -u "${DB_USER}" -p"${DB_PASSWORD}" -e "CREATE DATABASE \`${DB_NAME}\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
-# ---------- WordPress core ----------
+# ---- install WordPress core into ${WP_CORE_DIR} ----
 echo ">> Installing WP core (${WP_VERSION})"
-wp core download --path="${WP_PATH}" --version="${WP_VERSION}" --locale=en_US --force
+mkdir -p "${WP_CORE_DIR}"
+wp core download --path="${WP_CORE_DIR}" --version="${WP_VERSION}" --locale=en_US --force
+
 echo ">> Creating wp-config.php"
 wp config create \
-  --path="${WP_PATH}" \
+  --path="${WP_CORE_DIR}" \
   --dbname="${DB_NAME}" \
   --dbuser="${DB_USER}" \
   --dbpass="${DB_PASSWORD}" \
   --dbhost="${DB_HOST}" \
-  --dbprefix="${TABLE_PREFIX}" \
-  --skip-check \
-  --force
+  --skip-check
+
 echo ">> Installing WordPress"
 wp core install \
-  --path="${WP_PATH}" \
-  --url="http://example.test" \
-  --title="Test Blog" \
+  --path="${WP_CORE_DIR}" \
+  --url="http://example.com" \
+  --title="WP SAML Auth Test" \
   --admin_user="admin" \
   --admin_password="password" \
-  --admin_email="admin@example.org" \
-  --skip-email
+  --admin_email="admin@example.com"
 
-# ---------- WP test suite (manual, version-matched) ----------
-echo ">> Resolved WP version: $(wp core version --path="${WP_PATH}")"
+# ---- prepare WP tests library ----
+echo ">> Resolving WP version"
+RESOLVED_WP_VERSION="$(wp core version --path="${WP_CORE_DIR}")"
+echo ">> Resolved WP version: ${RESOLVED_WP_VERSION}"
+
 echo ">> Preparing WP test suite"
-mkdir -p "${WP_TESTS_DIR}/includes" "${WP_TESTS_DIR}/data"
+rm -rf "${WP_TESTS_DIR}"
+mkdir -p "${WP_TESTS_DIR}"
+svn co --quiet "https://develop.svn.wordpress.org/tags/${RESOLVED_WP_VERSION}/tests/phpunit/includes" "${WP_TESTS_DIR}/includes"
+svn co --quiet "https://develop.svn.wordpress.org/tags/${RESOLVED_WP_VERSION}/tests/phpunit/data"     "${WP_TESTS_DIR}/data"
 
-svn co --quiet "https://develop.svn.wordpress.org/tags/$(wp core version --path="${WP_PATH}")/tests/phpunit/includes/" "${WP_TESTS_DIR}/includes"
-svn co --quiet "https://develop.svn.wordpress.org/tags/$(wp core version --path="${WP_PATH}")/tests/phpunit/data/" "${WP_TESTS_DIR}/data"
-
-echo ">> Writing ${WP_TESTS_DIR}/wp-tests-config.php"
 cat > "${WP_TESTS_DIR}/wp-tests-config.php" <<PHP
 <?php
 define( 'DB_NAME',     '${DB_NAME}' );
@@ -72,66 +70,59 @@ define( 'DB_PASSWORD', '${DB_PASSWORD}' );
 define( 'DB_HOST',     '${DB_HOST}' );
 define( 'DB_CHARSET',  'utf8' );
 define( 'DB_COLLATE',  '' );
-\$table_prefix = '${TABLE_PREFIX}';
+\$table_prefix = 'wptests_';
 define( 'WP_DEBUG', true );
-define( 'ABSPATH', '${WP_PATH}/' );
 define( 'WP_PHP_BINARY', 'php' );
-define( 'WP_TESTS_DOMAIN', 'example.test' );
-define( 'WP_TESTS_EMAIL',  'admin@example.org' );
-define( 'WP_TESTS_TITLE',  'Test Blog' );
+define( 'ABSPATH', '${WP_CORE_DIR}/' );
 PHP
 
-# ---------- Sync plugin into WP and install plugin deps (inside plugin copy) ----------
-echo ">> Syncing plugin into ${PLUGIN_DST}"
-rm -rf "${PLUGIN_DST}"
-mkdir -p "$(dirname "${PLUGIN_DST}")"
-rsync -a --delete --exclude ".git" --exclude ".github" --exclude "node_modules" --exclude ".cache" "${REPO_DIR}/" "${PLUGIN_DST}/"
+# ---- place plugin into the test WP (only to mirror CircleCI behavior) ----
+echo ">> Syncing plugin into ${WP_CORE_DIR}/wp-content/plugins/wp-saml-auth"
+rsync -a --delete --exclude .git --exclude .github --exclude node_modules --exclude vendor ./ "${WP_CORE_DIR}/wp-content/plugins/wp-saml-auth/"
 
-echo ">> Installing plugin composer deps"
-pushd "${PLUGIN_DST}" >/dev/null
-composer install --no-interaction --no-progress --prefer-dist
-popd >/dev/null
+echo ">> Installing plugin composer deps (for dev-only autoloaders)"
+( cd "${WP_CORE_DIR}/wp-content/plugins/wp-saml-auth" && composer install --prefer-dist --no-progress --no-interaction )
 
-# ---------- Activate plugin & write minimal settings ----------
-echo ">> Activating plugin ${PLUGIN_SLUG}"
-wp plugin activate "${PLUGIN_SLUG}" --path="${WP_PATH}"
-
+# ---- minimal settings in the real WP DB (not relied upon by tests, kept for parity) ----
 echo ">> Writing minimal SAML settings into TEST DB (${DB_NAME})"
-# IMPORTANT: use OneLogin provider to avoid SimpleSAMLphp autoloader in CI.
-wp option update wp_saml_auth_settings "$(cat <<'JSON'
-{
-  "provider": "onelogin",
-  "strict": false,
-  "auto_provision": true,
-  "auto_provision_email": "mail",
-  "auto_provision_first_name": "first_name",
-  "auto_provision_last_name": "last_name",
-  "name": "name",
-  "email": "mail",
-  "external_user_login": "uid",
-  "default_role": "subscriber",
-  "get_user_by": "email",
-  "prevent_reauth": false,
-  "require_domain": "",
-  "append_domain": "",
-  "use_wp_login_form": true,
-  "debug": false
-}
-JSON
-)" --format=json --path="${WP_PATH}"
+wp option update wp_saml_auth_settings "$(jq -n \
+  --arg provider 'onelogin' \
+  '{provider: $provider, strict: false, auto_provision: true, user_login_attribute: "uid", user_email_attribute: "mail", user_first_name_attribute: "givenName", user_last_name_attribute: "sn"}' \
+)" --path="${WP_CORE_DIR}"
 
-# ---------- PHPUnit config (root-level) ----------
-ROOT_XML="phpunit.xml.dist"
-if [[ ! -f "${ROOT_XML}" ]]; then
-  echo "ERROR: ${ROOT_XML} not found at repo root."
-  exit 1
-fi
+# ---- create an explicit PHPUnit bootstrap that forces provider=onelogin BEFORE plugin loads ----
+BOOTSTRAP="/tmp/wpsa-phpunit-bootstrap.php"
+cat > "${BOOTSTRAP}" <<'PHP'
+<?php
+// Composer (for OneLogin/php-saml, polyfills, etc.)
+require __DIR__ . '/../vendor/autoload.php';
 
-echo ">> Test table prefix: ${TABLE_PREFIX}"
+// Load WP test helpers first to get tests_add_filter().
+require getenv('WP_TESTS_DIR') . '/includes/functions.php';
+
+// Ensure the plugin is loaded during muplugins_loaded.
+tests_add_filter('muplugins_loaded', function () {
+    require dirname(__DIR__, 1) . '/wp-saml-auth.php';
+});
+
+// Force provider choice BEFORE the plugin initializes anything that reads settings.
+tests_add_filter('muplugins_loaded', function () {
+    add_filter('wp_saml_auth_option', function ($value, $option) {
+        if ($option === 'provider') {
+            return 'onelogin';
+        }
+        return $value;
+    }, 10, 2);
+});
+
+// Now bootstrap WordPress test environment (fires muplugins_loaded with our hooks above).
+require getenv('WP_TESTS_DIR') . '/includes/bootstrap.php';
+PHP
+
+# ---- finally run PHPUnit using our bootstrap (no MU plugin hacks, no ignored errors) ----
 echo ">> Running PHPUnit"
-# Make sure the env WP_TESTS_DIR & WP_CORE_DIR are visible to the test bootstrap.
 export WP_TESTS_DIR
-export WP_CORE_DIR="${WP_PATH}"
+export WP_CORE_DIR
+export WP_PHP_BINARY=php
 
-# Run from repo root, use root phpunit.xml.dist
-composer run -- phpunit -c "${ROOT_XML}"
+vendor/bin/phpunit --bootstrap "${BOOTSTRAP}" -c phpunit.xml.dist
