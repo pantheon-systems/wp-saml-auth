@@ -122,9 +122,8 @@ echo ">> Activating plugin ${PLUGIN_SLUG}"
 wp plugin activate "${PLUGIN_SLUG}" --path="${WP_CORE_DIR}"
 
 echo ">> Seeding SAML settings"
-# Start with an object to avoid “key missing”
+# Initialize as an object then patch keys; avoids "key missing" failures.
 wp --path="${WP_CORE_DIR}" option update wp_saml_auth_settings '{}' --format=json
-# Patch all required keys
 wp --path="${WP_CORE_DIR}" option patch insert wp_saml_auth_settings provider onelogin           --type=string
 wp --path="${WP_CORE_DIR}" option patch insert wp_saml_auth_settings connection_type internal   --type=string || wp --path="${WP_CORE_DIR}" option patch update wp_saml_auth_settings connection_type internal --type=string
 wp --path="${WP_CORE_DIR}" option patch insert wp_saml_auth_settings permit_wp_login 1          --type=boolean || wp --path="${WP_CORE_DIR}" option patch update wp_saml_auth_settings permit_wp_login 1 --type=boolean
@@ -132,10 +131,7 @@ wp --path="${WP_CORE_DIR}" option patch insert wp_saml_auth_settings auto_provis
 wp --path="${WP_CORE_DIR}" option patch insert wp_saml_auth_settings default_role subscriber    --type=string || wp --path="${WP_CORE_DIR}" option patch update wp_saml_auth_settings default_role subscriber --type=string
 
 ###
-# Deterministic bootstrap that ensures:
-#  - plugin autoloader is present
-#  - provider=onelogin (so SimpleSAMLphp is never required)
-#  - WordPress test framework is loaded
+# Deterministic PHPUnit bootstrap
 ###
 echo ">> Preparing PHPUnit bootstrap: ${BOOTSTRAP}"
 cat > "${BOOTSTRAP}" <<'PHP'
@@ -188,7 +184,7 @@ tests_add_filter('muplugins_loaded', function () use ($pluginDir) {
 require $testsDir . '/includes/bootstrap.php';
 PHP
 
-# Local shim so any phpunit.xml that expects this path still works
+# Local shim for any phpunit.xml that expects a plugin-local bootstrap
 echo ">> Ensuring tests/phpunit/bootstrap.php shim"
 mkdir -p "${PLUGIN_DIR}/tests/phpunit"
 cat > "${PLUGIN_DIR}/tests/phpunit/bootstrap.php" <<PHP
@@ -199,8 +195,7 @@ require \$alt;
 PHP
 
 ###
-# Run PHPUnit — force only the plugin test directory to be collected
-# (avoids bad suites from phpunit.xml that point at repo root)
+# Run PHPUnit — force the plugin tests directory
 ###
 echo ">> Running PHPUnit"
 export WP_TESTS_DIR="${WP_TESTS_DIR}"
@@ -211,7 +206,6 @@ export WPSA_BOOTSTRAP="${BOOTSTRAP}"
 PHPUNIT_BIN="vendor/bin/phpunit"
 [[ -x "$PHPUNIT_BIN" ]] || PHPUNIT_BIN="${PLUGIN_DIR}/vendor/bin/phpunit"
 
-# If a config exists we still allow it, but we ALWAYS pass the tests dir.
 PHPUNIT_CFG=""
 if [[ -f "phpunit.xml" ]]; then
   PHPUNIT_CFG="-c phpunit.xml"
