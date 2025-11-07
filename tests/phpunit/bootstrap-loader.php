@@ -1,13 +1,11 @@
 <?php
-// Define early so WordPress tests stop complaining even if wp-tests-config.php is old.
+// Define early so WordPress tests are happy even if an old config is on disk.
 if (!defined('WP_PHP_BINARY')) {
-	// Fallback to current PHP interpreter if PHP_BINARY is empty on some runners
 	define('WP_PHP_BINARY', PHP_BINARY ?: 'php');
 }
-// Optional, harmless default
 if (!defined('WP_RUN_CORE_TESTS')) {
 	define('WP_RUN_CORE_TESTS', false);
 }
 
-// Now load your real bootstrap (the self-provisioning one you pasted)
+// Hand off to the real (self-provisioning) bootstrap.
 require __DIR__ . '/bootstrap.php';

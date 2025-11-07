@@ -64,8 +64,6 @@ define( 'WP_TESTS_TITLE', 'Test Blog' );
 \$table_prefix = 'wptests_';
 define( 'ABSPATH', '${WP_CORE_DIR}/' );
 define( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH', '${WP_TESTS_PHPUNIT_POLYFILLS_PATH}' );
-define( 'WP_PHP_BINARY', PHP_BINARY );
-define( 'WP_RUN_CORE_TESTS', false );
 PHP
 
 log "Sync plugin to WP"
