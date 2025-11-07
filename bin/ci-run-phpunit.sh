@@ -10,8 +10,12 @@ set -euo pipefail
 : "${WP_TESTS_PHPUNIT_POLYFILLS_PATH:?Missing WP_TESTS_PHPUNIT_POLYFILLS_PATH}"
 : "${WP_VERSION:?Missing WP_VERSION}"
 
+
+
+
 echo ">> Using DB_HOST=${DB_HOST} DB_USER=${DB_USER}"
 DB_NAME="wp_test_${WP_VERSION//./}_${RANDOM}"
+export DB_NAME
 echo ">> Using DB_NAME=${DB_NAME}"
 
 # ---- ensure svn for fetching WP test suite ----
@@ -62,19 +66,38 @@ mkdir -p "${WP_TESTS_DIR}"
 svn co --quiet "https://develop.svn.wordpress.org/tags/${RESOLVED_WP_VERSION}/tests/phpunit/includes" "${WP_TESTS_DIR}/includes"
 svn co --quiet "https://develop.svn.wordpress.org/tags/${RESOLVED_WP_VERSION}/tests/phpunit/data"     "${WP_TESTS_DIR}/data"
 
-cat > "${WP_TESTS_DIR}/wp-tests-config.php" <<PHP
+# --- Write a complete wp-tests-config.php expected by the WP test suite ---
+echo ">> Writing ${WP_TESTS_DIR}/wp-tests-config.php"
+mkdir -p "${WP_TESTS_DIR}"
+
+cat > "${WP_TESTS_DIR}/wp-tests-config.php" <<'PHP'
 <?php
-define( 'DB_NAME',     '${DB_NAME}' );
-define( 'DB_USER',     '${DB_USER}' );
-define( 'DB_PASSWORD', '${DB_PASSWORD}' );
-define( 'DB_HOST',     '${DB_HOST}' );
+// Database settings for the test suite.
+define( 'DB_NAME',     getenv('DB_NAME') ?: 'wordpress_test' );
+define( 'DB_USER',     getenv('DB_USER') ?: 'root' );
+define( 'DB_PASSWORD', getenv('DB_PASSWORD') ?: '' );
+define( 'DB_HOST',     getenv('DB_HOST') ?: '127.0.0.1' );
 define( 'DB_CHARSET',  'utf8' );
 define( 'DB_COLLATE',  '' );
-\$table_prefix = 'wptests_';
-define( 'WP_DEBUG', true );
+
+// Required test constants.
+define( 'WP_TESTS_DOMAIN', 'example.org' );
+define( 'WP_TESTS_EMAIL',  'admin@example.org' );
+define( 'WP_TESTS_TITLE',  'Test Blog' );
+
+// Path to the WP install (the *test* WP you downloaded).
+define( 'ABSPATH', rtrim(getenv('WP_CORE_DIR') ?: '/tmp/wordpress', '/') . '/' );
+
+// PHP binary the test runner should use.
 define( 'WP_PHP_BINARY', 'php' );
-define( 'ABSPATH', '${WP_CORE_DIR}/' );
+
+// Table prefix the suite will use.
+$table_prefix = 'wptests_';
+
+// Turn on debug during tests.
+define( 'WP_DEBUG', true );
 PHP
+
 
 # ---- place plugin into the test WP (only to mirror CircleCI behavior) ----
 echo ">> Syncing plugin into ${WP_CORE_DIR}/wp-content/plugins/wp-saml-auth"
@@ -85,50 +108,42 @@ echo ">> Installing plugin composer deps (for dev-only autoloaders)"
 
 # ---- minimal settings in the real WP DB (not relied upon by tests, kept for parity) ----
 echo ">> Writing minimal SAML settings into TEST DB (${DB_NAME})"
-wp option update wp_saml_auth_settings "$(jq -n \
-  --arg provider 'onelogin' \
-  '{provider: $provider, strict: false, auto_provision: true, user_login_attribute: "uid", user_email_attribute: "mail", user_first_name_attribute: "givenName", user_last_name_attribute: "sn"}' \
-)" --path="${WP_CORE_DIR}"
+wp option update wp_saml_auth_settings \
+'{"provider":"onelogin","strict":false,"auto_provision":true,"user_login_attribute":"uid","user_email_attribute":"mail","user_first_name_attribute":"givenName","user_last_name_attribute":"sn"}' \
+--path="${WP_CORE_DIR}"
 
 # ---- create an explicit PHPUnit bootstrap that forces provider=onelogin BEFORE plugin loads ----
+echo ">> Preparing PHPUnit bootstrap"
 REPO_ROOT="$(pwd)"
 BOOTSTRAP="/tmp/wpsa-phpunit-bootstrap.php"
 
-# sanity: make sure autoloader exists
+# Sanity: composer autoloader must exist in the repo
 test -f "${REPO_ROOT}/vendor/autoload.php"
 
 cat > "${BOOTSTRAP}" <<PHP
 <?php
-// Load Composer from the repository root (absolute path).
 require '${REPO_ROOT}/vendor/autoload.php';
-
-// Load WP test helpers first to get tests_add_filter().
 require getenv('WP_TESTS_DIR') . '/includes/functions.php';
 
-// Ensure the plugin is loaded during muplugins_loaded.
+// Load plugin from the synced copy inside the test WP tree.
 tests_add_filter('muplugins_loaded', function () {
-    // Load the plugin from the copy inside the test WP tree (mirrors CircleCI).
-    require '${WP_CORE_DIR}/wp-content/plugins/wp-saml-auth/wp-saml-auth.php';
+    require rtrim(getenv('WP_CORE_DIR'), '/') . '/wp-content/plugins/wp-saml-auth/wp-saml-auth.php';
 });
 
-// Force provider choice BEFORE the plugin initializes anything that reads settings.
-// This guarantees the plugin uses OneLogin (installed via Composer) and never touches SimpleSAMLphp.
+// Force provider=onelogin so the plugin never tries to load SimpleSAMLphp.
 tests_add_filter('muplugins_loaded', function () {
     add_filter('wp_saml_auth_option', function (\$value, \$option) {
-        if (\$option === 'provider') {
-            return 'onelogin';
-        }
+        if (\$option === 'provider') { return 'onelogin'; }
         return \$value;
     }, 10, 2);
 });
 
-// Now bootstrap WordPress test environment (fires muplugins_loaded with our hooks above).
+// Boot the WP test environment.
 require getenv('WP_TESTS_DIR') . '/includes/bootstrap.php';
 PHP
 
 echo ">> Running PHPUnit"
-export WP_TESTS_DIR
-export WP_CORE_DIR
 export WP_PHP_BINARY=php
 vendor/bin/phpunit --bootstrap "${BOOTSTRAP}" -c phpunit.xml.dist
+
 
