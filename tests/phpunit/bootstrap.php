@@ -20,6 +20,7 @@ $DB_USER = $env('DB_USER', 'root');
 $DB_PASS = $env('DB_PASSWORD', 'root');
 $DB_NAME = $env('DB_NAME', 'wp_test_boot');
 
+
 /** ---------- Polyfills (load early) ---------- */
 if (is_file($POLY_DIR . '/vendor/autoload.php')) {
 	require_once $POLY_DIR . '/vendor/autoload.php';
@@ -220,3 +221,4 @@ if (! function_exists('wp_logout')) {
 
 /** ---------- Finally load the WP tests bootstrap (defines WP_UnitTestCase) ---------- */
 require $_tests_dir . '/includes/bootstrap.php';
+
