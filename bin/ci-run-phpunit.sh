@@ -55,6 +55,18 @@ echo ">> Resolving WP version"
 RESOLVED_WP_VERSION="$(wp core version --path="${WP_CORE_DIR}")"
 echo ">> Resolved WP version: ${RESOLVED_WP_VERSION}"
 
+echo ">> Seeding minimal SAML settings (idempotent)"
+wp --path="$WP_CORE_DIR" eval '
+$opts = get_option("wp_saml_auth_settings", []);
+if (!is_array($opts)) { $opts = []; }
+$opts["provider"] = "onelogin";              // forces the non-SimpleSAML provider used by tests
+$opts["connection_type"] = "internal";       // avoid external redirects in CI
+$opts["permit_wp_login"] = true;             // allow username/password
+$opts["auto_provision"] = true;              // create user on first login
+$opts["default_role"] = "subscriber";        // harmless default
+update_option("wp_saml_auth_settings", $opts);
+';
+
 ###
 # Prepare WP test suite (download just what we need)
 ###

@@ -93,7 +93,11 @@ jobs:
           WP_TESTS_DIR: /tmp/wordpress-tests-lib
           WP_TESTS_PHPUNIT_POLYFILLS_PATH: /tmp/phpunit-deps
           WP_VERSION: 6.8.3
-        run: bash bin/ci-run-phpunit.sh
+        run: |
+          PHPUNIT_BIN="vendor/bin/phpunit"
+          [[ -x "$PHPUNIT_BIN" ]] || PHPUNIT_BIN="${PLUGIN_DIR}/vendor/bin/phpunit"
+          $PHPUNIT_BIN ${PHPUNIT_CFG:+$PHPUNIT_CFG} --bootstrap "${BOOTSTRAP}"
+          bash bin/ci-run-phpunit.sh
 
 ## TO DO: This is getting this: https://github.com/pantheon-systems/wp-saml-auth/actions/runs/19140065110/job/54702360664
 #      - name: Run upstream phpunit-test.sh (honor our setup)
