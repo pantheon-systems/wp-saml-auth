@@ -91,27 +91,34 @@ wp option update wp_saml_auth_settings "$(jq -n \
 )" --path="${WP_CORE_DIR}"
 
 # ---- create an explicit PHPUnit bootstrap that forces provider=onelogin BEFORE plugin loads ----
+REPO_ROOT="$(pwd)"
 BOOTSTRAP="/tmp/wpsa-phpunit-bootstrap.php"
-cat > "${BOOTSTRAP}" <<'PHP'
+
+# sanity: make sure autoloader exists
+test -f "${REPO_ROOT}/vendor/autoload.php"
+
+cat > "${BOOTSTRAP}" <<PHP
 <?php
-// Composer (for OneLogin/php-saml, polyfills, etc.)
-require __DIR__ . '/../vendor/autoload.php';
+// Load Composer from the repository root (absolute path).
+require '${REPO_ROOT}/vendor/autoload.php';
 
 // Load WP test helpers first to get tests_add_filter().
 require getenv('WP_TESTS_DIR') . '/includes/functions.php';
 
 // Ensure the plugin is loaded during muplugins_loaded.
 tests_add_filter('muplugins_loaded', function () {
-    require dirname(__DIR__, 1) . '/wp-saml-auth.php';
+    // Load the plugin from the copy inside the test WP tree (mirrors CircleCI).
+    require '${WP_CORE_DIR}/wp-content/plugins/wp-saml-auth/wp-saml-auth.php';
 });
 
 // Force provider choice BEFORE the plugin initializes anything that reads settings.
+// This guarantees the plugin uses OneLogin (installed via Composer) and never touches SimpleSAMLphp.
 tests_add_filter('muplugins_loaded', function () {
-    add_filter('wp_saml_auth_option', function ($value, $option) {
-        if ($option === 'provider') {
+    add_filter('wp_saml_auth_option', function (\$value, \$option) {
+        if (\$option === 'provider') {
             return 'onelogin';
         }
-        return $value;
+        return \$value;
     }, 10, 2);
 });
 
@@ -119,10 +126,9 @@ tests_add_filter('muplugins_loaded', function () {
 require getenv('WP_TESTS_DIR') . '/includes/bootstrap.php';
 PHP
 
-# ---- finally run PHPUnit using our bootstrap (no MU plugin hacks, no ignored errors) ----
 echo ">> Running PHPUnit"
 export WP_TESTS_DIR
 export WP_CORE_DIR
 export WP_PHP_BINARY=php
-
 vendor/bin/phpunit --bootstrap "${BOOTSTRAP}" -c phpunit.xml.dist
+
