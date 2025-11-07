@@ -20,14 +20,6 @@ echo ">> Using DB_HOST=${DB_HOST} DB_USER=${DB_USER}"
 echo ">> Using DB_NAME=${DB_NAME}"
 
 ###
-# Ensure minimal packages we actually need (svn). Keep behavior intact.
-###
-echo ">> Ensuring required packages (svn) exist"
-export DEBIAN_FRONTEND=noninteractive
-apt-get update -y
-apt-get install -y subversion
-
-###
 # Create/reset DB
 ###
 echo ">> Creating/resetting database ${DB_NAME}"
@@ -66,13 +58,28 @@ echo ">> Resolved WP version: ${RESOLVED_WP_VERSION}"
 ###
 # Prepare WP test suite (download just what we need)
 ###
-echo ">> Preparing WP test suite"
+echo ">> Preparing WP test suite (without svn)"
 mkdir -p "${WP_TESTS_DIR}/includes" "${WP_TESTS_DIR}/data"
 
-# Export test includes/data for the exact WP tag
-SVN_BASE="https://develop.svn.wordpress.org/tags/${RESOLVED_WP_VERSION}/tests/phpunit"
-svn export --force "${SVN_BASE}/includes" "${WP_TESTS_DIR}/includes"
-svn export --force "${SVN_BASE}/data"     "${WP_TESTS_DIR}/data"
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "$tmpdir"' EXIT
+
+# Download the exact WP tag as a tarball from the GitHub mirror
+echo ">> Fetching wordpress-develop tag ${RESOLVED_WP_VERSION} tarball"
+curl -fsSL \
+  "https://github.com/WordPress/wordpress-develop/archive/refs/tags/${RESOLVED_WP_VERSION}.tar.gz" \
+  -o "${tmpdir}/wp-dev.tar.gz"
+
+# Extract it
+tar -xzf "${tmpdir}/wp-dev.tar.gz" -C "${tmpdir}"
+
+src="${tmpdir}/wordpress-develop-${RESOLVED_WP_VERSION}/tests/phpunit"
+
+# Copy only what we need
+cp -R "${src}/includes/." "${WP_TESTS_DIR}/includes/"
+cp -R "${src}/data/."     "${WP_TESTS_DIR}/data/"
+
+# Done; tmpdir cleaned by trap
 
 # Write wp-tests-config.php with all required constants
 echo ">> Writing ${WP_TESTS_DIR}/wp-tests-config.php"
