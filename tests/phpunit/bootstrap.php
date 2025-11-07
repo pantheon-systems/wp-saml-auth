@@ -4,6 +4,7 @@
  * - Auto-installs WP test suite if missing (so early phpunit calls don’t fail).
  * - Loads Yoast PHPUnit Polyfills early.
  * - Preserves your plugin/CLI loading, option defaults, and wp_logout shim.
+ * - NEW: Uses wordpress-develop /src as ABSPATH if /tmp/wordpress is not ready yet.
  */
 
 $env = fn($k, $d=null) => getenv($k) !== false ? getenv($k) : $d;
@@ -28,6 +29,9 @@ if (is_file($POLY_DIR . '/vendor/autoload.php')) {
 	}
 }
 
+// We'll determine ABSPATH after (depends on whether /tmp/wordpress exists yet)
+$DEVDIR_SRC = null;
+
 // ---------- Ensure WP test suite exists ----------
 $includes_bootstrap = $_tests_dir . '/includes/bootstrap.php';
 if (! is_file($includes_bootstrap)) {
@@ -44,7 +48,6 @@ if (! is_file($includes_bootstrap)) {
 	}
 	$extract = "/tmp/wp-develop-{$WP_VERSION}";
 	if (is_dir($extract)) {
-		// clean
 		$iter = new RecursiveIteratorIterator(
 			new RecursiveDirectoryIterator($extract, FilesystemIterator::SKIP_DOTS),
 			RecursiveIteratorIterator::CHILD_FIRST
@@ -54,6 +57,7 @@ if (! is_file($includes_bootstrap)) {
 	}
 	mkdir($extract, 0777, true);
 
+	// Extract tarball (works on GH runners)
 	$phar = new PharData($tgz);
 	$phar->decompress(); // creates .tar next to .tar.gz
 	$tar = str_replace('.gz', '', $tgz);
@@ -68,6 +72,11 @@ if (! is_file($includes_bootstrap)) {
 	if (! $devDir || ! is_dir($devDir . '/tests/phpunit')) {
 		fwrite(STDERR, "ERROR: wordpress-develop tests not found for {$WP_VERSION}\n");
 		exit(1);
+	}
+
+	// Remember /src for ABSPATH fallback
+	if (is_dir($devDir . '/src')) {
+		$DEVDIR_SRC = rtrim($devDir . '/src', '/') . '/';
 	}
 
 	if (! is_dir($_tests_dir)) {
@@ -89,6 +98,13 @@ if (! is_file($includes_bootstrap)) {
 		}
 	}
 
+	// Decide ABSPATH:
+	// - If WP core is already downloaded to $WP_CORE_DIR and has wp-settings.php, use it.
+	// - Else use the wordpress-develop /src path so early phpunit runs don't crash.
+	$ABSPATH = (is_file($WP_CORE_DIR . '/wp-settings.php'))
+		? rtrim($WP_CORE_DIR, '/') . '/'
+		: ($DEVDIR_SRC ?: rtrim($WP_CORE_DIR, '/') . '/'); // fallback if src missing (unlikely)
+
 	// Write wp-tests-config.php
 	$cfg = <<<PHP
 <?php
@@ -102,8 +118,10 @@ define( 'WP_TESTS_DOMAIN', 'example.org' );
 define( 'WP_TESTS_EMAIL', 'admin@example.org' );
 define( 'WP_TESTS_TITLE', 'Test Blog' );
 \$table_prefix = 'wptests_';
-define( 'ABSPATH', '{$WP_CORE_DIR}/' );
+define( 'ABSPATH', '{$ABSPATH}' );
 define( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH', '{$POLY_DIR}' );
+define( 'WP_PHP_BINARY', PHP_BINARY );
+define( 'WP_RUN_CORE_TESTS', false );
 PHP;
 	file_put_contents($_tests_dir . '/wp-tests-config.php', $cfg);
 
@@ -112,6 +130,41 @@ PHP;
 		fwrite(STDERR, "ERROR: WP tests bootstrap still missing in {$_tests_dir}\n");
 		exit(1);
 	}
+} else {
+	// tests already present; still ensure ABSPATH is sensible for early runs
+	$config_file = $_tests_dir . '/wp-tests-config.php';
+	if (is_file($config_file) && is_readable($config_file)) {
+		// If ABSPATH points to /tmp/wordpress but core isn't there, patch in-memory ABSPATH before bootstrap loads it.
+		$core_has_settings = is_file($WP_CORE_DIR . '/wp-settings.php');
+		if (! $core_has_settings) {
+			// Try to find an adjacent devDir/src from prior extraction:
+			foreach (glob('/tmp/wp-develop-*', GLOB_ONLYDIR) as $ex) {
+				if (is_dir($ex . '/wordpress-develop-' . $WP_VERSION . '/src')) {
+					$DEVDIR_SRC = rtrim($ex . '/wordpress-develop-' . $WP_VERSION . '/src', '/') . '/';
+					break;
+				}
+				// generic catch-all
+				if (is_dir($ex . '/src')) {
+					$DEVDIR_SRC = rtrim($ex . '/src', '/') . '/';
+					break;
+				}
+			}
+			if ($DEVDIR_SRC) {
+				// Define it before including bootstrap (bootstrap reads constants from the config).
+				if (!defined('ABSPATH')) {
+					define('ABSPATH', $DEVDIR_SRC);
+				}
+			}
+		}
+	}
+}
+
+// ---------- Ensure required constants even if config predates new ones ----------
+if (!defined('WP_PHP_BINARY')) {
+	define('WP_PHP_BINARY', PHP_BINARY ?: 'php');
+}
+if (!defined('WP_RUN_CORE_TESTS')) {
+	define('WP_RUN_CORE_TESTS', false);
 }
 
 // ---------- Provide tests_add_filter ----------
