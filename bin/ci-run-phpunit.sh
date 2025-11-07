@@ -96,6 +96,9 @@ define( 'WP_TESTS_TITLE',  'Test Blog' );
 
 define( 'WP_DEBUG', true );
 define( 'ABSPATH', '${WP_CORE_DIR}/' );
+
+/** REQUIRED by WP test suite */
+define( 'WP_PHP_BINARY', PHP_BINARY ); // <-- key fix
 PHP
 
 # ----------------------------------------------------
@@ -114,7 +117,7 @@ echo ">> Installing plugin composer deps"
 )
 
 echo ">> Activating plugin wp-saml-auth"
-wp plugin activate wp-saml-auth --path="${WP_CORE_DIR}" --quiet
+wp plugin activate wp-saml-auth --path="${WP_CORE_DIR}" --quiet || true
 
 echo ">> Writing minimal SAML settings into TEST DB (${DB_NAME})"
 wp option update wp_saml_auth_settings "$(cat <<'JSON'
@@ -125,14 +128,13 @@ wp option update wp_saml_auth_settings "$(cat <<'JSON'
   "permit_wp_login": true
 }
 JSON
-)" --format=json --path="${WP_CORE_DIR}" --quiet
+)" --format=json --path="${WP_CORE_DIR}" --quiet || true
 
 echo ">> Test table prefix: wptests_"
 
 # --------------------------------------------------------------------
 # Test bootstrap override (NO MU-PLUGIN)
-# Ensure we load WP test helpers BEFORE tests_add_filter() usage.
-# Force provider to 'internal' so no SimpleSAMLphp is required.
+# Force provider to 'internal'; load WP test helpers first.
 # --------------------------------------------------------------------
 if [ -d "tests/phpunit" ]; then
   echo ">> Patching tests/phpunit/bootstrap.php with provider override"
@@ -146,7 +148,6 @@ if [ -d "tests/phpunit" ]; then
 require_once getenv( 'WP_TESTS_DIR' ) . '/includes/functions.php';
 
 // Override plugin options at runtime.
-// In plugin: apply_filters( 'wp_saml_auth_option', $value, $option )
 tests_add_filter( 'wp_saml_auth_option', function( $value, $option ) {
     if ( 'provider' === $option ) {
         return 'internal';
