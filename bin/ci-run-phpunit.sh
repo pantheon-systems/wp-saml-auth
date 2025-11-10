@@ -113,5 +113,5 @@ PHPUNIT_CFG=""
 [[ -f "$BOOTSTRAP" ]] || die "bootstrap file missing at $BOOTSTRAP"
 
 set -x
-"$PHPUNIT_BIN" ${PHPUNIT_CFG:+$PHPUNIT_CFG} --bootstrap "$BOOTSTRAP" "$REPO_DIR/tests/phpunit"
+"$PHPUNIT_BIN" ${PHPUNIT_CFG:+$PHPUNIT_CFG} --bootstrap "$BOOTSTRAP"
 set +x
