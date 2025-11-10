@@ -214,26 +214,35 @@ PHP
 		);
 	}
 
-	// Register option defaults EARLY via tests_add_filter (no add_filter here).
-	tests_add_filter('wp_saml_auth_option', function ($value, $name) use ($autoload) {
-		if ($name === 'simplesamlphp_autoload') return $autoload;
-		if ($name === 'auto_provision')        return true;
-		if ($name === 'permit_wp_login')       return true;
-		if ($name === 'default_role')          return 'subscriber';
-		return $value;
-	});
+	// Register option defaults EARLY via tests_add_filter (accept 2 args).
+	tests_add_filter(
+		'wp_saml_auth_option',
+		function ($value, $name = null) use ($autoload) {
+			// $name may be null if WP only passed 1 arg; guard accordingly.
+			if ($name === 'simplesamlphp_autoload' || ($name === null && !empty($value) && is_string($value) && strpos($value, '/simplesaml') !== false)) {
+				return $autoload;
+			}
+			if ($name === 'auto_provision'  || $name === null)  return true;
+			if ($name === 'permit_wp_login' || $name === null)  return true;
+			if ($name === 'default_role'    || $name === null)  return 'subscriber';
+			return $value;
+		},
+		10, // priority
+		2   // accepted args: ensure WP will pass both $value and $name when available
+	);
+
 })();
 
 /** ---------- Preserve your option filter (as fallback) ---------- */
-function _wp_saml_auth_filter_option( $value, $name ) {
-	if ($name === 'simplesamlphp_autoload') {
+function _wp_saml_auth_filter_option( $value, $name = null ) {
+	if ($name === 'simplesamlphp_autoload' || $name === null) {
 		$autoload = getenv('SIMPLESAMLPHP_AUTOLOAD');
 		if ($autoload && file_exists($autoload)) return $autoload;
 		return '/tmp/simplesamlphp-stub/autoload.php';
 	}
-	if ($name === 'auto_provision') return true;
-	if ($name === 'permit_wp_login') return true;
-	if ($name === 'default_role') return 'subscriber';
+	if ($name === 'auto_provision'  || $name === null) return true;
+	if ($name === 'permit_wp_login' || $name === null) return true;
+	if ($name === 'default_role'    || $name === null) return 'subscriber';
 	return $value;
 }
 
