@@ -1,12 +1,14 @@
 <?php
 /**
  * PHPUnit bootstrap for wp-saml-auth.
- * - Auto-installs WP test suite if missing (so early phpunit calls don’t fail).
- * - Ensures the test database exists before WP tries to select it.
- * - Uses wordpress-develop /src as ABSPATH if /tmp/wordpress isn't ready yet.
+ * - Self-provisions the WP test suite if missing.
+ * - Ensures the test database exists for early phpunit calls.
+ * - Uses wordpress-develop /src as ABSPATH when /tmp/wordpress isn’t ready yet.
  * - Loads Yoast PHPUnit Polyfills early.
- * - Creates a SimpleSAML stub and forces `simplesamlphp_autoload` BEFORE the plugin loads.
- * - Preserves your plugin/CLI loading, option defaults, and wp_logout shim.
+ * - Creates a SimpleSAML stub and forces `simplesamlphp_autoload` using tests_add_filter()
+ *   (so it’s ready before WP/plugin load).
+ * - Loads the plugin during `muplugins_loaded` via tests_add_filter().
+ * - Preserves your defaults and wp_logout shim.
  */
 
 $env = fn($k, $d=null) => getenv($k) !== false ? getenv($k) : $d;
@@ -31,10 +33,9 @@ if (is_file($POLY_DIR . '/vendor/autoload.php')) {
 	}
 }
 
-/** ---------- Ensure test DB exists (for early phpunit runs) ---------- */
+/** ---------- Ensure test DB exists for early runs ---------- */
 $mysqli = @mysqli_init();
 if ($mysqli && @$mysqli->real_connect($DB_HOST, $DB_USER, $DB_PASS)) {
-	// Create DB if missing; use utf8mb4 for parity with CI script.
 	@$mysqli->query("CREATE DATABASE IF NOT EXISTS `{$DB_NAME}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
 	@$mysqli->close();
 }
@@ -42,10 +43,9 @@ if ($mysqli && @$mysqli->real_connect($DB_HOST, $DB_USER, $DB_PASS)) {
 /** We'll decide ABSPATH dynamically */
 $DEVDIR_SRC = null;
 
-/** ---------- Ensure WP test suite exists ---------- */
+/** ---------- Self-provision WP test suite if missing ---------- */
 $includes_bootstrap = $_tests_dir . '/includes/bootstrap.php';
 if (! is_file($includes_bootstrap)) {
-	// Fetch wordpress-develop tarball and extract tests/phpunit into $_tests_dir
 	$tgz = "/tmp/wordpress-develop-{$WP_VERSION}.tar.gz";
 	if (! is_file($tgz)) {
 		$url = "https://github.com/WordPress/wordpress-develop/archive/refs/tags/{$WP_VERSION}.tar.gz";
@@ -67,14 +67,12 @@ if (! is_file($includes_bootstrap)) {
 	}
 	@mkdir($extract, 0777, true);
 
-	// Extract
 	$phar = new PharData($tgz);
-	$phar->decompress(); // creates .tar next to .tar.gz
+	$phar->decompress(); // .tar
 	$tar = str_replace('.gz', '', $tgz);
 	$pharTar = new PharData($tar);
 	$pharTar->extractTo($extract);
 
-	// Find folder like wordpress-develop-x.y.z
 	$devDir = null;
 	foreach (glob($extract . '/wordpress-develop-*') as $cand) {
 		if (is_dir($cand)) { $devDir = $cand; break; }
@@ -84,16 +82,12 @@ if (! is_file($includes_bootstrap)) {
 		exit(1);
 	}
 
-	// Remember /src for ABSPATH fallback
 	if (is_dir($devDir . '/src')) {
 		$DEVDIR_SRC = rtrim($devDir . '/src', '/') . '/';
 	}
 
-	if (! is_dir($_tests_dir)) {
-		@mkdir($_tests_dir, 0777, true);
-	}
+	@mkdir($_tests_dir, 0777, true);
 
-	// Copy tests/phpunit/* -> $_tests_dir
 	$it = new RecursiveIteratorIterator(
 		new RecursiveDirectoryIterator($devDir . '/tests/phpunit', FilesystemIterator::SKIP_DOTS),
 		RecursiveIteratorIterator::SELF_FIRST
@@ -102,18 +96,16 @@ if (! is_file($includes_bootstrap)) {
 		$rel = substr($src->getPathname(), strlen($devDir . '/tests/phpunit'));
 		$dst = $_tests_dir . $rel;
 		if ($src->isDir()) {
-			if (! is_dir($dst)) @mkdir($dst, 0777, true);
+			@mkdir($dst, 0777, true);
 		} else {
 			@copy($src->getPathname(), $dst);
 		}
 	}
 
-	// Decide ABSPATH for early run:
 	$ABSPATH = (is_file($WP_CORE_DIR . '/wp-settings.php'))
 		? rtrim($WP_CORE_DIR, '/') . '/'
 		: ($DEVDIR_SRC ?: rtrim($WP_CORE_DIR, '/') . '/');
 
-	// Write wp-tests-config.php (NOTE: do NOT define WP_PHP_BINARY here to avoid early re-define warnings)
 	$cfg = <<<PHP
 <?php
 define( 'DB_NAME', '{$DB_NAME}' );
@@ -137,9 +129,7 @@ PHP;
 		exit(1);
 	}
 } else {
-	// tests already present; if ABSPATH points to /tmp/wordpress but core isn't there, use /src
-	$core_has_settings = is_file($WP_CORE_DIR . '/wp-settings.php');
-	if (! $core_has_settings && !defined('ABSPATH')) {
+	if (!is_file($WP_CORE_DIR . '/wp-settings.php') && !defined('ABSPATH')) {
 		foreach (glob('/tmp/wp-develop-*', GLOB_ONLYDIR) as $ex) {
 			if (is_dir($ex . '/wordpress-develop-' . $WP_VERSION . '/src')) {
 				$DEVDIR_SRC = rtrim($ex . '/wordpress-develop-' . $WP_VERSION . '/src', '/') . '/';
@@ -154,31 +144,28 @@ PHP;
 			define('ABSPATH', $DEVDIR_SRC);
 		}
 	}
-
-	// Strip any old defines to avoid “already defined” warnings
+	// Strip old defines that can cause “already defined” warnings
 	$config_file = $_tests_dir . '/wp-tests-config.php';
 	if (is_file($config_file) && is_writable($config_file)) {
 		$cfg = file_get_contents($config_file);
 		$cfg2 = preg_replace('/^\s*define\(\s*[\'"]WP_PHP_BINARY[\'"].*?\);\s*$/m', '', $cfg);
 		$cfg2 = preg_replace('/^\s*define\(\s*[\'"]WP_RUN_CORE_TESTS[\'"].*?\);\s*$/m', '', $cfg2);
-		if ($cfg2 !== null && $cfg2 !== $cfg) {
-			file_put_contents($config_file, $cfg2);
-		}
+		if ($cfg2 !== null && $cfg2 !== $cfg) file_put_contents($config_file, $cfg2);
 	}
 }
 
 /** ---------- Ensure required constants even if config predates new ones ---------- */
-if (!defined('WP_PHP_BINARY')) {
-	define('WP_PHP_BINARY', PHP_BINARY ?: 'php');
-}
-if (!defined('WP_RUN_CORE_TESTS')) {
-	define('WP_RUN_CORE_TESTS', false);
-}
+if (!defined('WP_PHP_BINARY'))  define('WP_PHP_BINARY', PHP_BINARY ?: 'php');
+if (!defined('WP_RUN_CORE_TESTS')) define('WP_RUN_CORE_TESTS', false);
+
+/** ---------- Load test helper BEFORE using tests_add_filter() ---------- */
+require_once $_tests_dir . '/includes/functions.php';
 
 /**
- * ---------- SimpleSAML test stub & option enforcement (EARLY) ----------
- * Create a real autoload file that defines \SimpleSAML\Auth\Simple and force
- * the 'simplesamlphp_autoload' option BEFORE the plugin is loaded.
+ * ---------- SimpleSAML test stub + option via tests_add_filter() ----------
+ * We create a stub autoload that defines \SimpleSAML\Auth\Simple.
+ * Then we register the option with tests_add_filter so it’s present
+ * when WordPress (and the plugin) boot.
  */
 (function () {
 	$stubDir  = '/tmp/simplesamlphp-stub';
@@ -193,9 +180,7 @@ if (!defined('WP_RUN_CORE_TESTS')) {
 namespace SimpleSAML\Auth;
 
 class Simple {
-    /** @var bool */
     private $authed = true; // default to authenticated for provisioning tests
-    /** @var array<string,array<int,string>> */
     private $attrs;
 
     public function __construct($sp) {
@@ -206,7 +191,6 @@ class Simple {
             'sn'          => ['User'],
             'displayName' => ['Test User'],
         ];
-        // Optional per-test overrides via env:
         $envAttrs = getenv('WPSA_TEST_SAML_ATTRS');
         if ($envAttrs) {
             $json = json_decode($envAttrs, true);
@@ -230,26 +214,19 @@ PHP
 		);
 	}
 
-	// Force the autoload option EARLY (priority 1) so plugin sees it during init.
-	add_filter('wp_saml_auth_option', function ($value, $name) use ($autoload) {
-		if ($name === 'simplesamlphp_autoload') {
-			return $autoload;
-		}
-		// keep sensible defaults in tests
-		if ($name === 'auto_provision')  return true;
-		if ($name === 'permit_wp_login') return true;
-		if ($name === 'default_role')    return 'subscriber';
+	// Register option defaults EARLY via tests_add_filter (no add_filter here).
+	tests_add_filter('wp_saml_auth_option', function ($value, $name) use ($autoload) {
+		if ($name === 'simplesamlphp_autoload') return $autoload;
+		if ($name === 'auto_provision')        return true;
+		if ($name === 'permit_wp_login')       return true;
+		if ($name === 'default_role')          return 'subscriber';
 		return $value;
-	}, 1, 2);
+	});
 })();
 
-/** ---------- Provide tests_add_filter ---------- */
-require_once $_tests_dir . '/includes/functions.php';
-
-/** ---------- Preserve your filter + load plugin (filter FIRST) ---------- */
+/** ---------- Preserve your option filter (as fallback) ---------- */
 function _wp_saml_auth_filter_option( $value, $name ) {
 	if ($name === 'simplesamlphp_autoload') {
-		// our earlier closure sets it to the stub; keep this as a fallback.
 		$autoload = getenv('SIMPLESAMLPHP_AUTOLOAD');
 		if ($autoload && file_exists($autoload)) return $autoload;
 		return '/tmp/simplesamlphp-stub/autoload.php';
@@ -260,19 +237,16 @@ function _wp_saml_auth_filter_option( $value, $name ) {
 	return $value;
 }
 
+/** ---------- Load the plugin during muplugins_loaded (via tests_add_filter) ---------- */
 function _manually_load_plugin() {
 	$root = dirname(__DIR__, 2);
 
-	// Ensure our defaults are in place BEFORE plugin init.
-	add_filter('wp_saml_auth_option', '_wp_saml_auth_filter_option', 1, 2);
-
-	// Now load the plugin entry file
+	// At this point WP is loaded; filters from tests_add_filter are active.
 	foreach (['/wp-saml-auth.php','/plugin.php','/index.php'] as $rel) {
 		$p = $root . $rel;
 		if (file_exists($p)) { require $p; break; }
 	}
 
-	// CLI classes (as before)
 	$cli_main = $root . '/inc/class-wp-saml-auth-cli.php';
 	if (file_exists($cli_main)) { require $cli_main; }
 	$cli_test = __DIR__ . '/class-wp-saml-auth-test-cli.php';
@@ -280,7 +254,7 @@ function _manually_load_plugin() {
 }
 tests_add_filter('muplugins_loaded', '_manually_load_plugin');
 
-/** ---------- wp_logout shim (as before) ---------- */
+/** ---------- wp_logout shim ---------- */
 if (! function_exists('wp_logout')) {
 	function wp_logout() {
 		if (function_exists('wp_destroy_current_session')) wp_destroy_current_session();
@@ -289,5 +263,5 @@ if (! function_exists('wp_logout')) {
 	}
 }
 
-/** ---------- Finally load the WP tests bootstrap (defines WP_UnitTestCase) ---------- */
+/** ---------- Finally load the WP tests bootstrap ---------- */
 require $_tests_dir . '/includes/bootstrap.php';

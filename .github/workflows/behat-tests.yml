@@ -93,9 +93,7 @@ jobs:
           WP_TESTS_DIR: /tmp/wordpress-tests-lib
           WP_TESTS_PHPUNIT_POLYFILLS_PATH: /tmp/phpunit-deps
           WP_VERSION: 6.8.3
-        run: |
-          PHPUNIT_BIN="vendor/bin/phpunit"
-          [[ -x "$PHPUNIT_BIN" ]] || PHPUNIT_BIN="${PLUGIN_DIR}/vendor/bin/phpunit"
+        run: |        
           export BOOTSTRAP=tests/phpunit/bootstrap-loader.php
           $PHPUNIT_BIN ${PHPUNIT_CFG:+$PHPUNIT_CFG} --bootstrap "${BOOTSTRAP}"
           bash bin/ci-run-phpunit.sh
