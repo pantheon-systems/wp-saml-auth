@@ -192,10 +192,10 @@ require_once $_tests_dir . '/includes/functions.php';
 $__wpsa_settings = [
 	'provider'               => 'test-sp',
 	'auto_provision'         => true,
-	'permit_wp_login'        => true,
+	'permit_wp_login'        => false,      // <-- was true
 	'user_claim'             => 'mail',
 	'map_by_email'           => true,
-	'default_role'           => 'subscriber',
+	'default_role'           => 'student',  // <-- was subscriber
 	'display_name_mapping'   => 'display_name',
 	'attribute_mapping'      => [
 		'user_login'   => 'uid',
@@ -204,7 +204,6 @@ $__wpsa_settings = [
 		'last_name'    => 'sn',
 		'display_name' => 'displayName',
 	],
-	// Also expose autoload via settings in case the plugin reads it there.
 	'simplesamlphp_autoload' => $STUB_AUTOLOAD,
 ];
 
@@ -222,8 +221,8 @@ tests_add_filter(
 		if ($name === 'simplesamlphp_autoload') return $STUB_AUTOLOAD;
 		if ($name === 'provider')               return 'test-sp';
 		if ($name === 'auto_provision')         return true;
-		if ($name === 'permit_wp_login')        return true;
-		if ($name === 'default_role')           return 'subscriber';
+		if ($name === 'permit_wp_login')        return false;     // <-- was true
+		if ($name === 'default_role')           return 'student'; // <-- was subscriber
 		if ($name === 'user_claim')             return 'mail';
 		if ($name === 'map_by_email')           return true;
 		if ($name === 'display_name_mapping')   return 'display_name';

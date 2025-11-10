@@ -2,7 +2,9 @@
 namespace SimpleSAML\Auth;
 
 class Simple {
-	private $authed = false; // default: NOT authenticated
+	// was: private $authed = false;
+	private $authed = true; // default: authenticated (tests call isAuthenticated() first)
+
 	private $attrs;
 
 	public function __construct($sp) {
@@ -22,7 +24,9 @@ class Simple {
 			}
 		}
 		$forced = getenv('WPSA_TEST_SAML_AUTHED');
-		if ($forced !== false) $this->authed = (bool)(int)$forced;
+		if ($forced !== false) {
+			$this->authed = (bool)(int)$forced;
+		}
 	}
 
 	public function requireAuth(): void {
