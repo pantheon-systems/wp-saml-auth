@@ -102,7 +102,7 @@ jobs:
           PHPUNIT_CFG=""
           [[ -f phpunit.xml ]] && PHPUNIT_CFG="-c phpunit.xml"
           [[ -z "$PHPUNIT_CFG" && -f phpunit.xml.dist ]] && PHPUNIT_CFG="-c phpunit.xml.dist"
-          "$PHPUNIT_BIN" ${PHPUNIT_CFG:+$PHPUNIT_CFG} --bootstrap "$BOOTSTRAP"
+          "$PHPUNIT_BIN" ${PHPUNIT_CFG:+$PHPUNIT_CFG} --bootstrap tests/phpunit/bootstrap-loader.php
           bash bin/ci-run-phpunit.sh
 
 ## TO DO: This is getting this: https://github.com/pantheon-systems/wp-saml-auth/actions/runs/19140065110/job/54702360664

@@ -1,11 +1,11 @@
 <?php
 /**
- * PHPUnit bootstrap for wp-saml-auth (deterministic).
- * - Preloads SimpleSAML stub before WP.
- * - Self-provisions WP tests if missing.
- * - Ensures DB and ABSPATH.
- * - Provides full settings via pre_option so plugin always instantiates client.
- * - Loads plugin during muplugins_loaded and re-writes option for realism.
+ * Deterministic PHPUnit bootstrap for wp-saml-auth
+ * - Creates a SimpleSAML stub in /tmp and preloads it (no repo file needed)
+ * - Self-provisions WP tests if missing
+ * - Ensures DB & ABSPATH
+ * - Supplies a full settings array (incl. provider & autoload) before plugin init
+ * - Keeps Behat untouched
  */
 
 $env = fn($k, $d=null) => getenv($k) !== false ? getenv($k) : $d;
@@ -20,28 +20,76 @@ $DB_USER = $env('DB_USER', 'root');
 $DB_PASS = $env('DB_PASSWORD', 'root');
 $DB_NAME = $env('DB_NAME', 'wp_test_boot');
 
-/** ---- PRELOAD STUB (must be before plugin loads) ---- */
-$__wpsa_stub = __DIR__ . '/simplesaml-stub/autoload.php';
-if (is_file($__wpsa_stub)) {
-	require_once $__wpsa_stub;
-}
+/** ---------- Create & preload SimpleSAML stub in /tmp ---------- */
+$STUB_DIR = '/tmp/simplesamlphp-stub';
+$STUB_AUTOLOAD = $STUB_DIR . '/autoload.php';
 
-/** ---- Polyfills ---- */
+if (!is_dir($STUB_DIR)) {
+	@mkdir($STUB_DIR, 0777, true);
+}
+if (!is_file($STUB_AUTOLOAD)) {
+	file_put_contents($STUB_AUTOLOAD, <<<'PHP'
+<?php
+namespace SimpleSAML\Auth;
+
+class Simple {
+    private $authed = false; // default: unauthenticated
+    private $attrs;
+
+    public function __construct($sp) {
+        $this->attrs = [
+            'uid'         => ['testuser'],
+            'mail'        => ['testuser@example.com'],
+            'givenName'   => ['Test'],
+            'sn'          => ['User'],
+            'displayName' => ['Test User'],
+        ];
+        if ($env = getenv('WPSA_TEST_SAML_ATTRS')) {
+            $json = json_decode($env, true);
+            if (is_array($json)) {
+                foreach ($json as $k => $v) {
+                    $this->attrs[$k] = is_array($v) ? array_values($v) : [$v];
+                }
+            }
+        }
+        $forced = getenv('WPSA_TEST_SAML_AUTHED');
+        if ($forced !== false) {
+            $this->authed = (bool)(int)$forced;
+        }
+    }
+
+    public function requireAuth(): void {
+        $forced = getenv('WPSA_TEST_SAML_AUTHED');
+        $this->authed = ($forced !== false) ? (bool)(int)$forced : true;
+    }
+
+    public function isAuthenticated(): bool { return $this->authed; }
+    public function getAttributes(): array { return $this->attrs; }
+    public function logout($params = []) { $this->authed = false; return true; }
+}
+PHP
+	);
+}
+require_once $STUB_AUTOLOAD; // ensure class exists before plugin init
+
+/** ---------- Polyfills ---------- */
 if (is_file($POLY_DIR . '/vendor/autoload.php')) {
 	require_once $POLY_DIR . '/vendor/autoload.php';
 } else {
 	$fallback = dirname(__DIR__, 2) . '/vendor/yoast/phpunit-polyfills/phpunitpolyfills-autoload.php';
-	if (is_file($fallback)) require_once $fallback;
+	if (is_file($fallback)) {
+		require_once $fallback;
+	}
 }
 
-/** ---- Ensure DB ---- */
+/** ---------- Ensure DB exists ---------- */
 $mysqli = @mysqli_init();
 if ($mysqli && @$mysqli->real_connect($DB_HOST, $DB_USER, $DB_PASS)) {
 	@$mysqli->query("CREATE DATABASE IF NOT EXISTS `{$DB_NAME}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
 	@$mysqli->close();
 }
 
-/** ---- Provision WP tests if needed ---- */
+/** ---------- Provision WP test suite if missing ---------- */
 $includes_bootstrap = $_tests_dir . '/includes/bootstrap.php';
 $DEVDIR_SRC = null;
 
@@ -49,7 +97,8 @@ if (!is_file($includes_bootstrap)) {
 	$tgz = "/tmp/wordpress-develop-{$WP_VERSION}.tar.gz";
 	if (!is_file($tgz)) {
 		$url = "https://github.com/WordPress/wordpress-develop/archive/refs/tags/{$WP_VERSION}.tar.gz";
-		$tmp = @fopen($url, 'r'); if (!$tmp) { fwrite(STDERR, "ERROR: $url\n"); exit(1); }
+		$tmp = @fopen($url, 'r');
+		if (!$tmp) { fwrite(STDERR, "ERROR: Unable to download {$url}\n"); exit(1); }
 		file_put_contents($tgz, $tmp);
 	}
 	$extract = "/tmp/wp-develop-{$WP_VERSION}";
@@ -72,9 +121,12 @@ if (!is_file($includes_bootstrap)) {
 		if (is_dir($cand)) { $devDir = $cand; break; }
 	}
 	if (!$devDir || !is_dir($devDir . '/tests/phpunit')) {
-		fwrite(STDERR, "ERROR: tests not found for {$WP_VERSION}\n"); exit(1);
+		fwrite(STDERR, "ERROR: wordpress-develop tests not found for {$WP_VERSION}\n");
+		exit(1);
 	}
-	if (is_dir($devDir . '/src')) $DEVDIR_SRC = rtrim($devDir . '/src', '/') . '/';
+	if (is_dir($devDir . '/src')) {
+		$DEVDIR_SRC = rtrim($devDir . '/src', '/') . '/';
+	}
 
 	@mkdir($_tests_dir, 0777, true);
 	$it = new RecursiveIteratorIterator(
@@ -105,7 +157,9 @@ define( 'WP_TESTS_TITLE', 'Test Blog' );
 \$table_prefix = 'wptests_';
 define( 'ABSPATH', '{$ABSPATH}' );
 define( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH', '{$POLY_DIR}' );
-PHP);
+PHP
+	);
+
 	$includes_bootstrap = $_tests_dir . '/includes/bootstrap.php';
 } else {
 	if (!is_file($WP_CORE_DIR . '/wp-settings.php') && !defined('ABSPATH')) {
@@ -131,50 +185,48 @@ PHP);
 if (!defined('WP_PHP_BINARY'))     define('WP_PHP_BINARY', PHP_BINARY ?: 'php');
 if (!defined('WP_RUN_CORE_TESTS')) define('WP_RUN_CORE_TESTS', false);
 
-/** ---- WP test helpers ---- */
+/** ---------- WP test helpers ---------- */
 require_once $_tests_dir . '/includes/functions.php';
 
-/** ---- EARLY: give the plugin a full settings array ---- */
+/** ---------- EARLY: full settings so plugin always instantiates client ---------- */
+$__wpsa_settings = [
+	'provider'               => 'test-sp',
+	'auto_provision'         => true,
+	'permit_wp_login'        => true,
+	'user_claim'             => 'mail',
+	'map_by_email'           => true,
+	'default_role'           => 'subscriber',
+	'display_name_mapping'   => 'display_name',
+	'attribute_mapping'      => [
+		'user_login'   => 'uid',
+		'user_email'   => 'mail',
+		'first_name'   => 'givenName',
+		'last_name'    => 'sn',
+		'display_name' => 'displayName',
+	],
+	// Also expose autoload via settings in case the plugin reads it there.
+	'simplesamlphp_autoload' => $STUB_AUTOLOAD,
+];
+
 tests_add_filter(
 	'pre_option_wp_saml_auth_settings',
-	function ($pre) {
-		return [
-			'provider'               => 'test-sp',
-			'auto_provision'         => true,
-			'permit_wp_login'        => true,
-			'user_claim'             => 'mail',
-			'map_by_email'           => true,
-			'default_role'           => 'subscriber',
-			'display_name_mapping'   => 'display_name',
-			'attribute_mapping'      => [
-				'user_login'   => 'uid',
-				'user_email'   => 'mail',
-				'first_name'   => 'givenName',
-				'last_name'    => 'sn',
-				'display_name' => 'displayName',
-			],
-		];
-	},
+	fn($pre) => $__wpsa_settings,
 	10,
 	1
 );
 
-/** ---- EARLY per-option filter (kept for realism) ---- */
+/** ---------- Per-option filter (2 args) kept for realism ---------- */
 tests_add_filter(
 	'wp_saml_auth_option',
-	function ($value, $name) {
-		if ($name === 'simplesamlphp_autoload') {
-			$autoload = getenv('SIMPLESAMLPHP_AUTOLOAD');
-			if ($autoload && file_exists($autoload)) return $autoload;
-			return __DIR__ . '/simplesaml-stub/autoload.php';
-		}
-		if ($name === 'provider')              return 'test-sp';
-		if ($name === 'auto_provision')        return true;
-		if ($name === 'permit_wp_login')       return true;
-		if ($name === 'default_role')          return 'subscriber';
-		if ($name === 'user_claim')            return 'mail';
-		if ($name === 'map_by_email')          return true;
-		if ($name === 'display_name_mapping')  return 'display_name';
+	function ($value, $name) use ($STUB_AUTOLOAD) {
+		if ($name === 'simplesamlphp_autoload') return $STUB_AUTOLOAD;
+		if ($name === 'provider')               return 'test-sp';
+		if ($name === 'auto_provision')         return true;
+		if ($name === 'permit_wp_login')        return true;
+		if ($name === 'default_role')           return 'subscriber';
+		if ($name === 'user_claim')             return 'mail';
+		if ($name === 'map_by_email')           return true;
+		if ($name === 'display_name_mapping')   return 'display_name';
 		if ($name === 'attribute_mapping') {
 			return [
 				'user_login'   => 'uid',
@@ -190,30 +242,18 @@ tests_add_filter(
 	2
 );
 
-/** ---- Load plugin during muplugins_loaded ---- */
+/** ---------- Load plugin during muplugins_loaded ---------- */
 function _wpsa_manually_load_plugin() {
-	// Make sure the runtime option also exists (some code reads get_option directly).
-	update_option('wp_saml_auth_settings', [
-		'provider'               => 'test-sp',
-		'auto_provision'         => true,
-		'permit_wp_login'        => true,
-		'user_claim'             => 'mail',
-		'map_by_email'           => true,
-		'default_role'           => 'subscriber',
-		'display_name_mapping'   => 'display_name',
-		'attribute_mapping'      => [
-			'user_login'   => 'uid',
-			'user_email'   => 'mail',
-			'first_name'   => 'givenName',
-			'last_name'    => 'sn',
-			'display_name' => 'displayName',
-		],
-	]);
+	global $__wpsa_settings;
+	// Ensure runtime option exists for any direct get_option() calls.
+	update_option('wp_saml_auth_settings', $__wpsa_settings);
 
 	$root = dirname(__DIR__, 2);
 	foreach (['/wp-saml-auth.php','/plugin.php','/index.php'] as $rel) {
-		$p = $root . $rel; if (file_exists($p)) { require $p; break; }
+		$p = $root . $rel;
+		if (file_exists($p)) { require $p; break; }
 	}
+
 	$cli_main = $root . '/inc/class-wp-saml-auth-cli.php';
 	if (file_exists($cli_main)) require $cli_main;
 	$cli_test = __DIR__ . '/class-wp-saml-auth-test-cli.php';
@@ -221,7 +261,7 @@ function _wpsa_manually_load_plugin() {
 }
 tests_add_filter('muplugins_loaded', '_wpsa_manually_load_plugin');
 
-/** ---- wp_logout shim ---- */
+/** ---------- wp_logout shim ---------- */
 if (!function_exists('wp_logout')) {
 	function wp_logout() {
 		if (function_exists('wp_destroy_current_session')) wp_destroy_current_session();
@@ -230,5 +270,5 @@ if (!function_exists('wp_logout')) {
 	}
 }
 
-/** ---- Finally bootstrap WP tests ---- */
+/** ---------- Finally bootstrap WP tests ---------- */
 require $_tests_dir . '/includes/bootstrap.php';
