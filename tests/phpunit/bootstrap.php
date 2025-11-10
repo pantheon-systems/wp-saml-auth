@@ -180,10 +180,10 @@ require_once $_tests_dir . '/includes/functions.php';
 $__wpsa_defaults = [
 	'provider'               => 'test-sp',
 	'auto_provision'         => true,
-	'permit_wp_login'        => false,      // tests expect password login disabled by default
+	'permit_wp_login'        => false,     // IMPORTANT for this test
 	'user_claim'             => 'mail',
 	'map_by_email'           => true,
-	'default_role'           => 'student',  // tests expect 'student'
+	'default_role'           => 'student',
 	'display_name_mapping'   => 'display_name',
 	'attribute_mapping'      => [
 		'user_login'   => 'uid',
@@ -192,17 +192,17 @@ $__wpsa_defaults = [
 		'last_name'    => 'sn',
 		'display_name' => 'displayName',
 	],
-	'simplesamlphp_autoload' => $STUB_AUTOLOAD,
+	'simplesamlphp_autoload' => '/tmp/simplesamlphp-stub/autoload.php',
 ];
 
 /**
  * Provide full settings if no DB value exists yet.
  * (This runs when core calls get_option() while booting plugins.)
  */
-tests_add_filter( 'pre_option_wp_saml_auth_settings', function ($pre) use ($__wpsa_defaults) {
-	if (is_array($pre) && $pre) return $pre;
-	return $__wpsa_defaults;
-}, 10, 1 );
+tests_add_filter('pre_option_wp_saml_auth_settings', function ($pre) use ($__wpsa_defaults) {
+	// When the option does not yet exist in DB, this supplies the full array.
+	return (is_array($pre) && $pre) ? $pre : $__wpsa_defaults;
+}, 10, 1);
 
 /**
  * Also, if a test reads individual options, fill per-option only when missing.
@@ -234,6 +234,26 @@ if (!function_exists('wp_logout')) {
 		if (function_exists('wp_destroy_current_session')) wp_destroy_current_session();
 		if (function_exists('wp_set_current_user')) wp_set_current_user(0);
 		do_action('wp_logout');
+	}
+}
+// In tests/phpunit/bootstrap.php, BEFORE requiring WP tests bootstrap:
+$pluginSrc = dirname(__DIR__, 2);                              // repo root
+$pluginDst = rtrim(getenv('WP_PLUGIN_DIR') ?: $WP_CORE_DIR . '/wp-content/plugins', '/') . '/wp-saml-auth';
+
+if (!is_dir($pluginDst)) {
+	// Try symlink for speed; if it fails (e.g., on CI) fall back to copy.
+	if (!@symlink($pluginSrc, $pluginDst)) {
+		$it = new RecursiveIteratorIterator(
+			new RecursiveDirectoryIterator($pluginSrc, FilesystemIterator::SKIP_DOTS),
+			RecursiveIteratorIterator::SELF_FIRST
+		);
+		@mkdir($pluginDst, 0777, true);
+		foreach ($it as $src) {
+			$rel = substr($src->getPathname(), strlen($pluginSrc));
+			$dst = $pluginDst . $rel;
+			if ($src->isDir()) { @mkdir($dst, 0777, true); }
+			else { @copy($src->getPathname(), $dst); }
+		}
 	}
 }
 
