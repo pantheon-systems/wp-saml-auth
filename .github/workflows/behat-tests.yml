@@ -93,7 +93,33 @@ jobs:
           WP_TESTS_DIR: /tmp/wordpress-tests-lib
           WP_TESTS_PHPUNIT_POLYFILLS_PATH: /tmp/phpunit-deps
           WP_VERSION: 6.8.3
-        run: |        
+        run: |
+          # Ensure phpunit exists and the var is set
+          if [[ ! -x "vendor/bin/phpunit" ]]; then
+          composer install --no-interaction --no-progress --prefer-dist
+          fi
+          
+          PHPUNIT_BIN="${PHPUNIT_BIN:-vendor/bin/phpunit}"
+          if [[ ! -x "$PHPUNIT_BIN" ]]; then
+          # fallback to plugin dir if your workflow sets PLUGIN_DIR
+          PHPUNIT_BIN="${PLUGIN_DIR:+${PLUGIN_DIR}/}vendor/bin/phpunit"
+          fi
+          if [[ ! -x "$PHPUNIT_BIN" ]]; then
+          echo "Error: phpunit not found at vendor/bin/phpunit (or \$PLUGIN_DIR/vendor/bin/phpunit)" >&2
+          exit 1
+          fi
+          
+          # Point to the loader (keeps Behat untouched)
+          export BOOTSTRAP=tests/phpunit/bootstrap-loader.php
+          
+          # Optional: pick up config if present
+          PHPUNIT_CFG=""
+          [[ -f phpunit.xml ]] && PHPUNIT_CFG="-c phpunit.xml"
+          [[ -z "$PHPUNIT_CFG" && -f phpunit.xml.dist ]] && PHPUNIT_CFG="-c phpunit.xml.dist"
+        
+          # Now run (quote everything so empty vars don't break the command line)
+          "$PHPUNIT_BIN" ${PHPUNIT_CFG:+$PHPUNIT_CFG} --bootstrap "$BOOTSTRAP" tests/phpunit
+          
           export BOOTSTRAP=tests/phpunit/bootstrap-loader.php
           $PHPUNIT_BIN ${PHPUNIT_CFG:+$PHPUNIT_CFG} --bootstrap "${BOOTSTRAP}"
           bash bin/ci-run-phpunit.sh
