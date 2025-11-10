@@ -2,9 +2,7 @@
 namespace SimpleSAML\Auth;
 
 class Simple {
-	/** @var bool */
-	private $authed = false; // default: NOT authenticated (matches your tests)
-	/** @var array<string,array<int,string>> */
+	private $authed = false; // default: NOT authenticated
 	private $attrs;
 
 	public function __construct($sp) {
@@ -15,41 +13,24 @@ class Simple {
 			'sn'          => ['User'],
 			'displayName' => ['Test User'],
 		];
-
-		// Optional per-test overrides via env
-		$envAttrs = getenv('WPSA_TEST_SAML_ATTRS');
-		if ($envAttrs) {
-			$json = json_decode($envAttrs, true);
+		if ($env = getenv('WPSA_TEST_SAML_ATTRS')) {
+			$json = json_decode($env, true);
 			if (is_array($json)) {
 				foreach ($json as $k => $v) {
 					$this->attrs[$k] = is_array($v) ? array_values($v) : [$v];
 				}
 			}
 		}
-
 		$forced = getenv('WPSA_TEST_SAML_AUTHED');
-		if ($forced !== false) {
-			$this->authed = (bool)(int)$forced;
-		}
+		if ($forced !== false) $this->authed = (bool)(int)$forced;
 	}
 
-	/** Simulate SSO flow: flip to authed=true unless forced via env */
 	public function requireAuth(): void {
 		$forced = getenv('WPSA_TEST_SAML_AUTHED');
 		$this->authed = ($forced !== false) ? (bool)(int)$forced : true;
 	}
 
-	public function isAuthenticated(): bool {
-		return $this->authed;
-	}
-
-	/** @return array<string, array<int, string>> */
-	public function getAttributes(): array {
-		return $this->attrs;
-	}
-
-	public function logout($params = []) {
-		$this->authed = false;
-		return true;
-	}
+	public function isAuthenticated(): bool { return $this->authed; }
+	public function getAttributes(): array { return $this->attrs; }
+	public function logout($params = []) { $this->authed = false; return true; }
 }
