@@ -207,10 +207,14 @@ tests_add_filter('pre_option_wp_saml_auth_settings', function ($pre) use ($__wps
 /**
  * Also, if a test reads individual options, fill per-option only when missing.
  */
-tests_add_filter( 'wp_saml_auth_option', function ($value, $name) use ($__wpsa_defaults) {
-	if ($value !== null && $value !== false && $value !== '') return $value;
-	return array_key_exists($name, $__wpsa_defaults) ? $__wpsa_defaults[$name] : $value;
-}, 10, 2 );
+tests_add_filter('wp_saml_auth_option', function ($value, $name) {
+	if ($name === 'simplesamlphp_autoload') {
+		$autoload = getenv('SIMPLESAMLPHP_AUTOLOAD');
+		if ($autoload && file_exists($autoload)) return $autoload;
+		return '/tmp/simplesamlphp-stub/autoload.php'; // or your committed stub path
+	}
+	return $value;
+}, 10, 2);
 
 /**
  * Activate the plugin like a normal plugin (NO mu-plugins).
@@ -227,6 +231,15 @@ tests_add_filter( 'pre_option_active_plugins', function ($pre) {
 	}
 	return $list;
 }, 10, 1 );
+
+tests_add_filter('plugins_loaded', function () {
+	$root    = dirname(__DIR__, 2);                    // repo root
+	$cli     = $root . '/inc/class-wp-saml-auth-cli.php';
+	$testCli = __DIR__ . '/class-wp-saml-auth-test-cli.php'; // adjust path if different
+
+	if (is_file($cli))     require_once $cli;
+	if (is_file($testCli)) require_once $testCli;
+}, 1);
 
 /** ---------- wp_logout shim ---------- */
 if (!function_exists('wp_logout')) {
