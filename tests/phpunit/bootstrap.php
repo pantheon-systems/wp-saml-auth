@@ -11,7 +11,15 @@
  * - Preserves your wp_logout shim.
  */
 
+
+
 $env = fn($k, $d=null) => getenv($k) !== false ? getenv($k) : $d;
+
+// Make sure the SimpleSAML stub class is available before the plugin is loaded.
+$__wpsa_stub = __DIR__ . '/simplesaml-stub/autoload.php';
+if (is_file($__wpsa_stub)) {
+	require_once $__wpsa_stub;
+}
 
 $WP_VERSION  = $env('WP_VERSION', '6.8.3');
 $WP_CORE_DIR = rtrim($env('WP_CORE_DIR', '/tmp/wordpress'), '/');
@@ -178,16 +186,40 @@ require_once $_tests_dir . '/includes/functions.php';
 tests_add_filter(
 	'wp_saml_auth_option',
 	function ($value, $name) {
+		// Point the plugin to the committed SimpleSAML stub (unless explicitly overridden)
 		if ($name === 'simplesamlphp_autoload') {
 			$autoload = getenv('SIMPLESAMLPHP_AUTOLOAD');
 			if ($autoload && file_exists($autoload)) {
-				return $autoload; // explicit override when needed
+				return $autoload;
 			}
-			return __DIR__ . '/simplesaml-stub/autoload.php'; // committed stub
+			return __DIR__ . '/simplesaml-stub/autoload.php';
 		}
+
+		// CRITICAL: ensure provider is non-empty so the plugin actually instantiates the client
+		if ($name === 'provider') {
+			return 'test-sp';
+		}
+
+		// Your existing defaults
 		if ($name === 'auto_provision')  return true;
 		if ($name === 'permit_wp_login') return true;
 		if ($name === 'default_role')    return 'subscriber';
+
+		// Sensible mapping defaults to avoid WP_Error when provisioning
+		if ($name === 'user_claim')            return 'mail';
+		if ($name === 'map_by_email')          return true;
+		if ($name === 'display_name_mapping')  return 'display_name';
+
+		if ($name === 'attribute_mapping') {
+			return [
+				'user_login'   => 'uid',
+				'user_email'   => 'mail',
+				'first_name'   => 'givenName',
+				'last_name'    => 'sn',
+				'display_name' => 'displayName',
+			];
+		}
+
 		return $value;
 	},
 	10,
