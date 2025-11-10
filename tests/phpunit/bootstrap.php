@@ -45,6 +45,11 @@ $DEVDIR_SRC = null;
 
 /** ---------- Self-provision WP test suite if missing ---------- */
 $includes_bootstrap = $_tests_dir . '/includes/bootstrap.php';
+// Always make the stub class available before the plugin tries to use it.
+$__wpsa_stub = __DIR__ . '/simplesaml-stub/autoload.php';
+if (is_file($__wpsa_stub)) {
+	require_once $__wpsa_stub;
+}
 if (!is_file($includes_bootstrap)) {
 	$tgz = "/tmp/wordpress-develop-{$WP_VERSION}.tar.gz";
 	if (!is_file($tgz)) {
@@ -176,7 +181,7 @@ tests_add_filter(
 		if ($name === 'simplesamlphp_autoload') {
 			$autoload = getenv('SIMPLESAMLPHP_AUTOLOAD');
 			if ($autoload && file_exists($autoload)) {
-				return $autoload; // explicit override to real SSP if ever needed
+				return $autoload; // explicit override when needed
 			}
 			return __DIR__ . '/simplesaml-stub/autoload.php'; // committed stub
 		}
