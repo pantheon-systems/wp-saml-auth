@@ -231,7 +231,6 @@ if (!function_exists('wp_logout')) {
 		do_action('wp_logout');
 	}
 }
-// In tests/phpunit/bootstrap.php, BEFORE requiring WP tests bootstrap:
 $pluginSrc = dirname(__DIR__, 2);                              // repo root
 $pluginDst = rtrim(getenv('WP_PLUGIN_DIR') ?: $WP_CORE_DIR . '/wp-content/plugins', '/') . '/wp-saml-auth';
 
