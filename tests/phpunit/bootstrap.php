@@ -16,6 +16,20 @@ define( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH', __DIR__ . '/../../vendor/yoast/phpuni
 require_once $_tests_dir . '/includes/functions.php';
 
 /**
+ * Add plugin to active plugins list
+ */
+function _wp_saml_auth_activate_plugin( $active_plugins ) {
+	if ( ! is_array( $active_plugins ) ) {
+		$active_plugins = array();
+	}
+	if ( ! in_array( 'wp-saml-auth/wp-saml-auth.php', $active_plugins, true ) ) {
+		$active_plugins[] = 'wp-saml-auth/wp-saml-auth.php';
+	}
+	return $active_plugins;
+}
+tests_add_filter( 'pre_option_active_plugins', '_wp_saml_auth_activate_plugin' );
+
+/**
  * Manually load the plugin being tested.
  */
 function _manually_load_plugin() {

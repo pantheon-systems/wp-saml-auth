@@ -2,12 +2,14 @@
 
 // @codingStandardsIgnoreFile
 
+namespace SimpleSAML\Auth;
+
 /**
  * Helper class for simple authentication applications.
  *
  * @package SimpleSAMLphp
  */
-class SimpleSAML_Auth_Simple {
+class Simple {
 
 	/**
 	 * The id of the authentication source we are accessing.
