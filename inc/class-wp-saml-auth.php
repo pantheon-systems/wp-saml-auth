@@ -93,8 +93,8 @@ class WP_SAML_Auth {
 			$this->provider = new OneLogin\Saml2\Auth( $auth_config );
 		} else {
 			$this->simplesamlphp_class = 'SimpleSAML\Auth\Simple';
-			
-			// if object doesn't exist, find the autoloader
+
+			// If object doesn't exist, find the autoloader.
 			if ( ! class_exists( $this->simplesamlphp_class ) ) {
 				$simplesamlphp_autoloader = self::get_simplesamlphp_autoloader();
 
@@ -103,28 +103,28 @@ class WP_SAML_Auth {
 					require_once $simplesamlphp_autoloader;
 				} else {
 					// Autoloader not found.
-					$this->maybeLogError( $simplesamlphp_autoloader );
+					$this->maybe_log_error( $simplesamlphp_autoloader );
 					return;
 				}
 			}
 
-			// test again in case `require_once $simplesamlphp_autoloader` didn't find it.
+			// Test again in case `require_once $simplesamlphp_autoloader` didn't find it.
 			if ( ! class_exists( $this->simplesamlphp_class ) ) {
-				$this->maybeLogError();
+				$this->maybe_log_error();
 				return;
 			}
-   
+
 			$this->provider = new $this->simplesamlphp_class( self::get_option( 'auth_source' ) );
 		}
 	}
-  
+
 	/**
 	 * Use error_log when WP_DEBUG is set
 	 *
 	 * @param string $path Path to autoloader
 	 * @return void
 	 */
-	protected function maybeLogError( $path = '' ) {
+	protected function maybe_log_error( $path = '' ) {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			$error_message = empty( $path )
 				? __( 'WP SAML Auth: SimpleSAMLphp autoloader could not be loaded for set_provider.', 'wp-saml-auth' )
@@ -137,6 +137,20 @@ class WP_SAML_Auth {
 			error_log( $error_message );
 		}
 	}
+
+	/**
+	 * Deprecated camelCase wrapper for {@see self::maybe_log_error()}.
+	 *
+	 * Kept for backward compatibility with subclasses.
+	 *
+	 * @param string $path Path to autoloader.
+	 * @return void
+	 */
+	// phpcs:disable Squiz.Commenting.FunctionComment.Missing, WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid
+	protected function maybeLogError( $path = '' ) {
+		$this->maybe_log_error( $path );
+	}
+	// phpcs:enable Squiz.Commenting.FunctionComment.Missing, WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid
 
 	/**
 	 * Initialize the controller logic on the 'init' hook
@@ -423,7 +437,7 @@ class WP_SAML_Auth {
 		// Some SAML providers return oddly shaped responses.
 		$attributes = apply_filters( 'wp_saml_auth_patch_attributes', $attributes, $provider );
 		$get_user_by = self::get_option( 'get_user_by' );
-		$attribute   = self::get_option( "user_{$get_user_by}_attribute" );
+		$attribute = self::get_option( "user_{$get_user_by}_attribute" );
 		if ( empty( $attributes[ $attribute ][0] ) ) {
 			// Translators: Communicates how the user is fetched based on the SAML response.
 			return new WP_Error( 'wp_saml_auth_missing_attribute', sprintf( esc_html__( '"%1$s" attribute is expected, but missing, in SAML response. Attribute is used to fetch existing user by "%2$s". Please contact your administrator.', 'wp-saml-auth' ), $attribute, $get_user_by ) );
