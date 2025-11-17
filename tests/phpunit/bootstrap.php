@@ -29,7 +29,7 @@ if (!is_file($STUB_AUTOLOAD)) {
 namespace SimpleSAML\Auth;
 
 class Simple {
-    private $authed = true; // default authenticated: tests call isAuthenticated() first
+    private $authed = false; // default authenticated: tests call isAuthenticated() first
     private $attrs;
 
     public function __construct($sp) {
@@ -54,12 +54,12 @@ class Simple {
 
     public function requireAuth(): void {
         $forced = getenv('WPSA_TEST_SAML_AUTHED');
-        $this->authed = ($forced !== false) ? (bool)(int)$forced : true;
+        $this->authed = ($forced !== false) ? (bool)(int)$forced : false;
     }
 
     public function isAuthenticated(): bool { return $this->authed; }
     public function getAttributes(): array { return $this->attrs; }
-    public function logout($params = []) { $this->authed = false; return true; }
+    public function logout($params = []) { $this->authed = false; return false; }
 }
 PHP
 	);
@@ -176,45 +176,27 @@ if (!defined('WP_RUN_CORE_TESTS')) define('WP_RUN_CORE_TESTS', false);
 /** ---------- WP test helpers ---------- */
 require_once $_tests_dir . '/includes/functions.php';
 
-/** ---------- Defaults expected by tests (seed BEFORE plugins load) ---------- */
-$__wpsa_defaults = [
-	'provider'               => 'test-sp',
-	'auto_provision'         => true,
-	'permit_wp_login'        => false,     // IMPORTANT for this test
-	'user_claim'             => 'mail',
-	'map_by_email'           => true,
-	'default_role'           => 'student',
-	'display_name_mapping'   => 'display_name',
-	'attribute_mapping'      => [
-		'user_login'   => 'uid',
-		'user_email'   => 'mail',
-		'first_name'   => 'givenName',
-		'last_name'    => 'sn',
-		'display_name' => 'displayName',
-	],
-	'simplesamlphp_autoload' => '/tmp/simplesamlphp-stub/autoload.php',
-];
-
-/**
- * Provide full settings if no DB value exists yet.
- * (This runs when core calls get_option() while booting plugins.)
- */
-tests_add_filter('pre_option_wp_saml_auth_settings', function ($pre) use ($__wpsa_defaults) {
-	// When the option does not yet exist in DB, this supplies the full array.
-	return (is_array($pre) && $pre) ? $pre : $__wpsa_defaults;
-}, 10, 1);
 
 /**
  * Also, if a test reads individual options, fill per-option only when missing.
  */
-tests_add_filter('wp_saml_auth_option', function ($value, $name) {
-	if ($name === 'simplesamlphp_autoload') {
-		$autoload = getenv('SIMPLESAMLPHP_AUTOLOAD');
-		if ($autoload && file_exists($autoload)) return $autoload;
-		return '/tmp/simplesamlphp-stub/autoload.php'; // or your committed stub path
-	}
-	return $value;
-}, 10, 2);
+tests_add_filter(
+	'wp_saml_auth_option',
+	function ( $value, $name ) {
+		if ( 'simplesamlphp_autoload' === $name ) {
+			$autoload = getenv( 'SIMPLESAMLPHP_AUTOLOAD' );
+			if ( $autoload && file_exists( $autoload ) ) {
+				return $autoload;
+			}
+			// Path to your stub in the repo.
+			return __DIR__ . '/simplesamlphp-stub/autoload.php';
+		}
+
+		return $value;
+	},
+	10,
+	2
+);
 
 /**
  * Activate the plugin like a normal plugin (NO mu-plugins).

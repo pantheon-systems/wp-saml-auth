@@ -2,38 +2,67 @@
 namespace SimpleSAML\Auth;
 
 class Simple {
-	private $authed = true;
-	private $attrs = [
-		'uid'         => ['testuser'],
-		'mail'        => ['testuser@example.com'],
-		'givenName'   => ['Test'],
-		'sn'          => ['User'],
-		'displayName' => ['Test User'],
-	];
+	// Start unauthenticated – tests expect false before SAML login and after logout.
+	private $authed = false;
+	private $attrs;
 
 	public function __construct($sp) {
-		// Allow tests to override via env
+		// Default attributes as a fallback.
+		$this->attrs = [
+			'uid'         => ['testuser'],
+			'mail'        => ['testuser@example.com'],
+			'givenName'   => ['Test'],
+			'sn'          => ['User'],
+			'displayName' => ['Test User'],
+		];
+
+		// Prefer the test's "current SAML user" if provided.
+		if (isset($GLOBALS['wp_saml_auth_current_user']) && is_array($GLOBALS['wp_saml_auth_current_user'])) {
+			$this->attrs = $GLOBALS['wp_saml_auth_current_user'];
+		}
+
+		// Optional env-based attribute override.
 		if ($json = getenv('WPSA_TEST_SAML_ATTRS')) {
-			$data = json_decode($json, true);
-			if (is_array($data)) {
-				foreach ($data as $k => $v) {
-					$this->attrs[$k] = is_array($v) ? array_values($v) : [$v];
-				}
+			$decoded = json_decode($json, true);
+			if (is_array($decoded)) {
+				$this->attrs = array_map(
+					fn($v) => is_array($v) ? array_values($v) : [$v],
+					$decoded
+				);
 			}
 		}
-		if (($x = getenv('WPSA_TEST_SAML_AUTHED')) !== false) {
-			$this->authed = (bool)(int)$x;
+
+		// Optional explicit auth override.
+		if (($forced = getenv('WPSA_TEST_SAML_AUTHED')) !== false) {
+			$this->authed = (bool)(int)$forced;
 		}
 	}
 
 	public function requireAuth(): void {
-		// mirror isAuthenticated() but can be toggled by tests
-		if (($x = getenv('WPSA_TEST_SAML_AUTHED')) !== false) {
-			$this->authed = (bool)(int)$x;
+		// When the plugin forces SAML login, mark as authenticated and
+		// refresh attributes from the test global if present.
+		if (isset($GLOBALS['wp_saml_auth_current_user']) && is_array($GLOBALS['wp_saml_auth_current_user'])) {
+			$this->attrs = $GLOBALS['wp_saml_auth_current_user'];
+		}
+
+		$this->authed = true;
+
+		// Env override wins if explicitly set.
+		if (($forced = getenv('WPSA_TEST_SAML_AUTHED')) !== false) {
+			$this->authed = (bool)(int)$forced;
 		}
 	}
 
-	public function isAuthenticated(): bool { return $this->authed; }
-	public function getAttributes(): array  { return $this->attrs; }
-	public function logout($params = [])    { $this->authed = false; return true; }
+	public function isAuthenticated(): bool {
+		return $this->authed;
+	}
+
+	public function getAttributes(): array {
+		return $this->attrs;
+	}
+
+	public function logout($params = []) {
+		$this->authed = false;
+		return true;
+	}
 }

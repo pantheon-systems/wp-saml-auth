@@ -59,7 +59,7 @@ jobs:
       - name: Install MySQL client
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y mysql-client
+          sudo apt-get install -y mysql-client sendmail rsync
 
       - name: Install WP-CLI (if needed)
         run: |
@@ -93,6 +93,7 @@ jobs:
           WP_TESTS_DIR: /tmp/wordpress-tests-lib
           WP_TESTS_PHPUNIT_POLYFILLS_PATH: /tmp/phpunit-deps
           WP_VERSION: 6.8.3
+          WP_CLI_ALLOW_ROOT: 1
         run: |
           if [[ ! -x "vendor/bin/phpunit" ]]; then
           composer install --no-interaction --no-progress --prefer-dist
