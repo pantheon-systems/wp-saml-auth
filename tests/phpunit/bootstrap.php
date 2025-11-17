@@ -54,7 +54,7 @@ class Simple {
 
     public function requireAuth(): void {
         $forced = getenv('WPSA_TEST_SAML_AUTHED');
-        $this->authed = ($forced !== false) ? (bool)(int)$forced : false;
+        $this->authed = ($forced !== false) ? (bool)(int)$forced : true;
     }
 
     public function isAuthenticated(): bool { return $this->authed; }
