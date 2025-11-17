@@ -59,7 +59,7 @@ class Simple {
 
     public function isAuthenticated(): bool { return $this->authed; }
     public function getAttributes(): array { return $this->attrs; }
-    public function logout($params = []) { $this->authed = false; return false; }
+    public function logout($params = []) { $this->authed = false; return true; }
 }
 PHP
 	);
