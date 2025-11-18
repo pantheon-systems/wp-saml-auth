@@ -285,44 +285,44 @@ class WP_SAML_Auth {
 	 * @param string $password Password supplied by the user.
 	 * @return mixed
 	 */
-    public function filter_authenticate( $user, $username, $password ) {
-        $permit_wp_login = self::get_option( 'permit_wp_login' );
+	public function filter_authenticate( $user, $username, $password ) {
+		$permit_wp_login = self::get_option( 'permit_wp_login' );
 
-        // If there's already a user (WordPress username/password auth worked).
-        if ( $user instanceof \WP_User ) {
-            // If WP login is permitted, leave it alone.
-            if ( $permit_wp_login ) {
-                return $user;
-            }
+		// If there's already a user (WordPress username/password auth worked).
+		if ( $user instanceof \WP_User ) {
+			// If WP login is permitted, leave it alone.
+			if ( $permit_wp_login ) {
+				return $user;
+			}
 
-            // If WP login is NOT permitted, force SAML instead.
-            return $this->do_saml_authentication();
-        }
+			// If WP login is NOT permitted, force SAML instead.
+			return $this->do_saml_authentication();
+		}
 
-        // If no user yet…
-        // In "SAML only" mode, always force SAML, except when logging out.
-        if ( ! $permit_wp_login ) {
-            if ( isset( $_GET['loggedout'] ) && 'true' === $_GET['loggedout'] ) {
-                // Let WordPress handle the logged-out state.
-                return $user;
-            }
+		// If no user yet…
+		// In "SAML only" mode, always force SAML, except when logging out.
+		if ( ! $permit_wp_login ) {
+			if ( isset( $_GET['loggedout'] ) && 'true' === $_GET['loggedout'] ) {
+				// Let WordPress handle the logged-out state.
+				return $user;
+			}
 
-            return $this->do_saml_authentication();
-        }
+			return $this->do_saml_authentication();
+		}
 
-        // In default mode, only trigger SAML if we’re in the SAML flow.
-        $doing_saml = ! empty( $_POST['SAMLResponse'] )
-                || ( isset( $_GET['action'] ) && 'wp-saml-auth' === $_GET['action'] );
+		// In default mode, only trigger SAML if we’re in the SAML flow.
+		$doing_saml = ! empty( $_POST['SAMLResponse'] )
+				|| ( isset( $_GET['action'] ) && 'wp-saml-auth' === $_GET['action'] );
 
-        if ( $doing_saml ) {
-            return $this->do_saml_authentication();
-        }
+		if ( $doing_saml ) {
+			return $this->do_saml_authentication();
+		}
 
-        // Otherwise, let core handle login with username/password.
-        return $user;
-    }
+		// Otherwise, let core handle login with username/password.
+		return $user;
+	}
 
-    /**
+	/**
 	 * Do the SAML authentication dance
 	 */
 	public function do_saml_authentication() {
@@ -860,23 +860,22 @@ class WP_SAML_Auth {
 	public function load_textdomain() {
 		load_plugin_textdomain( 'wp-saml-auth', false, dirname( plugin_basename( __FILE__ ), 2 ) . '/languages' );
 	}
-    public function filter_logout() {
-        $provider = $this->get_provider();
+	public function filter_logout() {
+		$provider = $this->get_provider();
 
-        if ( ! $provider ) {
-            return;
-        }
+		if ( ! $provider ) {
+			return;
+		}
 
-        if ( ! $provider->isAuthenticated() ) {
-            return;
-        }
+		if ( ! $provider->isAuthenticated() ) {
+			return;
+		}
 
-        // Redirect back to login page after logging out of IdP.
-        $redirect = wp_login_url();
+		// Redirect back to login page after logging out of IdP.
+		$redirect = wp_login_url();
 
-        // This must be called; the test-provider tracks this via wasLogoutCalled().
-        $provider->logout( $redirect );
-    }
-
+		// This must be called; the test-provider tracks this via wasLogoutCalled().
+		$provider->logout( $redirect );
+	}
 }
 
