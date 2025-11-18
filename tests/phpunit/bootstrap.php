@@ -29,7 +29,7 @@ if (!is_file($STUB_AUTOLOAD)) {
 namespace SimpleSAML\Auth;
 
 class Simple {
-    private $authed = false; // default authenticated: tests call isAuthenticated() first
+    private $authed = true; // default authenticated: tests call isAuthenticated() first
     private $attrs;
 
     public function __construct($sp) {
@@ -54,12 +54,12 @@ class Simple {
 
     public function requireAuth(): void {
         $forced = getenv('WPSA_TEST_SAML_AUTHED');
-        $this->authed = ($forced !== false) ? (bool)(int)$forced : false;
+        $this->authed = ($forced !== false) ? (bool)(int)$forced : true;
     }
 
     public function isAuthenticated(): bool { return $this->authed; }
     public function getAttributes(): array { return $this->attrs; }
-    public function logout($params = []) { $this->authed = false; return false; }
+    public function logout($params = []) { $this->authed = false; return true; }
 }
 PHP
 	);
