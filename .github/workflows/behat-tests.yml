@@ -106,126 +106,114 @@ jobs:
           bash bin/ci-run-phpunit.sh
           "$PHPUNIT_BIN" ${PHPUNIT_CFG:+$PHPUNIT_CFG} --bootstrap tests/phpunit/bootstrap-loader.php tests/phpunit
 
-## TO DO: This is getting this: https://github.com/pantheon-systems/wp-saml-auth/actions/runs/19140065110/job/54702360664
-#      - name: Run upstream phpunit-test.sh (honor our setup)
-#        run: |
-#          export DB_NAME DB_USER DB_PASSWORD DB_HOST WP_VERSION
-#          # Do not let it manage DB again; we already installed and injected bootstrap.
-#          bash bin/phpunit-test.sh --skip-nightly --skip-db=true \
-#            --dbname="${DB_NAME}" \
-#            --dbuser="${DB_USER}" \
-#            --dbpass="${DB_PASSWORD}" \
-#            --dbhost="${DB_HOST}" \
-#            --version="${WP_VERSION}"
+  behat:
+    name: Behat (SSP ${{ matrix.ssp }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ssp: ["1.18.0", "2.0.0", "2.4.0"]
 
-#  behat:
-#    name: Behat (SSP ${{ matrix.ssp }})
-#    runs-on: ubuntu-latest
-#    strategy:
-#      fail-fast: false
-#      matrix:
-#        ssp: ["1.18.0", "2.0.0", "2.4.0"]
-#
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v5
-#        with:
-#          fetch-depth: 0
-#          persist-credentials: false
-#          submodules: recursive
-#          lfs: false
-#
-#      - name: Setup PHP 8.2
-#        uses: shivammathur/setup-php@v2
-#        with:
-#          php-version: "8.2"
-#          tools: composer:v2
-#          coverage: none
-#
-#      - name: Install Terminus
-#        uses: pantheon-systems/terminus-github-actions@v1
-#        with:
-#          pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
-#
-#      - name: SSH agent (Pantheon)
-#        uses: webfactory/ssh-agent@v0.9.0
-#        with:
-#          ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
-#          log-public-key: true
-#
-#      - name: Configure SSH (no strict host key checking)
-#        run: |
-#          mkdir -p ~/.ssh
-#          printf "Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile=/dev/null\n" > ~/.ssh/config
-#
-#      - name: Set Pantheon site id
-#        run: echo "TERMINUS_SITE=wp-saml-auth" >> $GITHUB_ENV
-#
-#      - name: Compute Pantheon env vars
-#        env:
-#          SSP: ${{ matrix.ssp }}
-#          TERMINUS_SITE: ${{ env.TERMINUS_SITE }}
-#        run: |
-#          set -e
-#          ssp_num="${SSP//./}"
-#          suffix=$(printf "%04d" $(( GITHUB_RUN_NUMBER % 10000 )) )
-#          env_id="ci${ssp_num}${suffix}"
-#          TERMINUS_ENV="${env_id:0:10}"
-#          echo "TERMINUS_ENV=$TERMINUS_ENV" >> $GITHUB_ENV
-#          echo "SIMPLESAMLPHP_VERSION=$SSP" >> $GITHUB_ENV
-#          echo "PANTHEON_SITE_URL=${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io" >> $GITHUB_ENV
-#          echo "Using env: $TERMINUS_SITE.$TERMINUS_ENV -> https://${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io"
-#
-#      - name: Install Composer deps
-#        run: composer install --no-progress --no-interaction
-#
-#      - name: Prepare Pantheon environment
-#        env:
-#          WORDPRESS_ADMIN_USERNAME: pantheon
-#          WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
-#          WORDPRESS_ADMIN_PASSWORD: pantheon
-#        run: |
-#          set -eux
-#          if [ "${{ matrix.ssp }}" = "1.18.0" ]; then
-#            # Ensure the 1.18 script exists under your repo path
-#            test -f bin/1.18/behat-prepare-simplesaml1.18.0.sh
-#
-#            # Patch the hard-coded WORKING_DIR inside the script to the current workspace
-#            sed -i 's|^WORKING_DIR=.*|WORKING_DIR="'"$GITHUB_WORKSPACE"'"|g' bin/1.18/behat-prepare-simplesaml1.18.0.sh
-#
-#            # Run
-#            bash bin/1.18/behat-prepare-simplesaml1.18.0.sh
-#          else
-#            bash bin/behat-prepare.sh
-#          fi
-#
-#      - name: Wait for Pantheon workflow
-#        run: |
-#          SITE_ENV="${TERMINUS_SITE}.${TERMINUS_ENV}"
-#          terminus workflow:wait "$SITE_ENV"
-#
-#      - name: Wait until site responds
-#        run: |
-#          set -e
-#          URL="https://${PANTHEON_SITE_URL}"
-#          echo "Waiting for $URL ..."
-#          for i in $(seq 1 60); do
-#            if curl -fsSL -o /dev/null "$URL"; then
-#              echo "OK"; exit 0
-#            fi
-#            sleep 5
-#          done
-#          echo "Site never became ready: $URL"
-#          exit 1
-#
-#      - name: Run Behat
-#        env:
-#          BEHAT_PARAMS: >-
-#            {"extensions":{"Behat\\MinkExtension":{"base_url":"https://${{ env.PANTHEON_SITE_URL }}"}}}
-#          PANTHEON_SITE_URL: ${{ env.PANTHEON_SITE_URL }}
-#          WORDPRESS_ADMIN_USERNAME: pantheon
-#          WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
-#          WORDPRESS_ADMIN_PASSWORD: pantheon
-#          XDEBUG_MODE: off
-#        run: |
-#          vendor/bin/behat --colors --no-interaction
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          submodules: recursive
+          lfs: false
+
+      - name: Setup PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          tools: composer:v2
+          coverage: none
+
+      - name: Install Terminus
+        uses: pantheon-systems/terminus-github-actions@v1
+        with:
+          pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
+
+      - name: SSH agent (Pantheon)
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
+          log-public-key: true
+
+      - name: Configure SSH (no strict host key checking)
+        run: |
+          mkdir -p ~/.ssh
+          printf "Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile=/dev/null\n" > ~/.ssh/config
+
+      - name: Set Pantheon site id
+        run: echo "TERMINUS_SITE=wp-saml-auth" >> $GITHUB_ENV
+
+      - name: Compute Pantheon env vars
+        env:
+          SSP: ${{ matrix.ssp }}
+          TERMINUS_SITE: ${{ env.TERMINUS_SITE }}
+        run: |
+          set -e
+          ssp_num="${SSP//./}"
+          suffix=$(printf "%04d" $(( GITHUB_RUN_NUMBER % 10000 )) )
+          env_id="ci${ssp_num}${suffix}"
+          TERMINUS_ENV="${env_id:0:10}"
+          echo "TERMINUS_ENV=$TERMINUS_ENV" >> $GITHUB_ENV
+          echo "SIMPLESAMLPHP_VERSION=$SSP" >> $GITHUB_ENV
+          echo "PANTHEON_SITE_URL=${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io" >> $GITHUB_ENV
+          echo "Using env: $TERMINUS_SITE.$TERMINUS_ENV -> https://${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io"
+
+      - name: Install Composer deps
+        run: composer install --no-progress --no-interaction
+
+      - name: Prepare Pantheon environment
+        env:
+          WORDPRESS_ADMIN_USERNAME: pantheon
+          WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
+          WORDPRESS_ADMIN_PASSWORD: pantheon
+        run: |
+          set -eux
+          if [ "${{ matrix.ssp }}" = "1.18.0" ]; then
+            # Ensure the 1.18 script exists under your repo path
+            test -f bin/1.18/behat-prepare-simplesaml1.18.0.sh
+
+            # Patch the hard-coded WORKING_DIR inside the script to the current workspace
+            sed -i 's|^WORKING_DIR=.*|WORKING_DIR="'"$GITHUB_WORKSPACE"'"|g' bin/1.18/behat-prepare-simplesaml1.18.0.sh
+
+            # Run
+            bash bin/1.18/behat-prepare-simplesaml1.18.0.sh
+          else
+            bash bin/behat-prepare.sh
+          fi
+
+      - name: Wait for Pantheon workflow
+        run: |
+          SITE_ENV="${TERMINUS_SITE}.${TERMINUS_ENV}"
+          terminus workflow:wait "$SITE_ENV"
+
+      - name: Wait until site responds
+        run: |
+          set -e
+          URL="https://${PANTHEON_SITE_URL}"
+          echo "Waiting for $URL ..."
+          for i in $(seq 1 60); do
+            if curl -fsSL -o /dev/null "$URL"; then
+              echo "OK"; exit 0
+            fi
+            sleep 5
+          done
+          echo "Site never became ready: $URL"
+          exit 1
+
+      - name: Run Behat
+        env:
+          BEHAT_PARAMS: >-
+            {"extensions":{"Behat\\MinkExtension":{"base_url":"https://${{ env.PANTHEON_SITE_URL }}"}}}
+          PANTHEON_SITE_URL: ${{ env.PANTHEON_SITE_URL }}
+          WORDPRESS_ADMIN_USERNAME: pantheon
+          WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
+          WORDPRESS_ADMIN_PASSWORD: pantheon
+          XDEBUG_MODE: off
+        run: |
+          vendor/bin/behat --colors --no-interaction
