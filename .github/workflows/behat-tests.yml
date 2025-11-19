@@ -69,17 +69,31 @@ jobs:
             echo "$PWD" >> "$GITHUB_PATH"
           fi
 
-      - name: Require wpunit-helpers (if missing)
+      - name: Prepare Composer deps for PHPUnit
         run: |
+          PHP_MM=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
+          echo "Running PHPUnit deps setup on PHP ${PHP_MM}"
+
+          # On PHP 7.4 / 8.0 we don't need Behat at all, and it pulls in
+          # symfony/yaml 6.x which requires php >= 8.1.
+          if [ "$PHP_MM" = "7.4" ] || [ "$PHP_MM" = "8.0" ]; then
+            echo "PHP ${PHP_MM}: removing Behat-related dev deps for PHPUnit job"
+            composer remove --dev \
+              behat/behat \
+              behat/gherkin \
+              --no-update --no-interaction
+
+            # Remove composer.lock to allow fresh dependency resolution for this PHP version
+            rm -f composer.lock
+          fi
+          # Ensure wpunit-helpers is present
           if ! composer show -D pantheon-systems/wpunit-helpers >/dev/null 2>&1; then
             composer require --dev pantheon-systems/wpunit-helpers:^2 --no-interaction --no-progress
           fi
 
-      - name: Install dependencies
-        run: composer install --no-interaction --no-progress --prefer-dist
+          # Now install everything for this PHP version
+          composer install --no-interaction --no-progress --prefer-dist
 
-      - name: Install wpunit-helpers
-        run: composer require --no-interaction --dev pantheon-systems/wpunit-helpers
 
       - name: Make CI runner executable
         run: chmod +x bin/ci-run-phpunit.sh
@@ -92,19 +106,18 @@ jobs:
           WP_CORE_DIR: /tmp/wordpress
           WP_TESTS_DIR: /tmp/wordpress-tests-lib
           WP_TESTS_PHPUNIT_POLYFILLS_PATH: /tmp/phpunit-deps
+          COMPOSER_NO_INTERACTION: 1
+          COMPOSER_NO_AUDIT: 1
+          COMPOSER_PROCESS_TIMEOUT: 0
           WP_VERSION: 6.8.3
           WP_CLI_ALLOW_ROOT: 1
         run: |
-          if [[ ! -x "vendor/bin/phpunit" ]]; then
-          composer install --no-interaction --no-progress --prefer-dist
-          fi
           PHPUNIT_BIN="${PHPUNIT_BIN:-vendor/bin/phpunit}"
           export BOOTSTRAP=tests/phpunit/bootstrap-loader.php
           PHPUNIT_CFG=""
           [[ -f phpunit.xml ]] && PHPUNIT_CFG="-c phpunit.xml"
           [[ -z "$PHPUNIT_CFG" && -f phpunit.xml.dist ]] && PHPUNIT_CFG="-c phpunit.xml.dist"
           bash bin/ci-run-phpunit.sh
-          "$PHPUNIT_BIN" ${PHPUNIT_CFG:+$PHPUNIT_CFG} --bootstrap tests/phpunit/bootstrap-loader.php tests/phpunit
 
   behat:
     name: Behat (SSP ${{ matrix.ssp }})

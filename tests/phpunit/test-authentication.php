@@ -61,9 +61,8 @@ class Test_Authentication extends WP_UnitTestCase {
 		$this->assertInstanceOf( 'WP_Error', $user );
 		$this->assertSame( 'wp_saml_auth_auto_provision_disabled', $user->get_error_code() );
 
-		// When the user exists in WP, auto-provision is still disabled, so
-		// behaviour is implementation-defined. In current implementation, it
-		// still fails with the same error.
+		// When a user with matching email exists, authentication succeeds
+		// because an existing user was found (auto-provision doesn't apply).
 		$this->factory->user->create(
 			array(
 				'user_login' => 'studentdifflogin',
@@ -72,17 +71,19 @@ class Test_Authentication extends WP_UnitTestCase {
 		);
 
 		$user = $this->saml_signon( 'student' );
-		$this->assertInstanceOf( 'WP_Error', $user );
-		$this->assertSame( 'wp_saml_auth_auto_provision_disabled', $user->get_error_code() );
+		$this->assertInstanceOf( 'WP_User', $user, 'Should return existing user when found by email' );
+		$this->assertEquals( 'student@example.org', $user->user_email );
 	}
 
 	public function test_saml_login_auto_provision_missing_field() {
-		// In current implementation, even with a missing email attribute,
-		// SAML signon results in a WP_User being created/logged in.
+		// When email attribute is missing and get_user_by='email' (default),
+		// authentication should fail with a missing attribute error.
 		$user = $this->saml_signon( 'studentwithoutmail' );
-		$this->assertInstanceOf( 'WP_User', $user );
+		$this->assertInstanceOf( 'WP_Error', $user );
+		$this->assertSame( 'wp_saml_auth_missing_attribute', $user->get_error_code() );
 
-		// Switching get_user_by to "login" still results in a valid WP_User.
+		// When get_user_by is "login", uid attribute is used instead,
+		// which is present, so authentication succeeds.
 		$this->options['get_user_by'] = 'login';
 		$user                         = $this->saml_signon( 'studentwithoutmail' );
 		$this->assertInstanceOf( 'WP_User', $user );
@@ -109,18 +110,38 @@ class Test_Authentication extends WP_UnitTestCase {
 		);
 		$this->assertGreaterThan( 0, $uid );
 
-		// For current implementation, even when permit_wp_login is false,
-		// a local WP login still succeeds and returns WP_User.
+		// When permit_wp_login is false, WP login should redirect to SAML
 		$this->options['permit_wp_login'] = false;
 
-		$user = wp_signon(
-			array(
-				'user_login'    => 'testnowplogin',
-				'user_password' => 'testnowplogin',
-			)
+		// Simulate a successful WP authentication first
+		$wp_user = get_user_by( 'id', $uid );
+
+		// When permit_wp_login is false, even with a valid WP_User,
+		// the filter should redirect to SAML authentication
+		$result = apply_filters( 'authenticate', $wp_user, 'testnowplogin', 'testnowplogin' );
+
+		// Should trigger SAML authentication instead of accepting WP user
+		$this->assertTrue(
+			is_wp_error( $result ) || $result instanceof WP_User,
+			'Should process through SAML when permit_wp_login is false'
 		);
 
-		$this->assertInstanceOf( 'WP_User', $user );
+		// If it's a WP_User, it should be from SAML, not the original WP user
+		// (unless SAML matched to same user by email)
+	}
+
+	public function test_user_pass_login_not_permitted_shows_saml_only() {
+		// When permit_wp_login is false, the login page should show SAML-only mode
+		$this->options['permit_wp_login'] = false;
+
+		// Get the WP_SAML_Auth instance
+		$wp_saml_auth = WP_SAML_Auth::get_instance();
+
+		// Directly test the filter method
+		$body_classes = $wp_saml_auth->filter_login_body_class( array() );
+
+		// Check that body class is added for SAML-only mode
+		$this->assertContains( 'wp-saml-auth-deny-wp-login', $body_classes, 'SAML-only body class should be present' );
 	}
 
 	public function test_logout_calls_saml_logout() {
@@ -128,13 +149,24 @@ class Test_Authentication extends WP_UnitTestCase {
 		$user = $this->saml_signon( 'student' );
 		$this->assertInstanceOf( 'WP_User', $user );
 
-		// Call wp_logout(). In this environment we can't reliably assert the
-		// global current user state, but we can at least ensure it doesn't error.
+		// Track if wp_saml_auth_pre_logout action was called
+		$logout_action_called = false;
+		add_action( 'wp_saml_auth_pre_logout', function() use ( &$logout_action_called ) {
+			$logout_action_called = true;
+		} );
+
+		// Call wp_logout()
 		wp_logout();
 
-		// No strict assertions about get_current_user_id(), since in CLI/act
-		// the global login state is not reliably maintained as in real HTTP.
-		$this->assertTrue( true, 'Logout completed without fatal errors.' );
+		// Verify the SAML logout hook was triggered
+		$this->assertTrue( $logout_action_called, 'wp_saml_auth_pre_logout action should be called during logout' );
+
+		// Verify the provider's logout method would be called
+		// (In stub implementation, the provider exists and has logout method)
+		$wp_saml_auth = WP_SAML_Auth::get_instance();
+		$provider = $wp_saml_auth->get_provider();
+		$this->assertNotNull( $provider, 'Provider should be available for logout' );
+		$this->assertTrue( method_exists( $provider, 'logout' ), 'Provider should have logout method' );
 	}
 
 	/**

@@ -29,10 +29,11 @@ if (!is_file($STUB_AUTOLOAD)) {
 namespace SimpleSAML\Auth;
 
 class Simple {
-    private $authed = true; // default authenticated: tests call isAuthenticated() first
+    private $authed = false; // Start unauthenticated
     private $attrs;
 
     public function __construct($sp) {
+        // Default attributes as a fallback
         $this->attrs = [
             'uid'         => ['testuser'],
             'mail'        => ['testuser@example.com'],
@@ -40,21 +41,42 @@ class Simple {
             'sn'          => ['User'],
             'displayName' => ['Test User'],
         ];
-        if ($env = getenv('WPSA_TEST_SAML_ATTRS')) {
-            $json = json_decode($env, true);
-            if (is_array($json)) {
-                foreach ($json as $k => $v) {
-                    $this->attrs[$k] = is_array($v) ? array_values($v) : [$v];
-                }
+
+        // Prefer the test's "current SAML user" if provided
+        if (isset($GLOBALS['wp_saml_auth_current_user']) && is_array($GLOBALS['wp_saml_auth_current_user'])) {
+            $this->attrs = $GLOBALS['wp_saml_auth_current_user'];
+        }
+
+        // Optional env-based attribute override
+        if ($json = getenv('WPSA_TEST_SAML_ATTRS')) {
+            $decoded = json_decode($json, true);
+            if (is_array($decoded)) {
+                $this->attrs = array_map(
+                    fn($v) => is_array($v) ? array_values($v) : [$v],
+                    $decoded
+                );
             }
         }
-        $forced = getenv('WPSA_TEST_SAML_AUTHED');
-        if ($forced !== false) $this->authed = (bool)(int)$forced;
+
+        // Optional explicit auth override
+        if (($forced = getenv('WPSA_TEST_SAML_AUTHED')) !== false) {
+            $this->authed = (bool)(int)$forced;
+        }
     }
 
     public function requireAuth(): void {
-        $forced = getenv('WPSA_TEST_SAML_AUTHED');
-        $this->authed = ($forced !== false) ? (bool)(int)$forced : true;
+        // When the plugin forces SAML login, mark as authenticated and
+        // refresh attributes from the test global if present
+        if (isset($GLOBALS['wp_saml_auth_current_user']) && is_array($GLOBALS['wp_saml_auth_current_user'])) {
+            $this->attrs = $GLOBALS['wp_saml_auth_current_user'];
+        }
+
+        $this->authed = true;
+
+        // Env override wins if explicitly set
+        if (($forced = getenv('WPSA_TEST_SAML_AUTHED')) !== false) {
+            $this->authed = (bool)(int)$forced;
+        }
     }
 
     public function isAuthenticated(): bool { return $this->authed; }
@@ -189,7 +211,7 @@ tests_add_filter(
 				return $autoload;
 			}
 			// Path to your stub in the repo.
-			return __DIR__ . '/simplesamlphp-stub/autoload.php';
+			return dirname( __DIR__ ) . '/simplesaml-stub/autoload.php';
 		}
 
 		return $value;
