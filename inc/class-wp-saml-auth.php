@@ -281,11 +281,13 @@ class WP_SAML_Auth {
 	 * Check if the user is authenticated against the SimpleSAMLphp instance
 	 *
 	 * @param mixed  $user     WordPress user reference.
-	 * @param string $username Username.
-	 * @param string $password Password supplied by the user.
+	 * @param string $username Username (unused, but required by filter signature).
+	 * @param string $password Password supplied by the user (unused, but required by filter signature).
 	 * @return mixed
+	 *
+	 * @SuppressWarnings(PHPMD.UnusedFormalParameter)
 	 */
-	public function filter_authenticate( $user, $username, $password ) {
+	public function filter_authenticate( $user, $username, $password ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed, VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
 		$permit_wp_login = self::get_option( 'permit_wp_login' );
 
 		// If there's already a user (WordPress username/password auth worked).
@@ -860,6 +862,12 @@ class WP_SAML_Auth {
 	public function load_textdomain() {
 		load_plugin_textdomain( 'wp-saml-auth', false, dirname( plugin_basename( __FILE__ ), 2 ) . '/languages' );
 	}
+
+	/**
+	 * Handle logout from the SAML provider
+	 *
+	 * @return void
+	 */
 	public function filter_logout() {
 		$provider = $this->get_provider();
 

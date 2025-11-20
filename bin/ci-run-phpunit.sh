@@ -11,7 +11,6 @@ set -euo pipefail
 
 REPO_DIR="${GITHUB_WORKSPACE:-$PWD}"
 : "${BOOTSTRAP:=${REPO_DIR}/tests/phpunit/bootstrap.php}"
-PLUGIN_DIR="$REPO_DIR"
 
 log(){ printf '>> %s\n' "$*"; }
 die(){ echo "Error: $*" >&2; exit 1; }
