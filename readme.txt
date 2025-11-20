@@ -201,6 +201,18 @@ If you need to adapt authentication behavior based on the SAML response, you can
         return $ret;
     }, 10, 2 );
 
+If you're using the OneLogin connection type and need to modify the `internal_config` (e.g. to set `requestedAuthnContext` to `false`), you can use the `wp_saml_auth_internal_config` filter:
+
+    /**
+     * Modify the OneLogin SAML configuration.
+     */
+    add_filter( 'wp_saml_auth_internal_config', function( $config ) {
+        $config['security'] = array(
+            'requestedAuthnContext' => false,
+        );
+        return $config;
+    } );
+
 If you have installed SimpleSAMLphp to a non-default path, you can set that path via the `wp_saml_auth_simplesamlphp_path_array` filter. By default, it is assumed that SimpleSAMLphp is installed into one of the following paths:
 * `ABSPATH . 'simplesaml'`
 * `ABSPATH . 'private/simplesamlphp'`

@@ -89,7 +89,13 @@ class WP_SAML_Auth {
 			if ( ! class_exists( 'OneLogin\Saml2\Auth' ) ) {
 				return;
 			}
-			$auth_config    = self::get_option( 'internal_config' );
+			$auth_config = self::get_option( 'internal_config' );
+			/**
+			 * Permit the internal_config array to be customized.
+			 *
+			 * @param array $auth_config The internal configuration array for OneLogin.
+			 */
+			$auth_config    = apply_filters( 'wp_saml_auth_internal_config', $auth_config );
 			$this->provider = new OneLogin\Saml2\Auth( $auth_config );
 		} else {
 			$simplesamlphp_autoloader = self::get_simplesamlphp_autoloader();
@@ -205,6 +211,12 @@ class WP_SAML_Auth {
 		$provider = $this->get_provider();
 		if ( 'internal' === self::get_option( 'connection_type' ) ) {
 			$internal_config = self::get_option( 'internal_config' );
+			/**
+			 * Permit the internal_config array to be customized.
+			 *
+			 * @param array $internal_config The internal configuration array for OneLogin.
+			 */
+			$internal_config = apply_filters( 'wp_saml_auth_internal_config', $internal_config );
 			if ( empty( $internal_config['idp']['singleLogoutService']['url'] ) ) {
 				return;
 			}
