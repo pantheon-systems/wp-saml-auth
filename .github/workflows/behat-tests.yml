@@ -215,12 +215,15 @@ jobs:
 
       - name: Run Behat
         env:
-          BEHAT_PARAMS: >-
-            {"extensions":{"Behat\\MinkExtension":{"base_url":"https://${{ env.PANTHEON_SITE_URL }}"}}}
-          PANTHEON_SITE_URL: ${{ env.PANTHEON_SITE_URL }}
           WORDPRESS_ADMIN_USERNAME: pantheon
           WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
           WORDPRESS_ADMIN_PASSWORD: pantheon
-          XDEBUG_MODE: off
         run: |
-          vendor/bin/behat --colors --no-interaction
+          set -e
+          echo ""
+          echo "=========================================================================="
+          echo "Running Behat on https://${PANTHEON_SITE_URL}/wp-login.php"
+          echo "with SimpleSAMLphp version ${SIMPLESAMLPHP_VERSION}"
+          echo "=========================================================================="
+          echo ""
+          ./bin/behat-test.sh --strict
