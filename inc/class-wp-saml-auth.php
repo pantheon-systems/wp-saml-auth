@@ -863,27 +863,5 @@ class WP_SAML_Auth {
 		load_plugin_textdomain( 'wp-saml-auth', false, dirname( plugin_basename( __FILE__ ), 2 ) . '/languages' );
 	}
 
-	/**
-	 * Handle logout from the SAML provider
-	 *
-	 * @return void
-	 */
-	public function filter_logout() {
-		$provider = $this->get_provider();
-
-		if ( ! $provider ) {
-			return;
-		}
-
-		if ( ! $provider->isAuthenticated() ) {
-			return;
-		}
-
-		// Redirect back to login page after logging out of IdP.
-		$redirect = wp_login_url();
-
-		// This must be called; the test-provider tracks this via wasLogoutCalled().
-		$provider->logout( $redirect );
-	}
 }
 
