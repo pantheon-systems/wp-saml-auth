@@ -6,12 +6,22 @@
 set -euo pipefail
 set -x
 
+TERMINUS_USER_ID=$(terminus auth:whoami --field=id 2>&1)
+if [[ ! $TERMINUS_USER_ID =~ ^[A-Za-z0-9-]{36}$ ]]; then
+	echo "Terminus unauthenticated; assuming unauthenticated build"
+	exit 0
+fi
+
 : "${TERMINUS_SITE:?TERMINUS_SITE not set}"
 : "${TERMINUS_ENV:?TERMINUS_ENV not set}"
 : "${SIMPLESAMLPHP_VERSION:=2.4.0}"
 : "${WORDPRESS_ADMIN_USERNAME:=pantheon}"
 : "${WORDPRESS_ADMIN_EMAIL:=no-reply@getpantheon.com}"
 : "${WORDPRESS_ADMIN_PASSWORD:=pantheon}"
+if [ -z "$TERMINUS_SITE" ] || [ -z "$TERMINUS_ENV" ]; then
+	echo "TERMINUS_SITE and TERMINUS_ENV environment variables must be set"
+	exit 1
+fi
 
 BASE_URL="http://${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io"
 
