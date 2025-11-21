@@ -50,6 +50,16 @@ class Test_Authentication extends WP_UnitTestCase {
 			)
 		);
 		$this->assertInstanceOf( 'WP_User', $user );
+		$this->assertTrue( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
+		$this->assertEquals( 0, get_current_user_id() );
+		$this->assertEquals( 'wp_saml_auth_auto_provision_disabled', $user->get_error_code() );
+		// User exists now, so expect login to work with lookup by email address
+		$user_id = $this->factory->user->create( array( 'user_login' => 'studentdifflogin', 'user_email' => 'student@example.org' ) );
+		$user = $this->saml_signon( 'student' );
+		$this->assertTrue( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
+		$this->assertInstanceOf( 'WP_User', $user );
+		$this->assertEquals( 'studentdifflogin', $user->user_login );
+		$this->assertEquals( 'studentdifflogin', wp_get_current_user()->user_login );
 	}
 
 	public function test_saml_login_disable_auto_provision() {
