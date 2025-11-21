@@ -239,11 +239,11 @@ sed -i "s|dirname(__FILE__, 2) . '/src/_autoload.php'|__DIR__ . '/src/_autoload.
 ###
 # Push files to the environment
 ###
-git -C "$PREPARE_DIR" add private wp-content simplesaml
-git -C "$PREPARE_DIR" config user.email "wp-saml-auth@getpantheon.com"
-git -C "$PREPARE_DIR" config user.name "Pantheon"
-git -C "$PREPARE_DIR" commit -m "Include SimpleSAMLphp and its configuration files" || true
-git -C "$PREPARE_DIR" push
+git add private wp-content simplesaml
+git config user.email "wp-saml-auth@getpantheon.com"
+git config user.name "Pantheon"
+git commit -m "Include SimpleSAMLphp and its configuration files"
+git push
 
 # Sometimes Pantheon takes a little time to refresh the filesystem
 terminus workflow:wait "$SITE_ENV"
