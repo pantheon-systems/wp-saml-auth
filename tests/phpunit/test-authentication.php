@@ -21,6 +21,18 @@ class Test_Authentication extends WP_UnitTestCase {
 	}
 
 	public function test_default_behavior_saml_login_no_existing_user() {
+		$this->assertEquals( 0, get_current_user_id() );
+		$this->assertFalse( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
+		$this->assertFalse( get_user_by( 'login', 'student' ) );
+		$this->saml_signon( 'student' );
+		$user = wp_get_current_user();
+		$this->assertEquals( 'student', $user->user_login );
+		$this->assertEquals( 'student@example.org', $user->user_email );
+		$this->assertEquals( array( 'subscriber' ), $user->roles );
+		$this->assertEquals( $user, get_user_by( 'login', 'student' ) );
+		wp_logout();
+		$this->assertEquals( 0, get_current_user_id() );
+		$this->assertFalse( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
 		// Perform a SAML signon for a user that doesn't yet exist in WP.
 		$result = $this->saml_signon( 'student' );
 
@@ -33,6 +45,12 @@ class Test_Authentication extends WP_UnitTestCase {
 	}
 
 	public function test_default_behavior_user_pass_login() {
+		$this->factory->user->create( array( 'user_login' => 'testnowplogin', 'user_pass' => 'testnowplogin' ) );
+		$this->assertFalse( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
+		$user = wp_signon( array(
+			'user_login'     => 'testnowplogin',
+			'user_password'  => 'testnowplogin',
+		) );
 		// Ensure clean state by logging out any previous SAML session
 		wp_logout();
 		$GLOBALS['wp_saml_auth_current_user'] = null;
