@@ -185,16 +185,10 @@ jobs:
           WORDPRESS_ADMIN_USERNAME: pantheon
           WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
           WORDPRESS_ADMIN_PASSWORD: pantheon
+          WORKING_DIR: ${{ github.workspace }}
         run: |
           set -eux
           if [ "${{ matrix.ssp }}" = "1.18.0" ]; then
-            # Ensure the 1.18 script exists under your repo path
-            test -f bin/1.18/behat-prepare-simplesaml1.18.0.sh
-
-            # Patch the hard-coded WORKING_DIR inside the script to the current workspace
-            sed -i 's|^WORKING_DIR=.*|WORKING_DIR="'"$GITHUB_WORKSPACE"'"|g' bin/1.18/behat-prepare-simplesaml1.18.0.sh
-
-            # Run
             bash bin/1.18/behat-prepare-simplesaml1.18.0.sh
           else
             bash bin/behat-prepare.sh
