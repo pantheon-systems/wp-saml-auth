@@ -56,17 +56,29 @@ class Test_Authentication extends WP_UnitTestCase {
 		// Turn off auto-provision.
 		$this->options['auto_provision'] = false;
 
-		// When the SAML user does not exist yet, signon should fail.
+		// User doesn't exist yet, so expect an error
 		$user = $this->saml_signon( 'student' );
+		$this->assertTrue( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
+		$this->assertEquals( 0, get_current_user_id() );
 		$this->assertInstanceOf( 'WP_Error', $user );
-		$this->assertSame( 'wp_saml_auth_auto_provision_disabled', $user->get_error_code() );
+		$this->assertEquals( 'wp_saml_auth_auto_provision_disabled', $user->get_error_code() );
+		// User exists now, so expect login to work with lookup by email address
+		$user_id = $this->factory->user->create( array( 'user_login' => 'studentdifflogin', 'user_email' => 'student@example.org' ) );
+		$user = $this->saml_signon( 'student' );
+		$this->assertTrue( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
+		$this->assertInstanceOf( 'WP_User', $user );
+		$this->assertEquals( 'studentdifflogin', $user->user_login );
+		// Set current user so we can verify it was properly authenticated
+		wp_set_current_user( $user->ID );
+		$this->assertEquals( 'studentdifflogin', wp_get_current_user()->user_login );
 
 		// When a user with matching email exists, authentication succeeds
 		// because an existing user was found (auto-provision doesn't apply).
+		// Create another user with different login but to verify the same SAML flow
 		$this->factory->user->create(
 			array(
-				'user_login' => 'studentdifflogin',
-				'user_email' => 'student@example.org',
+				'user_login' => 'studentdifflogin2',
+				'user_email' => 'student2@example.org',
 			)
 		);
 
