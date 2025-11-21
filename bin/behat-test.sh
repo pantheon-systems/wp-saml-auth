@@ -23,6 +23,11 @@ if [ -z "$TERMINUS_SITE" ] || [ -z "$TERMINUS_ENV" ]; then
 	exit 1
 fi
 
+if [ -z "$WORDPRESS_ADMIN_USERNAME" ] || [ -z "$WORDPRESS_ADMIN_PASSWORD" ]; then
+	echo "WORDPRESS_ADMIN_USERNAME and WORDPRESS_ADMIN_PASSWORD environment variables must be set"
+	exit 1
+fi
+
 BASE_URL="http://${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io"
 
 retry() { n=0; until "$@" || [ $n -ge 3 ]; do n=$((n+1)); sleep $((2*n)); done; }
