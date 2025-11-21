@@ -862,6 +862,5 @@ class WP_SAML_Auth {
 	public function load_textdomain() {
 		load_plugin_textdomain( 'wp-saml-auth', false, dirname( plugin_basename( __FILE__ ), 2 ) . '/languages' );
 	}
-
 }
 
