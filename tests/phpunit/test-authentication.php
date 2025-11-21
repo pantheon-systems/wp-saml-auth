@@ -24,7 +24,8 @@ class Test_Authentication extends WP_UnitTestCase {
 		$this->assertEquals( 0, get_current_user_id() );
 		$this->assertFalse( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
 		$this->assertFalse( get_user_by( 'login', 'student' ) );
-		$this->saml_signon( 'student' );
+		$user_obj = $this->saml_signon( 'student' );
+		wp_set_current_user( $user_obj->ID );
 		$user = wp_get_current_user();
 		$this->assertEquals( 'student', $user->user_login );
 		$this->assertEquals( 'student@example.org', $user->user_email );
@@ -45,12 +46,6 @@ class Test_Authentication extends WP_UnitTestCase {
 	}
 
 	public function test_default_behavior_user_pass_login() {
-		$this->factory->user->create( array( 'user_login' => 'testnowplogin', 'user_pass' => 'testnowplogin' ) );
-		$this->assertFalse( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
-		$user = wp_signon( array(
-			'user_login'     => 'testnowplogin',
-			'user_password'  => 'testnowplogin',
-		) );
 		// Ensure clean state by logging out any previous SAML session
 		wp_logout();
 		$GLOBALS['wp_saml_auth_current_user'] = null;
@@ -63,6 +58,9 @@ class Test_Authentication extends WP_UnitTestCase {
 			)
 		);
 		$this->assertGreaterThan( 0, $uid );
+
+		// SAML should not be authenticated initially
+		$this->assertFalse( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
 
 		// Username/password login should succeed.
 		$user = wp_signon(

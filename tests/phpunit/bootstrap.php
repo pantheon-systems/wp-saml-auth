@@ -236,6 +236,15 @@ tests_add_filter( 'pre_option_active_plugins', function ($pre) {
 	return $list;
 }, 10, 1 );
 
+// Manually load the plugin before WP tries to load plugins
+tests_add_filter('muplugins_loaded', function () {
+	$WP_CORE_DIR = rtrim(getenv('WP_CORE_DIR') ?: '/tmp/wordpress', '/');
+	$pluginFile = $WP_CORE_DIR . '/wp-content/plugins/wp-saml-auth/wp-saml-auth.php';
+	if (file_exists($pluginFile)) {
+		require_once $pluginFile;
+	}
+});
+
 tests_add_filter('plugins_loaded', function () {
 	$root    = dirname(__DIR__, 2);                    // repo root
 	$cli     = $root . '/inc/class-wp-saml-auth-cli.php';
