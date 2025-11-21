@@ -148,7 +148,7 @@ jobs:
         with:
           pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
 
-      - name: SSH agent (Pantheon)
+      - name: SSH agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
@@ -180,7 +180,7 @@ jobs:
       - name: Install Composer deps
         run: composer install --no-progress --no-interaction
 
-      - name: Prepare Pantheon environment
+      - name: Prepare Behat environment
         env:
           WORDPRESS_ADMIN_USERNAME: pantheon
           WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
