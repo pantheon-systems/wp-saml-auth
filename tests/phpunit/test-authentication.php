@@ -33,6 +33,10 @@ class Test_Authentication extends WP_UnitTestCase {
 	}
 
 	public function test_default_behavior_user_pass_login() {
+		// Ensure clean state by logging out any previous SAML session
+		wp_logout();
+		$GLOBALS['wp_saml_auth_current_user'] = null;
+
 		// Create a regular WP user.
 		$uid = $this->factory->user->create(
 			array(
