@@ -235,7 +235,7 @@ jobs:
       - name: Wait for Pantheon workflow
         run: |
           SITE_ENV="${TERMINUS_SITE}.${TERMINUS_ENV}"
-          terminus workflow "$SITE_ENV"
+          terminus workflow:wait "$SITE_ENV"
 
       - name: Wait until site responds
         run: |
