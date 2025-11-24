@@ -93,7 +93,7 @@ class WP_SAML_Auth {
 			$this->provider = new OneLogin\Saml2\Auth( $auth_config );
 		} else {
 			$this->simplesamlphp_class = 'SimpleSAML\Auth\Simple';
-
+			
 			// if object doesn't exist, find the autoloader
 			if ( ! class_exists( $this->simplesamlphp_class ) ) {
 				$simplesamlphp_autoloader = self::get_simplesamlphp_autoloader();
@@ -113,11 +113,11 @@ class WP_SAML_Auth {
 				$this->maybeLogError();
 				return;
 			}
-
+   
 			$this->provider = new $this->simplesamlphp_class( self::get_option( 'auth_source' ) );
 		}
 	}
-
+  
 	/**
 	 * Use error_log when WP_DEBUG is set
 	 *
@@ -127,12 +127,12 @@ class WP_SAML_Auth {
 	protected function maybeLogError( $path = '' ) {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			$error_message = empty( $path )
-					? __( 'WP SAML Auth: SimpleSAMLphp autoloader could not be loaded for set_provider.', 'wp-saml-auth' )
-					: sprintf(
+				? __( 'WP SAML Auth: SimpleSAMLphp autoloader could not be loaded for set_provider.', 'wp-saml-auth' )
+				: sprintf(
 					// Translators: %s is the path to the SimpleSAMLphp autoloader file (if found).
-						__( 'WP SAML Auth: SimpleSAMLphp autoloader could not be loaded for set_provider. Path determined: %s', 'wp-saml-auth' ),
-						esc_html( $path )
-					);
+					__( 'WP SAML Auth: SimpleSAMLphp autoloader could not be loaded for set_provider. Path determined: %s', 'wp-saml-auth' ),
+					esc_html( $path )
+				);
 
 			error_log( $error_message );
 		}
@@ -159,20 +159,20 @@ class WP_SAML_Auth {
 		}
 
 		?>
-		<style>
-			#wp-saml-auth-cta {
-				background: #fff;
-				-webkit-box-shadow: 0 1px 3px rgba(0,0,0,.13);
-				box-shadow: 0 1px 3px rgba(0,0,0,.13);
-				padding: 26px 24px 26px;
-				margin-top: 24px;
-				margin-bottom: 24px;
-			}
-			.wp-saml-auth-deny-wp-login #loginform,
-			.wp-saml-auth-deny-wp-login #nav {
-				display: none;
-			}
-		</style>
+<style>
+	#wp-saml-auth-cta {
+		background: #fff;
+		-webkit-box-shadow: 0 1px 3px rgba(0,0,0,.13);
+		box-shadow: 0 1px 3px rgba(0,0,0,.13);
+		padding: 26px 24px 26px;
+		margin-top: 24px;
+		margin-bottom: 24px;
+	}
+	.wp-saml-auth-deny-wp-login #loginform,
+	.wp-saml-auth-deny-wp-login #nav {
+		display: none;
+	}
+</style>
 		<?php
 	}
 
@@ -335,7 +335,7 @@ class WP_SAML_Auth {
 					// to the IDP. However, when $permit_wp_login=false, hitting wp-login will always
 					// trigger the IDP redirect.
 					if ( ( $permit_wp_login && false === stripos( $redirect_to, 'action=wp-saml-auth' ) )
-							|| ( ! $permit_wp_login && false === stripos( $redirect_to, parse_url( wp_login_url(), PHP_URL_PATH ) ) ) ) {
+						|| ( ! $permit_wp_login && false === stripos( $redirect_to, parse_url( wp_login_url(), PHP_URL_PATH ) ) ) ) {
 						add_filter(
 							'login_redirect',
 							function () use ( $redirect_to ) {
