@@ -24,7 +24,10 @@ SITE_ENV="${TERMINUS_SITE}.${TERMINUS_ENV}"
 ###
 # Create a new environment for this particular test run.
 ###
-terminus env:create "$TERMINUS_SITE".dev "$TERMINUS_ENV"
+# Check if environment exists, create only if it doesn't
+if ! terminus env:list "$TERMINUS_SITE" --format=list | grep -q "^${TERMINUS_ENV}$"; then
+	terminus env:create "$TERMINUS_SITE".dev "$TERMINUS_ENV"
+fi
 terminus env:wipe "$SITE_ENV" --yes
 
 ###
