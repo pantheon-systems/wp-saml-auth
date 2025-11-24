@@ -30,6 +30,10 @@ if ! terminus env:list "$TERMINUS_SITE" --format=list | grep -q "^${TERMINUS_ENV
 fi
 terminus env:wipe "$SITE_ENV" --yes
 
+# Save environment info for cleanup
+mkdir -p /tmp/behat-envs
+echo "$SITE_ENV" > "/tmp/behat-envs/site_env_${TERMINUS_ENV}.txt"
+
 ###
 # Get all necessary environment details.
 ###

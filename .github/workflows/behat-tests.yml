@@ -265,3 +265,7 @@ jobs:
           echo "=========================================================================="
           echo ""
           ./bin/behat-test.sh --strict
+
+      - name: Cleanup Behat environment
+        if: ${{ always() }}
+        run: bash bin/behat-cleanup.sh
