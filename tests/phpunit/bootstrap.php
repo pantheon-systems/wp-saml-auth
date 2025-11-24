@@ -19,7 +19,7 @@ $DB_USER = $env('DB_USER', 'root');
 $DB_PASS = $env('DB_PASSWORD', 'root');
 $DB_NAME = $env('DB_NAME', 'wp_test_boot');
 
-/** ---------- Create & preload SimpleSAML stub ---------- */
+/** ---------- Create SimpleSAML stub (but don't load it yet) ---------- */
 $STUB_DIR = '/tmp/simplesamlphp-stub';
 $STUB_AUTOLOAD = $STUB_DIR . '/autoload.php';
 if (!is_dir($STUB_DIR)) @mkdir($STUB_DIR, 0777, true);
@@ -86,7 +86,7 @@ class Simple {
 PHP
 	);
 }
-require_once $STUB_AUTOLOAD;
+// Don't load the stub here - let it be loaded via the filter below
 
 /** ---------- Polyfills ---------- */
 if (is_file($POLY_DIR . '/vendor/autoload.php')) {
@@ -200,7 +200,8 @@ require_once $_tests_dir . '/includes/functions.php';
 
 
 /**
- * Also, if a test reads individual options, fill per-option only when missing.
+ * Provide default simplesamlphp_autoload option for tests.
+ * Points to the stub created above unless test overrides it.
  */
 tests_add_filter(
 	'wp_saml_auth_option',
@@ -210,8 +211,8 @@ tests_add_filter(
 			if ( $autoload && file_exists( $autoload ) ) {
 				return $autoload;
 			}
-			// Path to your stub in the repo.
-			return dirname( __DIR__ ) . '/simplesaml-stub/autoload.php';
+			// Return path to the stub created at bootstrap
+			return '/tmp/simplesamlphp-stub/autoload.php';
 		}
 
 		return $value;
@@ -221,9 +222,11 @@ tests_add_filter(
 );
 
 /**
+ * Log the current user out.
  * Activate the plugin like a normal plugin (NO mu-plugins).
  * We add our plugin’s entry to active_plugins before WP loads them.
  *
+ * @since 2.5.0
  * NOTE: Ensure the plugin folder exists under WP_PLUGIN_DIR (your CI
  * script already "syncs plugin to WP"; if needed, copy/symlink here).
  */

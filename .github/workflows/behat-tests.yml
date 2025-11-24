@@ -95,29 +95,67 @@ jobs:
           composer install --no-interaction --no-progress --prefer-dist
 
 
-      - name: Make CI runner executable
-        run: chmod +x bin/ci-run-phpunit.sh
-
-      - name: Run PHPUnit (single step)
+      - name: Install WordPress test environment
         env:
-          DB_HOST: 127.0.0.1
-          DB_USER: root
-          DB_PASSWORD: root
           WP_CORE_DIR: /tmp/wordpress
           WP_TESTS_DIR: /tmp/wordpress-tests-lib
-          WP_TESTS_PHPUNIT_POLYFILLS_PATH: /tmp/phpunit-deps
-          COMPOSER_NO_INTERACTION: 1
-          COMPOSER_NO_AUDIT: 1
-          COMPOSER_PROCESS_TIMEOUT: 0
           WP_VERSION: 6.8.3
           WP_CLI_ALLOW_ROOT: 1
         run: |
-          PHPUNIT_BIN="${PHPUNIT_BIN:-vendor/bin/phpunit}"
-          export BOOTSTRAP=tests/phpunit/bootstrap-loader.php
-          PHPUNIT_CFG=""
-          [[ -f phpunit.xml ]] && PHPUNIT_CFG="-c phpunit.xml"
-          [[ -z "$PHPUNIT_CFG" && -f phpunit.xml.dist ]] && PHPUNIT_CFG="-c phpunit.xml.dist"
-          bash bin/ci-run-phpunit.sh
+          chmod +x bin/*.sh
+          bin/install-wp-tests.sh \
+            --dbname=wp_phpunit_test \
+            --dbuser=root \
+            --dbpass=root \
+            --dbhost=127.0.0.1 \
+            --version=$WP_VERSION \
+            --tmpdir=/tmp
+
+      - name: Sync plugin to WordPress
+        env:
+          WP_CORE_DIR: /tmp/wordpress
+          WP_CLI_ALLOW_ROOT: 1
+        run: |
+          mkdir -p $WP_CORE_DIR/wp-content/plugins
+          rsync -a --delete \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='node_modules/' \
+            --exclude='vendor/' \
+            . $WP_CORE_DIR/wp-content/plugins/wp-saml-auth/
+
+      - name: Install plugin dependencies in WordPress
+        env:
+          WP_CORE_DIR: /tmp/wordpress
+        run: |
+          cd $WP_CORE_DIR/wp-content/plugins/wp-saml-auth
+          composer install --no-interaction --no-progress --prefer-dist || true
+
+      - name: Activate plugin and seed settings
+        env:
+          WP_CORE_DIR: /tmp/wordpress
+          WP_CLI_ALLOW_ROOT: 1
+        run: |
+          wp plugin activate wp-saml-auth --path=$WP_CORE_DIR
+          wp option update wp_saml_auth_settings '{
+            "provider": "test-sp",
+            "auto_provision": true,
+            "permit_wp_login": true,
+            "user_claim": "mail",
+            "display_name_mapping": "display_name",
+            "map_by_email": true,
+            "default_role": "subscriber",
+            "attribute_mapping": {
+              "user_login": "uid",
+              "user_email": "mail",
+              "first_name": "givenName",
+              "last_name": "sn",
+              "display_name": "displayName"
+            }
+          }' --format=json --path=$WP_CORE_DIR
+
+      - name: Run PHPUnit
+        run: composer phpunit
 
   behat:
     name: Behat (SSP ${{ matrix.ssp }})
