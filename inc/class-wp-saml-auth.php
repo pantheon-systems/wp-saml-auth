@@ -94,7 +94,7 @@ class WP_SAML_Auth {
 		} else {
 			$this->simplesamlphp_class = 'SimpleSAML\Auth\Simple';
 
-			// If object doesn't exist, find the autoloader.
+			// if object doesn't exist, find the autoloader
 			if ( ! class_exists( $this->simplesamlphp_class ) ) {
 				$simplesamlphp_autoloader = self::get_simplesamlphp_autoloader();
 
@@ -103,14 +103,14 @@ class WP_SAML_Auth {
 					require_once $simplesamlphp_autoloader;
 				} else {
 					// Autoloader not found.
-					$this->maybe_log_error( $simplesamlphp_autoloader );
+					$this->maybeLogError( $simplesamlphp_autoloader );
 					return;
 				}
 			}
 
-			// Test again in case `require_once $simplesamlphp_autoloader` didn't find it.
+			// test again in case `require_once $simplesamlphp_autoloader` didn't find it.
 			if ( ! class_exists( $this->simplesamlphp_class ) ) {
-				$this->maybe_log_error();
+				$this->maybeLogError();
 				return;
 			}
 
@@ -124,7 +124,7 @@ class WP_SAML_Auth {
 	 * @param string $path Path to autoloader
 	 * @return void
 	 */
-	protected function maybe_log_error( $path = '' ) {
+	protected function maybeLogError( $path = '' ) {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			$error_message = empty( $path )
 				? __( 'WP SAML Auth: SimpleSAMLphp autoloader could not be loaded for set_provider.', 'wp-saml-auth' )
@@ -137,20 +137,6 @@ class WP_SAML_Auth {
 			error_log( $error_message );
 		}
 	}
-
-	/**
-	 * Deprecated camelCase wrapper for {@see self::maybe_log_error()}.
-	 *
-	 * Kept for backward compatibility with subclasses.
-	 *
-	 * @param string $path Path to autoloader.
-	 * @return void
-	 */
-	// phpcs:disable Squiz.Commenting.FunctionComment.Missing, WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid
-	protected function maybeLogError( $path = '' ) {
-		$this->maybe_log_error( $path );
-	}
-	// phpcs:enable Squiz.Commenting.FunctionComment.Missing, WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid
 
 	/**
 	 * Initialize the controller logic on the 'init' hook
@@ -281,46 +267,32 @@ class WP_SAML_Auth {
 	 * Check if the user is authenticated against the SimpleSAMLphp instance
 	 *
 	 * @param mixed  $user     WordPress user reference.
-	 * @param string $username Username (unused, but required by filter signature).
-	 * @param string $password Password supplied by the user (unused, but required by filter signature).
+	 * @param string $username Username.
+	 * @param string $password Password supplied by the user.
 	 * @return mixed
-	 *
-	 * @SuppressWarnings(PHPMD.UnusedFormalParameter)
 	 */
-	public function filter_authenticate( $user, $username, $password ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed, VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
+	public function filter_authenticate( $user, $username, $password ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable,Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
+
 		$permit_wp_login = self::get_option( 'permit_wp_login' );
+		if ( is_a( $user, 'WP_User' ) ) {
 
-		// If there's already a user (WordPress username/password auth worked).
-		if ( $user instanceof \WP_User ) {
-			// If WP login is permitted, leave it alone.
-			if ( $permit_wp_login ) {
-				return $user;
+			if ( ! $permit_wp_login ) {
+				$user = $this->do_saml_authentication();
 			}
 
-			// If WP login is NOT permitted, force SAML instead.
-			return $this->do_saml_authentication();
+			return $user;
 		}
 
-		// If no user yet…
-		// In "SAML only" mode, always force SAML, except when logging out.
 		if ( ! $permit_wp_login ) {
-			if ( isset( $_GET['loggedout'] ) && 'true' === $_GET['loggedout'] ) {
-				// Let WordPress handle the logged-out state.
-				return $user;
-			}
+			$should_saml = ! isset( $_GET['loggedout'] );
+		} else {
+			$should_saml = isset( $_POST['SAMLResponse'] ) || ( isset( $_GET['action'] ) && 'wp-saml-auth' === $_GET['action'] );
+		}
 
+		if ( $should_saml ) {
 			return $this->do_saml_authentication();
 		}
 
-		// In default mode, only trigger SAML if we’re in the SAML flow.
-		$doing_saml = ! empty( $_POST['SAMLResponse'] )
-				|| ( isset( $_GET['action'] ) && 'wp-saml-auth' === $_GET['action'] );
-
-		if ( $doing_saml ) {
-			return $this->do_saml_authentication();
-		}
-
-		// Otherwise, let core handle login with username/password.
 		return $user;
 	}
 
