@@ -15,29 +15,31 @@
 /**
  * Bootstrap the WP SAML Auth plugin.
  */
-function wpsa_boostrap() {
-	if ( ! defined( 'WP_SAML_AUTH_AUTOLOADER' ) ) {
-		define( 'WP_SAML_AUTH_AUTOLOADER', __DIR__ . '/vendor/autoload.php' );
-	}
+if ( ! function_exists( 'wpsa_boostrap' ) ) {
+	function wpsa_boostrap() {
+		if ( ! defined( 'WP_SAML_AUTH_AUTOLOADER' ) ) {
+			define( 'WP_SAML_AUTH_AUTOLOADER', __DIR__ . '/vendor/autoload.php' );
+		}
 
-	require_once __DIR__ . '/inc/class-wp-saml-auth.php';
-	WP_SAML_Auth::get_instance();
+		require_once __DIR__ . '/inc/class-wp-saml-auth.php';
+		WP_SAML_Auth::get_instance();
 
-	require_once __DIR__ . '/inc/class-wp-saml-auth-options.php';
-	add_filter( 'wp_saml_auth_option', 'wpsa_filter_option', 0, 2 );
-	WP_SAML_Auth_Options::get_instance();
+		require_once __DIR__ . '/inc/class-wp-saml-auth-options.php';
+		add_filter( 'wp_saml_auth_option', 'wpsa_filter_option', 0, 2 );
+		WP_SAML_Auth_Options::get_instance();
 
-	if ( defined( 'WP_CLI' ) && WP_CLI ) {
-		require_once __DIR__ . '/inc/class-wp-saml-auth-cli.php';
-		WP_CLI::add_command( 'saml-auth', 'WP_SAML_Auth_CLI' );
-	}
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			require_once __DIR__ . '/inc/class-wp-saml-auth-cli.php';
+			WP_CLI::add_command( 'saml-auth', 'WP_SAML_Auth_CLI' );
+		}
 
-	/**
-	 * Initialize the WP SAML Auth plugin settings page.
-	 */
-	require_once __DIR__ . '/inc/class-wp-saml-auth-settings.php';
-	if ( is_admin() ) {
-		WP_SAML_Auth_Settings::get_instance();
+		/**
+		 * Initialize the WP SAML Auth plugin settings page.
+		 */
+		require_once __DIR__ . '/inc/class-wp-saml-auth-settings.php';
+		if ( is_admin() ) {
+			WP_SAML_Auth_Settings::get_instance();
+		}
 	}
 }
 
@@ -47,7 +49,8 @@ function wpsa_boostrap() {
  * @param mixed  $value       Configuration value.
  * @param string $option_name Configuration option name.
  */
-function wpsa_filter_option( $value, $option_name ) {
+if ( ! function_exists( 'wpsa_filter_option' ) ) {
+	function wpsa_filter_option( $value, $option_name ) {
 	$defaults = [
 		/**
 		 * Type of SAML connection bridge to use.
@@ -206,6 +209,7 @@ function wpsa_filter_option( $value, $option_name ) {
 	];
 	$value = isset( $defaults[ $option_name ] ) ? $defaults[ $option_name ] : $value;
 	return $value;
+	}
 }
 
 // Bootstrap the plugin.
