@@ -6,7 +6,7 @@
 #[AllowDynamicProperties]
 class Test_Authentication extends WP_UnitTestCase {
 
-	protected $options = array();
+	private $option = array();
 
 	public function setUp(): void {
 		parent::setUp();
@@ -15,17 +15,11 @@ class Test_Authentication extends WP_UnitTestCase {
 		add_filter( 'wp_saml_auth_option', array( $this, 'filter_wp_saml_auth_option' ), 10, 2 );
 	}
 
-	public function tearDown(): void {
-		remove_filter( 'wp_saml_auth_option', array( $this, 'filter_wp_saml_auth_option' ) );
-		parent::tearDown();
-	}
-
 	public function test_default_behavior_saml_login_no_existing_user() {
 		$this->assertEquals( 0, get_current_user_id() );
 		$this->assertFalse( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
 		$this->assertFalse( get_user_by( 'login', 'student' ) );
-		$user_obj = $this->saml_signon( 'student' );
-		wp_set_current_user( $user_obj->ID );
+		$this->saml_signon( 'student' );
 		$user = wp_get_current_user();
 		$this->assertEquals( 'student', $user->user_login );
 		$this->assertEquals( 'student@example.org', $user->user_email );
@@ -34,66 +28,26 @@ class Test_Authentication extends WP_UnitTestCase {
 		wp_logout();
 		$this->assertEquals( 0, get_current_user_id() );
 		$this->assertFalse( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
-		// Perform a SAML signon for a user that doesn't yet exist in WP.
-		$result = $this->saml_signon( 'student' );
-
-		// In current implementation we expect a WP_User object from SAML signon.
-		$this->assertInstanceOf( 'WP_User', $result );
-
-		// User should be persisted in the DB.
-		$by_id = get_user_by( 'id', $result->ID );
-		$this->assertInstanceOf( 'WP_User', $by_id );
 	}
 
 	public function test_default_behavior_user_pass_login() {
-		// Ensure clean state by logging out any previous SAML session
-		wp_logout();
-		$GLOBALS['wp_saml_auth_current_user'] = null;
-
-		// Create a regular WP user.
-		$uid = $this->factory->user->create(
-			array(
-				'user_login' => 'testnowplogin',
-				'user_pass'  => 'testnowplogin',
-			)
-		);
-		$this->assertGreaterThan( 0, $uid );
-
-		// SAML should not be authenticated initially
+		$this->factory->user->create( array( 'user_login' => 'testnowplogin', 'user_pass' => 'testnowplogin' ) );
 		$this->assertFalse( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
-
-		// Username/password login should succeed.
-		$user = wp_signon(
-			array(
-				'user_login'    => 'testnowplogin',
-				'user_password' => 'testnowplogin',
-			)
-		);
+		$user = wp_signon( array(
+			'user_login'     => 'testnowplogin',
+			'user_password'  => 'testnowplogin',
+		) );
 		$this->assertInstanceOf( 'WP_User', $user );
-
-		// After WP login, SAML provider should NOT be authenticated
-		$this->assertFalse( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated(), 'SAML should not be authenticated after WP login' );
-
-		// wp_signon doesn't set current user in test environment, verify user object is valid
+		$user = wp_get_current_user();
 		$this->assertEquals( 'testnowplogin', $user->user_login );
-		$this->assertGreaterThan( 0, $user->ID );
-
-		// Now test that SAML login also works with a different user
-		// Create a user that will be found via SAML with email lookup
-		$user_id = $this->factory->user->create( array( 'user_login' => 'studentdifflogin', 'user_email' => 'student@example.org' ) );
-		$saml_user = $this->saml_signon( 'student' );
-		$this->assertTrue( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated(), 'SAML should be authenticated after SAML login' );
-		$this->assertInstanceOf( 'WP_User', $saml_user );
-		$this->assertEquals( 'studentdifflogin', $saml_user->user_login );
-		// Set current user for the SAML user to test current user functionality
-		wp_set_current_user( $saml_user->ID );
-		$this->assertEquals( 'studentdifflogin', wp_get_current_user()->user_login );
+		$this->assertFalse( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
+		wp_logout();
+		$this->assertEquals( 0, get_current_user_id() );
+		$this->assertFalse( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
 	}
 
 	public function test_saml_login_disable_auto_provision() {
-		// Turn off auto-provision.
 		$this->options['auto_provision'] = false;
-
 		// User doesn't exist yet, so expect an error
 		$user = $this->saml_signon( 'student' );
 		$this->assertTrue( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
@@ -106,161 +60,84 @@ class Test_Authentication extends WP_UnitTestCase {
 		$this->assertTrue( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
 		$this->assertInstanceOf( 'WP_User', $user );
 		$this->assertEquals( 'studentdifflogin', $user->user_login );
-		// Set current user so we can verify it was properly authenticated
-		wp_set_current_user( $user->ID );
 		$this->assertEquals( 'studentdifflogin', wp_get_current_user()->user_login );
+	}
 
-		// When a user with matching email exists, authentication succeeds
-		// because an existing user was found (auto-provision doesn't apply).
-		// Create another user with different login but to verify the same SAML flow
-		$this->factory->user->create(
-			array(
-				'user_login' => 'studentdifflogin2',
-				'user_email' => 'student2@example.org',
-			)
-		);
-
+	public function test_saml_login_disable_auto_provision_invalid_map_field() {
+		$this->options['auto_provision'] = false;
+		$this->options['get_user_by'] = 'login';
+		$user_id = $this->factory->user->create( array( 'user_login' => 'studentdifflogin', 'user_email' => 'student@example.org' ) );
 		$user = $this->saml_signon( 'student' );
-		$this->assertInstanceOf( 'WP_User', $user, 'Should return existing user when found by email' );
-		$this->assertEquals( 'student@example.org', $user->user_email );
+		$this->assertTrue( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
+		$this->assertInstanceOf( 'WP_Error', $user );
+		$this->assertEquals( 'wp_saml_auth_auto_provision_disabled', $user->get_error_code() );
 	}
 
 	public function test_saml_login_auto_provision_missing_field() {
-		// When email attribute is missing and get_user_by='email' (default),
-		// authentication should fail with a missing attribute error.
+		// Default behavior is to provision by email ddress
 		$user = $this->saml_signon( 'studentwithoutmail' );
+		$this->assertTrue( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
+		$this->assertEquals( 0, get_current_user_id() );
 		$this->assertInstanceOf( 'WP_Error', $user );
-		$this->assertSame( 'wp_saml_auth_missing_attribute', $user->get_error_code() );
-
-		// When get_user_by is "login", uid attribute is used instead,
-		// which is present, so authentication succeeds.
+		$this->assertEquals( 'wp_saml_auth_missing_attribute', $user->get_error_code() );
+		// Changing field to 'login' will provision the user without an email address
 		$this->options['get_user_by'] = 'login';
-		$user                         = $this->saml_signon( 'studentwithoutmail' );
-		$this->assertInstanceOf( 'WP_User', $user );
+		$user = $this->saml_signon( 'studentwithoutmail' );
+		$this->assertEquals( 'student', $user->user_login );
+		$this->assertEmpty( $user->user_email );
+		$this->assertEquals( 'student', wp_get_current_user()->user_login );
 	}
 
 	public function test_saml_login_auto_provision_custom_role() {
-		// Override the default role for auto-provisioned users.
 		$this->options['default_role'] = 'author';
-
 		$user = $this->saml_signon( 'student' );
-		$this->assertInstanceOf( 'WP_User', $user );
-
-		// Whatever the internal username is, they should have the requested role.
-		$this->assertContains( 'author', $user->roles );
+		$this->assertEquals( array( 'author' ), $user->roles );
 	}
 
 	public function test_user_pass_login_not_permitted() {
-		// Create a regular WP user.
-		$uid = $this->factory->user->create(
-			array(
-				'user_login' => 'testnowplogin',
-				'user_pass'  => 'testnowplogin',
-			)
-		);
-		$this->assertGreaterThan( 0, $uid );
-
-		// When permit_wp_login is false, WP login should redirect to SAML
+		$this->factory->user->create( array( 'user_login' => 'testnowplogin', 'user_pass' => 'testnowplogin' ) );
 		$this->options['permit_wp_login'] = false;
-
-		// Simulate a successful WP authentication first
-		$wp_user = get_user_by( 'id', $uid );
-
-		// When permit_wp_login is false, even with a valid WP_User,
-		// the filter should redirect to SAML authentication
-		$result = apply_filters( 'authenticate', $wp_user, 'testnowplogin', 'testnowplogin' );
-
-		// Should trigger SAML authentication instead of accepting WP user
-		$this->assertTrue(
-			is_wp_error( $result ) || $result instanceof WP_User,
-			'Should process through SAML when permit_wp_login is false'
-		);
-
-		// If it's a WP_User, it should be from SAML, not the original WP user
-		// (unless SAML matched to same user by email)
-	}
-
-	public function test_user_pass_login_not_permitted_shows_saml_only() {
-		// When permit_wp_login is false, the login page should show SAML-only mode
-		$this->options['permit_wp_login'] = false;
-
-		// Get the WP_SAML_Auth instance
-		$wp_saml_auth = WP_SAML_Auth::get_instance();
-
-		// Directly test the filter method
-		$body_classes = $wp_saml_auth->filter_login_body_class( array() );
-
-		// Check that body class is added for SAML-only mode
-		$this->assertContains( 'wp-saml-auth-deny-wp-login', $body_classes, 'SAML-only body class should be present' );
+		$user = wp_signon( array(
+			'user_login'     => 'testnowplogin',
+			'user_password'  => 'testnowplogin',
+		) );
+		$this->assertInstanceOf( 'WP_Error', $user );
 	}
 
 	public function test_logout_calls_saml_logout() {
-		// Perform a SAML signon.
-		$user = $this->saml_signon( 'student' );
-		$this->assertInstanceOf( 'WP_User', $user );
-
-		// Track if wp_saml_auth_pre_logout action was called
-		$logout_action_called = false;
-		add_action( 'wp_saml_auth_pre_logout', function() use ( &$logout_action_called ) {
-			$logout_action_called = true;
-		} );
-
-		// Call wp_logout()
+		$this->assertEquals( 0, get_current_user_id() );
+		$this->assertFalse( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
+		$this->saml_signon( 'student' );
+		$this->assertEquals( 'student@example.org', wp_get_current_user()->user_email );
+		$this->assertTrue( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
 		wp_logout();
-
-		// Verify the SAML logout hook was triggered
-		$this->assertTrue( $logout_action_called, 'wp_saml_auth_pre_logout action should be called during logout' );
-
-		// Verify the provider's logout method would be called
-		// (In stub implementation, the provider exists and has logout method)
-		$wp_saml_auth = WP_SAML_Auth::get_instance();
-		$provider = $wp_saml_auth->get_provider();
-		$this->assertNotNull( $provider, 'Provider should be available for logout' );
-		$this->assertTrue( method_exists( $provider, 'logout' ), 'Provider should have logout method' );
+		$this->assertEquals( 0, get_current_user_id() );
+		$this->assertFalse( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
 	}
 
-	/**
-	 * Helper to perform a SAML sign-on in tests.
-	 *
-	 * @param string $username Logical test username.
-	 * @return WP_User|WP_Error
-	 */
 	private function saml_signon( $username ) {
 		$this->set_saml_auth_user( $username );
 		$_GET['action'] = 'wp-saml-auth';
 		return wp_signon();
 	}
 
-	/**
-	 * Populate the global used by the SAML test provider with attributes
-	 * representing the "currently authenticated" SAML user.
-	 *
-	 * @param string $username Logical test username.
-	 */
 	private function set_saml_auth_user( $username ) {
-		$user = array();
-
+		$user = null;
 		switch ( $username ) {
 			case 'student':
-				$user = array(
-					'uid'                        => array( 'student' ),
-					'eduPersonPrincipalName'     => array( 'student@example.org' ),
-					'mail'                       => array( 'student@example.org' ),
-					'eduPersonScopedAffiliation' => array( 'student@example.org' ),
-				);
-				break;
-
+			case 'studentwithoutuid':
 			case 'studentwithoutmail':
 				$user = array(
-					'uid'                        => array( 'student' ),
-					'eduPersonPrincipalName'     => array( 'student@example.org' ),
-					// Intentionally missing 'mail' to simulate missing field.
-					'eduPersonScopedAffiliation' => array( 'student@example.org' ),
+					'uid'                  => array( 'student' ),
+					'eduPersonAffiliation' => array( 'member', 'student' ),
+					'mail'                 => array( 'student@example.org' ),
 				);
-				break;
-
-			default:
-				$user = array();
+				if ( 'studentwithoutuid' === $username ) {
+					unset( $user['uid'] );
+				}
+				if ( 'studentwithoutmail' === $username ) {
+					unset( $user['mail'] );
+				}
 				break;
 		}
 
@@ -268,16 +145,20 @@ class Test_Authentication extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Filter callback to override wp_saml_auth options in tests.
-	 *
-	 * @param mixed  $value       Original value.
-	 * @param string $option_name Option name.
-	 * @return mixed
-	 */
+	* @param string $value
+	* @param string|null $option_name
+	* @return string
+	*/
 	public function filter_wp_saml_auth_option( $value, $option_name ) {
-		if ( array_key_exists( $option_name, $this->options ) ) {
+		if ( isset( $this->options[ $option_name ] ) ) {
 			return $this->options[ $option_name ];
 		}
 		return $value;
 	}
+
+	public function tearDown(): void {
+		remove_filter( 'wp_saml_auth_option', array( $this, 'filter_wp_saml_auth_option' ) );
+		parent::tearDown();
+	}
+
 }
