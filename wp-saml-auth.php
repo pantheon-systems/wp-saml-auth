@@ -12,10 +12,10 @@
  * @package Wp_Saml_Auth
  */
 
-/**
- * Bootstrap the WP SAML Auth plugin.
- */
 if ( ! function_exists( 'wpsa_boostrap' ) ) {
+	/**
+	 * Bootstrap the WP SAML Auth plugin.
+	 */
 	function wpsa_boostrap() {
 		if ( ! defined( 'WP_SAML_AUTH_AUTOLOADER' ) ) {
 			define( 'WP_SAML_AUTH_AUTOLOADER', __DIR__ . '/vendor/autoload.php' );
@@ -43,13 +43,13 @@ if ( ! function_exists( 'wpsa_boostrap' ) ) {
 	}
 }
 
-/**
- * Provides default options for WP SAML Auth.
- *
- * @param mixed  $value       Configuration value.
- * @param string $option_name Configuration option name.
- */
 if ( ! function_exists( 'wpsa_filter_option' ) ) {
+	/**
+	 * Provides default options for WP SAML Auth.
+	 *
+	 * @param mixed  $value       Configuration value.
+	 * @param string $option_name Configuration option name.
+	 */
 	function wpsa_filter_option( $value, $option_name ) {
 		$defaults = [
 			/**
