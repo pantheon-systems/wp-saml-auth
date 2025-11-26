@@ -4,7 +4,7 @@ Tags: authentication, SAML
 Requires at least: 6.4
 Tested up to: 6.8.1
 Requires PHP: 7.3
-Stable tag: 2.2.0
+Stable tag: 2.2.2-dev
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -321,6 +321,9 @@ Minimum supported PHP version is 7.3.
 
 
 == Changelog ==
+
+= 2.2.2-dev =
+* Adds `wp_saml_auth_internal_config` filter to allow customization of the OneLogin SAML configuration [[#497](https://github.com/pantheon-systems/wp-saml-auth/pull/497)].
 
 = 2.2.0 (9 June 2024) =
 * Add a hook to modify returned attributes. [[#379](https://github.com/pantheon-systems/wp-saml-auth/pull/379/)]
