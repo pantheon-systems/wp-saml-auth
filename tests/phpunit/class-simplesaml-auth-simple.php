@@ -34,7 +34,7 @@ class SimpleSAML_Auth_Simple {
 	 * authentication source selected by the 'default-authsource' option in
 	 * 'config.php'.
 	 *
-	 * @return bool  TRUE if the user is authenticated, FALSE if not.
+	 * @return bool TRUE if the user is authenticated, FALSE if not.
 	 */
 	public function isAuthenticated() {
 		return (bool) $this->getCurrentUser();
