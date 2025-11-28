@@ -174,7 +174,7 @@ class WP_SAML_Auth {
 			'alt_title' => __( 'Or, sign in with WordPress:', 'wp-saml-auth' ),
 		];
 
-		$query_args  = [
+		$query_args = [
 			'action' => 'wp-saml-auth',
 		];
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This is reading a redirect parameter, not performing an action.
@@ -313,7 +313,7 @@ class WP_SAML_Auth {
 					// Translators: Includes error reason from OneLogin.
 					return new WP_Error( 'wp_saml_auth_unauthenticated', sprintf( __( 'User is not authenticated with SAML IdP. Reason: %s', 'wp-saml-auth' ), $provider->getLastErrorReason() ) );
 				}
-				$attributes      = $provider->getAttributes();
+				$attributes = $provider->getAttributes();
 				// phpcs:ignore WordPress.Security.NonceVerification.Missing -- SAML response verification happens via SimpleSAMLphp.
 				$redirect_to     = isset( $_POST['RelayState'] ) ? esc_url_raw( wp_unslash( $_POST['RelayState'] ) ) : '';
 				$permit_wp_login = self::get_option( 'permit_wp_login' );
