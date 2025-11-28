@@ -92,49 +92,31 @@ class WP_SAML_Auth {
 			$auth_config    = self::get_option( 'internal_config' );
 			$this->provider = new OneLogin\Saml2\Auth( $auth_config );
 		} else {
-			$this->simplesamlphp_class = 'SimpleSAML\Auth\Simple';
-			
-			// if object doesn't exist, find the autoloader
-			if ( ! class_exists( $this->simplesamlphp_class ) ) {
-				$simplesamlphp_autoloader = self::get_simplesamlphp_autoloader();
+			$simplesamlphp_autoloader = self::get_simplesamlphp_autoloader();
 
-				// If the autoloader exists, load it.
-				if ( ! empty( $simplesamlphp_autoloader ) && file_exists( $simplesamlphp_autoloader ) ) {
-					require_once $simplesamlphp_autoloader;
-				} else {
-					// Autoloader not found.
-					$this->maybeLogError( $simplesamlphp_autoloader );
-					return;
+			// If the autoloader exists, load it.
+			if ( ! empty( $simplesamlphp_autoloader ) && file_exists( $simplesamlphp_autoloader ) ) {
+				require_once $simplesamlphp_autoloader;
+			} else {
+				// Autoloader not found.
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					$error_message = sprintf(
+						// Translators: %s is the path to the SimpleSAMLphp autoloader file (if found).
+						__( 'WP SAML Auth: SimpleSAMLphp autoloader could not be loaded for set_provider. Path determined: %s', 'wp-saml-auth' ),
+						empty( $simplesamlphp_autoloader ) ? '[empty]' : esc_html( $simplesamlphp_autoloader )
+					);
+					error_log( $error_message );
 				}
-			}
-
-			// test again in case `require_once $simplesamlphp_autoloader` didn't find it.
-			if ( ! class_exists( $this->simplesamlphp_class ) ) {
-				$this->maybeLogError();
 				return;
 			}
-   
-			$this->provider = new $this->simplesamlphp_class( self::get_option( 'auth_source' ) );
-		}
-	}
-  
-	/**
-	 * Use error_log when WP_DEBUG is set
-	 *
-	 * @param string $path Path to autoloader
-	 * @return void
-	 */
-	protected function maybeLogError( $path = '' ) {
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			$error_message = empty( $path )
-				? __( 'WP SAML Auth: SimpleSAMLphp autoloader could not be loaded for set_provider.', 'wp-saml-auth' )
-				: sprintf(
-					// Translators: %s is the path to the SimpleSAMLphp autoloader file (if found).
-					__( 'WP SAML Auth: SimpleSAMLphp autoloader could not be loaded for set_provider. Path determined: %s', 'wp-saml-auth' ),
-					esc_html( $path )
-				);
 
-			error_log( $error_message );
+			if ( class_exists( 'SimpleSAML\Auth\Simple' ) ) {
+				$this->simplesamlphp_class = 'SimpleSAML\Auth\Simple';
+			}
+			if ( ! class_exists( $this->simplesamlphp_class ) ) {
+				return;
+			}
+			$this->provider = new $this->simplesamlphp_class( self::get_option( 'auth_source' ) );
 		}
 	}
 
@@ -195,7 +177,8 @@ class WP_SAML_Auth {
 		$query_args  = [
 			'action' => 'wp-saml-auth',
 		];
-		$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This is reading a redirect parameter, not performing an action.
+		$redirect_to = isset( $_GET['redirect_to'] ) ? esc_url_raw( wp_unslash( $_GET['redirect_to'] ) ) : '';
 		if ( $redirect_to ) {
 			$query_args['redirect_to'] = rawurlencode( $redirect_to );
 		}
@@ -284,9 +267,11 @@ class WP_SAML_Auth {
 		}
 
 		if ( ! $permit_wp_login ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This is checking if user was logged out, not performing an action.
 			$should_saml = ! isset( $_GET['loggedout'] );
 		} else {
-			$should_saml = isset( $_POST['SAMLResponse'] ) || ( isset( $_GET['action'] ) && 'wp-saml-auth' === $_GET['action'] );
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.NonceVerification.Recommended -- SAML response verification happens via SimpleSAMLphp.
+			$should_saml = isset( $_POST['SAMLResponse'] ) || ( isset( $_GET['action'] ) && 'wp-saml-auth' === sanitize_key( $_GET['action'] ) );
 		}
 
 		if ( $should_saml ) {
@@ -321,6 +306,7 @@ class WP_SAML_Auth {
 
 		$provider = $this->get_provider();
 		if ( is_a( $provider, 'OneLogin\Saml2\Auth' ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- SAML response verification happens via SimpleSAMLphp.
 			if ( ! empty( $_POST['SAMLResponse'] ) ) {
 				$provider->processResponse();
 				if ( ! $provider->isAuthenticated() ) {
@@ -328,7 +314,8 @@ class WP_SAML_Auth {
 					return new WP_Error( 'wp_saml_auth_unauthenticated', sprintf( __( 'User is not authenticated with SAML IdP. Reason: %s', 'wp-saml-auth' ), $provider->getLastErrorReason() ) );
 				}
 				$attributes      = $provider->getAttributes();
-				$redirect_to     = filter_input( INPUT_POST, 'RelayState', FILTER_SANITIZE_URL );
+				// phpcs:ignore WordPress.Security.NonceVerification.Missing -- SAML response verification happens via SimpleSAMLphp.
+				$redirect_to     = isset( $_POST['RelayState'] ) ? esc_url_raw( wp_unslash( $_POST['RelayState'] ) ) : '';
 				$permit_wp_login = self::get_option( 'permit_wp_login' );
 				if ( $redirect_to ) {
 					// When $permit_wp_login=true, we only care about accidentially triggering the redirect
@@ -346,8 +333,9 @@ class WP_SAML_Auth {
 					}
 				}
 			} else {
-				$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
-				$redirect_to = $redirect_to ? $redirect_to : ( isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( $_SERVER['REQUEST_URI'] ) : null );
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This is reading a redirect parameter, not performing an action.
+				$redirect_to = isset( $_GET['redirect_to'] ) ? esc_url_raw( wp_unslash( $_GET['redirect_to'] ) ) : '';
+				$redirect_to = $redirect_to ? $redirect_to : ( isset( $_SERVER['REQUEST_URI'] ) ? esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : null );
 				/**
 				 * Allows forceAuthn="true" to be enabled.
 				 *
@@ -365,7 +353,8 @@ class WP_SAML_Auth {
 				$provider->login( $redirect_to, $parameters, $force_authn );
 			}
 		} elseif ( is_a( $provider, $this->simplesamlphp_class ) ) {
-			$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This is reading a redirect parameter, not performing an action.
+			$redirect_to = isset( $_GET['redirect_to'] ) ? esc_url_raw( wp_unslash( $_GET['redirect_to'] ) ) : '';
 			if ( $redirect_to ) {
 				$redirect_to = add_query_arg(
 					[
@@ -377,10 +366,10 @@ class WP_SAML_Auth {
 			} else {
 				$redirect_to = wp_login_url();
 				// Make sure we're only dealing with the URI components and not arguments.
-				$request = explode( '?', sanitize_text_field( $_SERVER['REQUEST_URI'] ) );
+				$request = explode( '?', esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) ) );
 				// Only persist redirect_to when it's not wp-login.php.
 				if ( false === stripos( $redirect_to, reset( $request ) ) ) {
-					$redirect_to = add_query_arg( 'redirect_to', sanitize_text_field( $_SERVER['REQUEST_URI'] ), $redirect_to );
+					$redirect_to = add_query_arg( 'redirect_to', esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) ), $redirect_to );
 				} else {
 					$redirect_to = add_query_arg( [ 'action' => 'wp-saml-auth' ], $redirect_to );
 				}
@@ -741,7 +730,8 @@ class WP_SAML_Auth {
 		// If we have a SimpleSAMLphp version but the connection type is set, we haven't set up SimpleSAMLphp correctly.
 		if ( ! $simplesamlphp_version && $connection_type === 'simplesaml' ) {
 			// Only show this notice if we're on the settings page.
-			if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'wp-saml-auth-settings' ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This is checking the current admin page, not performing an action.
+			if ( ! isset( $_GET['page'] ) || sanitize_key( $_GET['page'] ) !== 'wp-saml-auth-settings' ) {
 				return;
 			}
 			wp_admin_notice(
@@ -804,7 +794,8 @@ class WP_SAML_Auth {
 			}
 		} elseif ( 'unknown' === $simplesamlphp_version_status ) {
 			// Only show this notice if we're on the settings page.
-			if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'wp-saml-auth-settings' ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This is checking the current admin page, not performing an action.
+			if ( ! isset( $_GET['page'] ) || sanitize_key( $_GET['page'] ) !== 'wp-saml-auth-settings' ) {
 				return;
 			}
 			wp_admin_notice(
