@@ -56,10 +56,11 @@ jobs:
           tools: composer:v2
           coverage: none
 
-      - name: Install MySQL client
+      - name: Install MySQL client and rsync
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y mysql-client sendmail rsync
+          # rsync is required for syncing plugin files to WordPress directory (see "Sync plugin to WordPress" step)
+          sudo apt-get install -y mysql-client rsync
 
       - name: Install WP-CLI (if needed)
         run: |
@@ -231,11 +232,6 @@ jobs:
           else
             bash bin/behat-prepare.sh
           fi
-
-      - name: Wait for Pantheon workflow
-        run: |
-          SITE_ENV="${TERMINUS_SITE}.${TERMINUS_ENV}"
-          terminus workflow:wait "$SITE_ENV"
 
       - name: Wait until site responds
         run: |

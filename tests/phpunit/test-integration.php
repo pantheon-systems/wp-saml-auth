@@ -485,12 +485,12 @@ class Test_Integration_Environment extends WP_UnitTestCase {
 }
 
 /**
- * Class Test_Integration_Provider_Setup
+ * Class Test_SimpleSAMLphp_Provider_Setup
  *
- * Tests for provider setup and configuration
+ * Tests for SimpleSAMLphp provider setup and configuration
  */
 #[AllowDynamicProperties]
-class Test_Integration_Provider_Setup extends WP_UnitTestCase {
+class Test_SimpleSAMLphp_Provider_Setup extends WP_UnitTestCase {
 
 	/**
 	 * Instance of WP_SAML_Auth for testing
