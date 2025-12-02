@@ -94,7 +94,7 @@ class WP_SAML_Auth {
 		} else {
 			$this->simplesamlphp_class = 'SimpleSAML\Auth\Simple';
 
-			// if object doesn't exist, find the autoloader.
+			// If object doesn't exist, find the autoloader.
 			if ( ! class_exists( $this->simplesamlphp_class ) ) {
 				$simplesamlphp_autoloader = self::get_simplesamlphp_autoloader();
 
@@ -108,7 +108,7 @@ class WP_SAML_Auth {
 				}
 			}
 
-			// test again in case `require_once $simplesamlphp_autoloader` didn't find it.
+			// Test again in case `require_once $simplesamlphp_autoloader` didn't find it.
 			if ( ! class_exists( $this->simplesamlphp_class ) ) {
 				$this->maybe_log_error();
 				return;
@@ -120,7 +120,7 @@ class WP_SAML_Auth {
 	/**
 	 * Use error_log when WP_DEBUG is set
 	 *
-	 * @param string $path Path to autoloader
+	 * @param string $path Path to autoloader.
 	 * @return void
 	 */
 	protected function maybe_log_error( $path = '' ) {

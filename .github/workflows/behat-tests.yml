@@ -1,0 +1,271 @@
+name: PHPUnit & Behat
+
+on:
+  pull_request:
+  workflow_dispatch: {}
+
+jobs:
+  phpunit:
+    name: PHPUnit (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.4', '8.0', '8.1', '8.2', '8.3']
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_AUTHENTICATION_PLUGIN: mysql_native_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+          --health-start-period=10s
+
+    env:
+      DB_HOST: 127.0.0.1
+      DB_USER: root
+      DB_PASSWORD: root
+      WP_CORE_DIR: /tmp/wordpress/
+      WP_TESTS_DIR: /tmp/wordpress-tests-lib
+      WP_TESTS_PHPUNIT_POLYFILLS_PATH: /tmp/phpunit-deps
+      COMPOSER_NO_INTERACTION: 1
+      COMPOSER_NO_AUDIT: 1
+      COMPOSER_PROCESS_TIMEOUT: 0
+      WP_VERSION: 6.8.3
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mysqli, intl, mbstring
+          tools: composer:v2
+          coverage: none
+
+      - name: Install MySQL client
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y mysql-client sendmail rsync
+
+      - name: Install WP-CLI (if needed)
+        run: |
+          if ! command -v wp >/dev/null 2>&1; then
+            curl -fsSL https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o wp
+            chmod +x wp
+            echo "$PWD" >> "$GITHUB_PATH"
+          fi
+
+      - name: Prepare Composer deps for PHPUnit
+        run: |
+          PHP_MM=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
+          echo "Running PHPUnit deps setup on PHP ${PHP_MM}"
+
+          # On PHP 7.4 / 8.0 we don't need Behat at all, and it pulls in
+          # symfony/yaml 6.x which requires php >= 8.1.
+          if [ "$PHP_MM" = "7.4" ] || [ "$PHP_MM" = "8.0" ]; then
+            echo "PHP ${PHP_MM}: removing Behat-related dev deps for PHPUnit job"
+            composer remove --dev \
+              behat/behat \
+              behat/gherkin \
+              --no-update --no-interaction
+
+            # Remove composer.lock to allow fresh dependency resolution for this PHP version
+            rm -f composer.lock
+          fi
+          # Ensure wpunit-helpers is present
+          if ! composer show -D pantheon-systems/wpunit-helpers >/dev/null 2>&1; then
+            composer require --dev pantheon-systems/wpunit-helpers:^2 --no-interaction --no-progress
+          fi
+
+          # Now install everything for this PHP version
+          composer install --no-interaction --no-progress --prefer-dist
+
+
+      - name: Install WordPress test environment
+        env:
+          WP_CORE_DIR: /tmp/wordpress
+          WP_TESTS_DIR: /tmp/wordpress-tests-lib
+          WP_VERSION: 6.8.3
+          WP_CLI_ALLOW_ROOT: 1
+        run: |
+          chmod +x bin/*.sh
+          bin/install-wp-tests.sh \
+            --dbname=wp_phpunit_test \
+            --dbuser=root \
+            --dbpass=root \
+            --dbhost=127.0.0.1 \
+            --version=$WP_VERSION \
+            --tmpdir=/tmp
+
+      - name: Sync plugin to WordPress
+        env:
+          WP_CORE_DIR: /tmp/wordpress
+          WP_CLI_ALLOW_ROOT: 1
+        run: |
+          mkdir -p $WP_CORE_DIR/wp-content/plugins
+          rsync -a --delete \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='node_modules/' \
+            --exclude='vendor/' \
+            . $WP_CORE_DIR/wp-content/plugins/wp-saml-auth/
+
+      - name: Install plugin dependencies in WordPress
+        env:
+          WP_CORE_DIR: /tmp/wordpress
+        run: |
+          cd $WP_CORE_DIR/wp-content/plugins/wp-saml-auth
+          composer install --no-interaction --no-progress --prefer-dist || true
+
+      - name: Activate plugin and seed settings
+        env:
+          WP_CORE_DIR: /tmp/wordpress
+          WP_CLI_ALLOW_ROOT: 1
+        run: |
+          wp plugin activate wp-saml-auth --path=$WP_CORE_DIR
+          wp option update wp_saml_auth_settings '{
+            "provider": "test-sp",
+            "auto_provision": true,
+            "permit_wp_login": true,
+            "user_claim": "mail",
+            "display_name_mapping": "display_name",
+            "map_by_email": true,
+            "default_role": "subscriber",
+            "attribute_mapping": {
+              "user_login": "uid",
+              "user_email": "mail",
+              "first_name": "givenName",
+              "last_name": "sn",
+              "display_name": "displayName"
+            }
+          }' --format=json --path=$WP_CORE_DIR
+
+      - name: Run PHPUnit
+        run: composer phpunit
+
+  behat:
+    name: Behat (SSP ${{ matrix.ssp }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ssp: ["1.18.0", "2.0.0", "2.4.0"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          submodules: recursive
+          lfs: false
+
+      - name: Setup PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          tools: composer:v2
+          coverage: none
+
+      - name: Install Terminus
+        uses: pantheon-systems/terminus-github-actions@v1
+        with:
+          pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
+
+      - name: SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
+          log-public-key: true
+
+      - name: Configure SSH (no strict host key checking)
+        run: |
+          mkdir -p ~/.ssh
+          printf "Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile=/dev/null\n" > ~/.ssh/config
+
+      - name: Set Pantheon site id
+        run: echo "TERMINUS_SITE=wp-saml-auth" >> $GITHUB_ENV
+
+      - name: Compute Pantheon env vars
+        env:
+          SSP: ${{ matrix.ssp }}
+          TERMINUS_SITE: ${{ env.TERMINUS_SITE }}
+        run: |
+          set -e
+          ssp_num="${SSP//./}"
+          suffix=$(printf "%04d" $(( GITHUB_RUN_NUMBER % 10000 )) )
+          env_id="ci${ssp_num}${suffix}"
+          TERMINUS_ENV="${env_id:0:10}"
+          echo "TERMINUS_ENV=$TERMINUS_ENV" >> $GITHUB_ENV
+          echo "SIMPLESAMLPHP_VERSION=$SSP" >> $GITHUB_ENV
+          echo "PANTHEON_SITE_URL=${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io" >> $GITHUB_ENV
+          echo "Using env: $TERMINUS_SITE.$TERMINUS_ENV -> https://${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io"
+
+      - name: Install Composer deps
+        run: composer install --no-progress --no-interaction
+
+      - name: Prepare Behat environment
+        env:
+          WORDPRESS_ADMIN_USERNAME: pantheon
+          WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
+          WORDPRESS_ADMIN_PASSWORD: pantheon
+          WORKING_DIR: ${{ github.workspace }}
+        run: |
+          set -eux
+          if [ "${{ matrix.ssp }}" = "1.18.0" ]; then
+            bash bin/1.18/behat-prepare-simplesaml1.18.0.sh
+          else
+            bash bin/behat-prepare.sh
+          fi
+
+      - name: Wait for Pantheon workflow
+        run: |
+          SITE_ENV="${TERMINUS_SITE}.${TERMINUS_ENV}"
+          terminus workflow:wait "$SITE_ENV"
+
+      - name: Wait until site responds
+        run: |
+          set -e
+          URL="https://${PANTHEON_SITE_URL}"
+          echo "Waiting for $URL ..."
+          for i in $(seq 1 60); do
+            if curl -fsSL -o /dev/null "$URL"; then
+              echo "OK"; exit 0
+            fi
+            sleep 5
+          done
+          echo "Site never became ready: $URL"
+          exit 1
+
+      - name: Run Behat
+        env:
+          WORDPRESS_ADMIN_USERNAME: pantheon
+          WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
+          WORDPRESS_ADMIN_PASSWORD: pantheon
+        run: |
+          set -e
+          echo ""
+          echo "=========================================================================="
+          echo "Running Behat on https://${PANTHEON_SITE_URL}/wp-login.php"
+          echo "with SimpleSAMLphp version ${SIMPLESAMLPHP_VERSION}"
+          echo "=========================================================================="
+          echo ""
+          ./bin/behat-test.sh --strict
+
+      - name: Cleanup Behat environment
+        if: ${{ always() }}
+        run: bash bin/behat-cleanup.sh
