@@ -233,6 +233,14 @@ jobs:
             bash bin/behat-prepare.sh
           fi
 
+      - name: Wait for Pantheon workflow
+        run: |
+          # Wait for any Pantheon workflows triggered by terminus wp commands in behat-prepare.sh
+          # (WP core install, plugin activation, cache clearing) to complete before running tests.
+          # Without this wait, tests fail because WordPress/plugins aren't fully ready.
+          SITE_ENV="${TERMINUS_SITE}.${TERMINUS_ENV}"
+          terminus workflow:wait "$SITE_ENV"
+
       - name: Wait until site responds
         run: |
           set -e
