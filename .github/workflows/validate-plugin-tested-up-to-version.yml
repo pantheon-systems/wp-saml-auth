@@ -12,8 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     name: Validate Plugin Tested Up To
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
-      - uses: jazzsequence/action-validate-plugin-version@v1
+      - uses: jazzsequence/action-validate-plugin-version@9cb142a9e858cac795ce7ca32f07f49a2874dba2 # v1.2.8
         branch: 'develop'

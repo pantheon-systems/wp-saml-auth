@@ -14,9 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
     - name: Build, tag, and release
-      uses: pantheon-systems/plugin-release-actions/build-tag-release@main
+      uses: pantheon-systems/plugin-release-actions/build-tag-release@a3839d25efa9d0d4270c088702c2072a2e49edde # main 2025-11-07T23:23:14Z
       with:
         gh_token: ${{ secrets.GITHUB_TOKEN }}
         build_composer_assets: "true"
