@@ -15,6 +15,7 @@ add_filter( 'wp_saml_auth_option', function( $value, $option_name ){
     if ( 'connection_type' === $option_name ) {
         return 'simplesamlphp';
     }
+    
     // Set auth_source to match the authentication source configured in SimpleSAMLphp's authsources.php
     // This is required when connection_type is 'simplesamlphp' for the plugin to find the correct IdP config
     if ( 'auth_source' === $option_name ) {
