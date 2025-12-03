@@ -160,6 +160,8 @@ jobs:
   behat:
     name: Behat (SSP ${{ matrix.ssp }})
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       max-parallel: 1  # Run tests sequentially to avoid Pantheon API rate limiting
