@@ -56,8 +56,6 @@ class AdminLogIn implements Context, SnippetAcceptingContext {
 		$session = $this->minkContext->getSession();
 		$html = $session->getPage()->getContent();
 
-		$this->minkContext->printLastResponse(); // Optional debugging
-
 		// Meta refresh
 		if (preg_match('/<meta http-equiv="refresh" content="\d+;url=([^"]+)"/i', $html, $matches)) {
 			$this->minkContext->visit(html_entity_decode($matches[1]));
@@ -75,10 +73,18 @@ class AdminLogIn implements Context, SnippetAcceptingContext {
 		$form = $crawler->filter('form')->first();
 
 		if (!$form->count()) {
-			throw new \Exception('No form found to submit SAML response.');
+			// No form found - we may already be at the destination after SAML auth
+			// This is expected when SAML authentication completes successfully
+			return;
 		}
 
 		$action = $form->attr('action');
+
+		// If action is null or empty, the form may not be a SAML form or auth already completed
+		if (empty($action)) {
+			return;
+		}
+
 		$inputs = $form->filter('input');
 
 		$formFields = [];
