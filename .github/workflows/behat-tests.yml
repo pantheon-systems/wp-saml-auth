@@ -162,6 +162,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      max-parallel: 1  # Run tests sequentially to avoid Pantheon API rate limiting
       matrix:
         ssp: ["1.18.0", "2.0.0", "2.4.0"]
 
