@@ -394,7 +394,11 @@ class WP_SAML_Auth {
 			// After SimpleSAMLphp returns, handle the redirect_to parameter
 			// This mirrors the OneLogin RelayState handling above
 			$final_redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
-			$permit_wp_login   = self::get_option( 'permit_wp_login' );
+			// URL decode in case it's encoded (e.g., %2Fsample-page%2F)
+			if ( $final_redirect_to ) {
+				$final_redirect_to = urldecode( $final_redirect_to );
+			}
+			$permit_wp_login = self::get_option( 'permit_wp_login' );
 			if ( $final_redirect_to ) {
 				// When $permit_wp_login=true, we only care about accidentally triggering the redirect
 				// to the IdP. However, when $permit_wp_login=false, hitting wp-login will always
