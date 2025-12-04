@@ -364,7 +364,11 @@ class WP_SAML_Auth {
 				$provider->login( $redirect_to, $parameters, $force_authn );
 			}
 		} elseif ( is_a( $provider, $this->simplesamlphp_class ) ) {
-			$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
+			// Read redirect_to from POST (form submission) or GET (direct link)
+			$redirect_to = filter_input( INPUT_POST, 'redirect_to', FILTER_SANITIZE_URL );
+			if ( ! $redirect_to ) {
+				$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
+			}
 			if ( $redirect_to ) {
 				$redirect_to = add_query_arg(
 					[
