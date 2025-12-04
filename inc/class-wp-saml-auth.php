@@ -390,6 +390,26 @@ class WP_SAML_Auth {
 				]
 			);
 			$attributes = $provider->getAttributes();
+
+			// After SimpleSAMLphp returns, handle the redirect_to parameter
+			// This mirrors the OneLogin RelayState handling above
+			$final_redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
+			$permit_wp_login   = self::get_option( 'permit_wp_login' );
+			if ( $final_redirect_to ) {
+				// When $permit_wp_login=true, we only care about accidentally triggering the redirect
+				// to the IdP. However, when $permit_wp_login=false, hitting wp-login will always
+				// trigger the IdP redirect.
+				if ( ( $permit_wp_login && false === stripos( $final_redirect_to, 'action=wp-saml-auth' ) )
+					|| ( ! $permit_wp_login && false === stripos( $final_redirect_to, parse_url( wp_login_url(), PHP_URL_PATH ) ) ) ) {
+					add_filter(
+						'login_redirect',
+						function () use ( $final_redirect_to ) {
+							return $final_redirect_to;
+						},
+						1
+					);
+				}
+			}
 		} else {
 			return new WP_Error( 'wp_saml_auth_invalid_provider', __( 'Invalid provider specified for SAML authentication', 'wp-saml-auth' ) );
 		}
