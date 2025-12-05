@@ -364,10 +364,10 @@ class WP_SAML_Auth {
 				$provider->login( $redirect_to, $parameters, $force_authn );
 			}
 		} elseif ( is_a( $provider, $this->simplesamlphp_class ) ) {
-			// Read redirect_to from POST (form submission) or GET (direct link)
-			$redirect_to = filter_input( INPUT_POST, 'redirect_to', FILTER_SANITIZE_URL );
-			if ( ! $redirect_to ) {
-				$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
+			// Read redirect_to from REQUEST (handles both POST form submissions and GET direct links)
+			$redirect_to = '';
+			if ( isset( $_REQUEST['redirect_to'] ) ) {
+				$redirect_to = sanitize_text_field( wp_unslash( $_REQUEST['redirect_to'] ) );
 			}
 			if ( $redirect_to ) {
 				$redirect_to = add_query_arg(
@@ -397,10 +397,10 @@ class WP_SAML_Auth {
 
 			// After SimpleSAMLphp returns, handle the redirect_to parameter
 			// This mirrors the OneLogin RelayState handling above
-			$final_redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
-			// URL decode in case it's encoded (e.g., %2Fsample-page%2F)
-			if ( $final_redirect_to ) {
-				$final_redirect_to = urldecode( $final_redirect_to );
+			$final_redirect_to = '';
+			if ( isset( $_REQUEST['redirect_to'] ) ) {
+				// URL decode in case it's encoded (e.g., %2Fsample-page%2F)
+				$final_redirect_to = urldecode( sanitize_text_field( wp_unslash( $_REQUEST['redirect_to'] ) ) );
 			}
 			$permit_wp_login = self::get_option( 'permit_wp_login' );
 			if ( $final_redirect_to ) {
