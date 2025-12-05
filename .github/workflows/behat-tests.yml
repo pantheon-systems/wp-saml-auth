@@ -164,7 +164,6 @@ jobs:
       contents: read
     strategy:
       fail-fast: false
-      max-parallel: 1  # Run tests sequentially to avoid Pantheon API rate limiting
       matrix:
         # Note: SimpleSAMLphp 1.18.0 tests have known limitations with Goutte's redirect handling.
         # See tests/behat/README.md for details. Version 1.18.0 is deprecated and has critical
