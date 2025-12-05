@@ -210,6 +210,7 @@ class WP_SAML_Auth {
 		echo '<h3><em>' . esc_html( $strings['alt_title'] ) . '</em></h3>';
 		return $message;
 	}
+	
 
 	/**
 	 * Log the user out of the SAML instance when they log out of WordPress
