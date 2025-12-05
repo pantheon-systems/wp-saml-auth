@@ -414,7 +414,7 @@ class WP_SAML_Auth {
 						function () use ( $final_redirect_to ) {
 							return $final_redirect_to;
 						},
-						1
+						999
 					);
 				}
 			}
