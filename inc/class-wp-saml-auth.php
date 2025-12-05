@@ -446,13 +446,6 @@ class WP_SAML_Auth {
 			 */
 			do_action( 'wp_saml_auth_existing_user_authenticated', $existing_user, $attributes );
 
-			// Handle redirect_to for SimpleSAMLphp by logging in and redirecting directly
-			if ( ! empty( $_REQUEST['redirect_to'] ) ) {
-				$redirect_to = wp_unslash( $_REQUEST['redirect_to'] );
-				wp_set_auth_cookie( $existing_user->ID );
-				wp_safe_redirect( $redirect_to );
-				exit;
-			}
 
 			return $existing_user;
 		}
@@ -489,13 +482,6 @@ class WP_SAML_Auth {
 		 */
 		do_action( 'wp_saml_auth_new_user_authenticated', $user, $attributes );
 
-		// Handle redirect_to for SimpleSAMLphp by logging in and redirecting directly
-		if ( ! empty( $_REQUEST['redirect_to'] ) ) {
-			$redirect_to = wp_unslash( $_REQUEST['redirect_to'] );
-			wp_set_auth_cookie( $user->ID );
-			wp_safe_redirect( $redirect_to );
-			exit;
-		}
 		return $user;
 	}
 
