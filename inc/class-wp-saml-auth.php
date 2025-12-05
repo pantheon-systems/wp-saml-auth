@@ -395,31 +395,8 @@ class WP_SAML_Auth {
 			);
 			$attributes = $provider->getAttributes();
 
-			// After SimpleSAMLphp returns, handle the redirect_to parameter
-			// This mirrors the OneLogin RelayState handling above
-			$final_redirect_to = '';
-			if ( ! empty( $_REQUEST['redirect_to'] ) ) {
-				// PHP automatically URL-decodes query parameters, so no need for urldecode()
-				$final_redirect_to = wp_unslash( $_REQUEST['redirect_to'] );
-				// Ensure $_GET['redirect_to'] is set for WordPress's built-in redirect handling
-				$_GET['redirect_to'] = $final_redirect_to;
-			}
-			$permit_wp_login = self::get_option( 'permit_wp_login' );
-			if ( $final_redirect_to ) {
-				// When $permit_wp_login=true, we only care about accidentally triggering the redirect
-				// to the IdP. However, when $permit_wp_login=false, hitting wp-login will always
-				// trigger the IdP redirect.
-				if ( ( $permit_wp_login && false === stripos( $final_redirect_to, 'action=wp-saml-auth' ) )
-					|| ( ! $permit_wp_login && false === stripos( $final_redirect_to, parse_url( wp_login_url(), PHP_URL_PATH ) ) ) ) {
-					add_filter(
-						'login_redirect',
-						function () use ( $final_redirect_to ) {
-							return $final_redirect_to;
-						},
-						10
-					);
-				}
-			}
+			// Note: redirect_to is now handled directly when getting/creating the user
+			// by calling wp_set_auth_cookie() and wp_safe_redirect() before returning
 		} else {
 			return new WP_Error( 'wp_saml_auth_invalid_provider', __( 'Invalid provider specified for SAML authentication', 'wp-saml-auth' ) );
 		}
@@ -467,6 +444,15 @@ class WP_SAML_Auth {
 			 * @param array   $attributes     All attributes received from the SAML Response
 			 */
 			do_action( 'wp_saml_auth_existing_user_authenticated', $existing_user, $attributes );
+
+			// Handle redirect_to for SimpleSAMLphp by logging in and redirecting directly
+			if ( ! empty( $_REQUEST['redirect_to'] ) ) {
+				$redirect_to = wp_unslash( $_REQUEST['redirect_to'] );
+				wp_set_auth_cookie( $existing_user->ID );
+				wp_safe_redirect( $redirect_to );
+				exit;
+			}
+
 			return $existing_user;
 		}
 		if ( ! self::get_option( 'auto_provision' ) ) {
@@ -501,6 +487,14 @@ class WP_SAML_Auth {
 		 * @param array   $attributes All attributes received from the SAML Response
 		 */
 		do_action( 'wp_saml_auth_new_user_authenticated', $user, $attributes );
+
+	// Handle redirect_to for SimpleSAMLphp by logging in and redirecting directly
+	if ( ! empty( $_REQUEST['redirect_to'] ) ) {
+		$redirect_to = wp_unslash( $_REQUEST['redirect_to'] );
+		wp_set_auth_cookie( $user->ID );
+		wp_safe_redirect( $redirect_to );
+		exit;
+	}
 		return $user;
 	}
 
