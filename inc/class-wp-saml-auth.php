@@ -401,10 +401,8 @@ class WP_SAML_Auth {
 			if ( ! empty( $_REQUEST['redirect_to'] ) ) {
 				// PHP automatically URL-decodes query parameters, so no need for urldecode()
 				$final_redirect_to = wp_unslash( $_REQUEST['redirect_to'] );
-				// Convert relative URLs to absolute URLs
-				if ( 0 === strpos( $final_redirect_to, '/' ) && 0 !== strpos( $final_redirect_to, '//' ) ) {
-					$final_redirect_to = home_url( $final_redirect_to );
-				}
+				// Ensure $_GET['redirect_to'] is set for WordPress's built-in redirect handling
+				$_GET['redirect_to'] = $final_redirect_to;
 			}
 			$permit_wp_login = self::get_option( 'permit_wp_login' );
 			if ( $final_redirect_to ) {
@@ -418,7 +416,7 @@ class WP_SAML_Auth {
 						function () use ( $final_redirect_to ) {
 							return $final_redirect_to;
 						},
-						1
+						10
 					);
 				}
 			}
