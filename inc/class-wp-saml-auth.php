@@ -364,39 +364,35 @@ class WP_SAML_Auth {
 				$provider->login( $redirect_to, $parameters, $force_authn );
 			}
 		} elseif ( is_a( $provider, $this->simplesamlphp_class ) ) {
-			// Check if user is already authenticated
-			if ( ! $provider->isAuthenticated() ) {
-				// User not authenticated - redirect to IdP
-				// Read redirect_to from REQUEST (handles both POST form submissions and GET direct links)
-				$redirect_to = '';
-				if ( ! empty( $_REQUEST['redirect_to'] ) ) {
-					$redirect_to = wp_unslash( $_REQUEST['redirect_to'] );
-				}
-				if ( $redirect_to ) {
-					$redirect_to = add_query_arg(
-						[
-							'redirect_to' => rawurlencode( $redirect_to ),
-							'action'      => 'wp-saml-auth',
-						],
-						wp_login_url()
-					);
-				} else {
-					$redirect_to = wp_login_url();
-					// Make sure we're only dealing with the URI components and not arguments.
-					$request = explode( '?', sanitize_text_field( $_SERVER['REQUEST_URI'] ) );
-					// Only persist redirect_to when it's not wp-login.php.
-					if ( false === stripos( $redirect_to, reset( $request ) ) ) {
-						$redirect_to = add_query_arg( 'redirect_to', sanitize_text_field( $_SERVER['REQUEST_URI'] ), $redirect_to );
-					} else {
-						$redirect_to = add_query_arg( [ 'action' => 'wp-saml-auth' ], $redirect_to );
-					}
-				}
-				$provider->requireAuth(
-					[
-						'ReturnTo' => $redirect_to,
-					]
-				);
+			// Read redirect_to from REQUEST (handles both POST form submissions and GET direct links)
+			$redirect_to = '';
+			if ( ! empty( $_REQUEST['redirect_to'] ) ) {
+				$redirect_to = wp_unslash( $_REQUEST['redirect_to'] );
 			}
+			if ( $redirect_to ) {
+				$redirect_to = add_query_arg(
+					[
+						'redirect_to' => rawurlencode( $redirect_to ),
+						'action'      => 'wp-saml-auth',
+					],
+					wp_login_url()
+				);
+			} else {
+				$redirect_to = wp_login_url();
+				// Make sure we're only dealing with the URI components and not arguments.
+				$request = explode( '?', sanitize_text_field( $_SERVER['REQUEST_URI'] ) );
+				// Only persist redirect_to when it's not wp-login.php.
+				if ( false === stripos( $redirect_to, reset( $request ) ) ) {
+					$redirect_to = add_query_arg( 'redirect_to', sanitize_text_field( $_SERVER['REQUEST_URI'] ), $redirect_to );
+				} else {
+					$redirect_to = add_query_arg( [ 'action' => 'wp-saml-auth' ], $redirect_to );
+				}
+			}
+			$provider->requireAuth(
+				[
+					'ReturnTo' => $redirect_to,
+				]
+			);
 			$attributes = $provider->getAttributes();
 
 			// After SimpleSAMLphp returns, handle the redirect_to parameter
