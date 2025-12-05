@@ -32,7 +32,17 @@ These test failures are **accepted and documented** as known limitations of test
 
 #### SimpleSAMLphp 2.0.0+
 
-SimpleSAMLphp 2.0.0 and later versions work well with the Behat test suite. Occasional failures may occur in edge case scenarios (e.g., `redirect_to` parameter handling), but core authentication flows are fully tested.
+SimpleSAMLphp 2.0.0 and later versions work well with the Behat test suite. Core authentication flows are fully tested.
+
+#### redirect_to Parameter Limitation
+
+The WordPress `redirect_to` parameter (used to redirect users to a specific page after login) is not tested for SimpleSAMLphp authentication because:
+
+1. **SimpleSAMLphp controls the entire authentication flow**: Unlike OneLogin where WordPress manages the login process, SimpleSAMLphp handles authentication and redirects independently
+2. **WordPress login hooks are bypassed**: The `login_redirect` filter and other WordPress login mechanisms don't apply when SimpleSAMLphp completes authentication
+3. **Session state differences**: SimpleSAMLphp may maintain session state differently than WordPress expects
+
+While the plugin attempts to handle `redirect_to` by setting authentication cookies and calling `wp_safe_redirect()` directly, this functionality is not guaranteed to work consistently across different SimpleSAMLphp versions and configurations. Users requiring guaranteed redirect functionality should use the OneLogin (internal) connection type instead.
 
 ## Test Infrastructure
 
