@@ -106,14 +106,16 @@ class WP_SAML_Auth {
 					$this->maybe_log_error( $simplesamlphp_autoloader );
 					return;
 				}
+				return;
 			}
 
-			// test again in case `require_once $simplesamlphp_autoloader` didn't find it.
+			if ( class_exists( 'SimpleSAML\Auth\Simple' ) ) {
+				$this->simplesamlphp_class = 'SimpleSAML\Auth\Simple';
+			}
 			if ( ! class_exists( $this->simplesamlphp_class ) ) {
 				$this->maybe_log_error();
 				return;
 			}
-   
 			$this->provider = new $this->simplesamlphp_class( self::get_option( 'auth_source' ) );
 		}
 	}
