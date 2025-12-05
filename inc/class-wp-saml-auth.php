@@ -365,10 +365,10 @@ class WP_SAML_Auth {
 				$provider->login( $redirect_to, $parameters, $force_authn );
 			}
 		} elseif ( is_a( $provider, $this->simplesamlphp_class ) ) {
-			// Read redirect_to from REQUEST (handles both POST form submissions and GET direct links)
+			// Read redirect_to from REQUEST (handles both POST form submissions and GET direct links).
 			$redirect_to = '';
 			if ( ! empty( $_REQUEST['redirect_to'] ) ) {
-				$redirect_to = wp_unslash( $_REQUEST['redirect_to'] );
+				$redirect_to = sanitize_text_field( wp_unslash( $_REQUEST['redirect_to'] ) );
 			}
 			if ( $redirect_to ) {
 				$redirect_to = add_query_arg(
@@ -396,8 +396,6 @@ class WP_SAML_Auth {
 			);
 			$attributes = $provider->getAttributes();
 
-			// Note: redirect_to is now handled directly when getting/creating the user
-			// by calling wp_set_auth_cookie() and wp_safe_redirect() before returning
 		} else {
 			return new WP_Error( 'wp_saml_auth_invalid_provider', __( 'Invalid provider specified for SAML authentication', 'wp-saml-auth' ) );
 		}
