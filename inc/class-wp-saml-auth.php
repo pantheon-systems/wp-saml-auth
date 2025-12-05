@@ -367,7 +367,7 @@ class WP_SAML_Auth {
 			// Read redirect_to from REQUEST (handles both POST form submissions and GET direct links)
 			$redirect_to = '';
 			if ( ! empty( $_REQUEST['redirect_to'] ) ) {
-				$redirect_to = wp_validate_redirect( wp_unslash( $_REQUEST['redirect_to'] ), '' );
+				$redirect_to = wp_unslash( $_REQUEST['redirect_to'] );
 			}
 			if ( $redirect_to ) {
 				$redirect_to = add_query_arg(
@@ -399,8 +399,8 @@ class WP_SAML_Auth {
 			// This mirrors the OneLogin RelayState handling above
 			$final_redirect_to = '';
 			if ( ! empty( $_REQUEST['redirect_to'] ) ) {
-				// URL decode in case it's encoded (e.g., %2Fsample-page%2F)
-				$final_redirect_to = wp_validate_redirect( urldecode( wp_unslash( $_REQUEST['redirect_to'] ) ), '' );
+				// PHP automatically URL-decodes query parameters, so no need for urldecode()
+				$final_redirect_to = wp_unslash( $_REQUEST['redirect_to'] );
 			}
 			$permit_wp_login = self::get_option( 'permit_wp_login' );
 			if ( $final_redirect_to ) {
