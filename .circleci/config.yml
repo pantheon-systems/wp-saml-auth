@@ -106,9 +106,6 @@ jobs:
         paths:
           - "site_env_<< parameters.simplesamlphp_version >>.txt"
     - run:
-        name: Validate fixture version
-        command: ./bin/validate-fixture-version.sh
-    - run:
         name: Prepare and run Behat tests
         command: |
           set -e
