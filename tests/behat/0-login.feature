@@ -31,6 +31,7 @@ Feature: SAML Login
     And I press "submit"
 	Then I follow the SAML redirect manually
     Then print current URL
+    And I should be on "/sample-page/"
     Then I should see "Sample Page" in the ".wp-block-post-title" element
 
   Scenario: Errors on an invalidpassword
