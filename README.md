@@ -335,6 +335,7 @@ Minimum supported PHP version is 7.3.
 
 ### 2.3.0-dev ###
 * Adds PHP 8.4 compatibility [[#410](https://github.com/pantheon-systems/wp-saml-auth/pull/410)].
+* Adds `wp_saml_auth_internal_config` filter to allow customization of the OneLogin SAML configuration [[#497](https://github.com/pantheon-systems/wp-saml-auth/pull/497)].
 
 ### 2.2.0 (9 June 2024) ###
 * Add a hook to modify returned attributes. [[#379](https://github.com/pantheon-systems/wp-saml-auth/pull/379/)] (props @anthonybaxter-uwu)
