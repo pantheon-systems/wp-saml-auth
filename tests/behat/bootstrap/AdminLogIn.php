@@ -39,6 +39,16 @@ class AdminLogIn implements Context, SnippetAcceptingContext {
         $this->minkContext->assertPageAddress("wp-admin/");
     }
 
+    /**
+     * @Given my connection type is :arg1
+     */
+    public function myConnectionTypeIs($arg1)
+    {
+    	// checks the connection type for adminNotice behat test
+    	global $connection_type;
+    	$connection_type = $arg1;
+	}
+
 	/**
 	 * @Then I follow the SAML redirect manually
 	 */
