@@ -20,11 +20,20 @@ if [ -z "$TERMINUS_SITE" ] || [ -z "$TERMINUS_ENV" ]; then
 	exit 1
 fi
 
+SITE_ENV="$TERMINUS_SITE.$TERMINUS_ENV"
+
 ###
 # Create a new environment for this particular test run.
 ###
-terminus env:create "$TERMINUS_SITE".dev "$TERMINUS_ENV"
+# Check if environment exists, create only if it doesn't
+if ! terminus env:list "$TERMINUS_SITE" --format=list | grep -q "^${TERMINUS_ENV}$"; then
+	terminus env:create "$TERMINUS_SITE".dev "$TERMINUS_ENV"
+fi
 terminus env:wipe "$SITE_ENV" --yes
+
+# Save environment info for cleanup
+mkdir -p /tmp/behat-envs
+echo "$SITE_ENV" > "/tmp/behat-envs/site_env_${TERMINUS_ENV}.txt"
 
 ###
 # Get all necessary environment details.
@@ -170,7 +179,7 @@ git commit -m "Include SimpleSAMLphp and its configuration files"
 git push
 
 # Sometimes Pantheon takes a little time to refresh the filesystem
-terminus build:workflow:wait "$SITE_ENV"
+terminus workflow:wait "$SITE_ENV"
 
 ###
 # Copy the Pantheon.yml to switch PHP to 7.4
