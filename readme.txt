@@ -1,8 +1,8 @@
 === WP SAML Auth ===
-Contributors: getpantheon, danielbachhuber, Outlandish Josh, jspellman, jazzs3quence
+Contributors: getpantheon, danielbachhuber, Outlandish Josh, jspellman, jazzs3quence, AnaisPantheor
 Tags: authentication, SAML
 Requires at least: 6.4
-Tested up to: 6.8.1
+Tested up to: 6.9
 Requires PHP: 7.4
 Stable tag: 2.2.1-dev
 License: GPLv2 or later
@@ -297,6 +297,12 @@ If you're using the SimpleSAMLphp connection type:
 * It's always recommended to use the latest stable version of SimpleSAMLphp for security and compatibility.
 
 == Upgrade Notice ==
+
+= 2.2.1-dev =
+Minimum supported PHP version is 7.4.
+Adds PHP 8.4 compatibility.
+Compatible with WordPress 6.9.
+
 = 2.2.0 =
 Security Notice: The recommended version of SimpleSAMLphp library is 2.3.7 or later when using the simplesamlphp SAML authentication type. SimpleSAMLphp 2.0.0 or later is required to fix CVE-2023-26881 (XML signature validation bypass vulnerability).
 
@@ -314,8 +320,8 @@ Minimum supported PHP version is 7.3.
 * Adds PHP 8.4 compatibility [[#410](https://github.com/pantheon-systems/wp-saml-auth/pull/410)].
 * Increases minimum supported PHP version to 7.4.
 * Compatible with WordPress 6.9
-* Fix warning message on the plugin's settings page for users who aren't using SimpleSAML [[#445](https://github.com/pantheon-systems/wp-saml-auth/pull/445)].
 * Fix behat tests and adapt 1.18 version testing [[#447](https://github.com/pantheon-systems/wp-saml-auth/pull/447)].
+* Fix warning message on the plugin's settings page for users who aren't using SimpleSAML [[#445](https://github.com/pantheon-systems/wp-saml-auth/pull/445)].
 
 = 2.2.0 (9 June 2024) =
 * Add a hook to modify returned attributes. [[#379](https://github.com/pantheon-systems/wp-saml-auth/pull/379/)]
