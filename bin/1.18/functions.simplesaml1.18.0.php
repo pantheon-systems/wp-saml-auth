@@ -13,7 +13,7 @@ function samltheme_parent_theme_enqueue_styles() {
 
 add_filter( 'wp_saml_auth_option', function( $value, $option_name ){
     if ( 'connection_type' === $option_name ) {
-        return 'internal';
+        return 'simplesamlphp';
     }
 
     // Set auth_source to match the authentication source configured in SimpleSAMLphp's authsources.php

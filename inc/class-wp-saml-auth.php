@@ -721,7 +721,7 @@ class WP_SAML_Auth {
 		}
 
 		// If we have a SimpleSAMLphp version but the connection type is set, we haven't set up SimpleSAMLphp correctly.
-		if ( ! $simplesamlphp_version && $connection_type === 'simplesaml' ) {
+		if ( ! $simplesamlphp_version && $connection_type === 'simplesamlphp' ) {
 			// Only show this notice if we're on the settings page.
 			if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'wp-saml-auth-settings' ) {
 				return;
@@ -745,7 +745,7 @@ class WP_SAML_Auth {
 
 		// Check SimpleSAMLphp version.
 		if ( $simplesamlphp_version !== false ) {
-			if ( 'critical' === $simplesamlphp_version_status ) {
+			if ( 'critical' === $simplesamlphp_version_status && $connection_type === 'simplesamlphp' ) {
 				$min_version = self::get_option( 'critical_simplesamlphp_version' );
 				wp_admin_notice(
 					sprintf(
@@ -764,7 +764,7 @@ class WP_SAML_Auth {
 						],
 					]
 				);
-			} elseif ( 'warning' === $simplesamlphp_version_status ) {
+			} elseif ( 'warning' === $simplesamlphp_version_status && $connection_type === 'simplesamlphp' ) {
 				$min_version = self::get_option( 'min_simplesamlphp_version' );
 				wp_admin_notice(
 					sprintf(
@@ -784,7 +784,7 @@ class WP_SAML_Auth {
 					]
 				);
 			}
-		} elseif ( 'unknown' === $simplesamlphp_version_status ) {
+		} elseif ( 'unknown' === $simplesamlphp_version_status && $connection_type === 'simplesamlphp' ) {
 			// Only show this notice if we're on the settings page.
 			if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'wp-saml-auth-settings' ) {
 				return;
