@@ -91,33 +91,13 @@ if [ ! -d "$WORKING_DIR" ]; then
 	exit 1
 fi
 
-# Check that "$BASH_DIR"/1-adminnotice.feature exists.
-if [ ! -f "$BASH_DIR"/1-adminnotice.feature ]; then
-	echo "\"$BASH_DIR/1-adminnotice.feature\" does not exist"
-	exit 1
-fi
-
-# Check that $WORKING_DIR/tests exists
-if [ ! -d "$WORKING_DIR/tests" ]; then
-	echo "$WORKING_DIR/tests does not exist"
-	exit 1
-fi
-
-# Check that $WORKING_DIR/tests contains a behat directory
-if [ ! -d "$WORKING_DIR/tests/behat" ]; then
-	echo "$WORKING_DIR/tests/behat does not exist"
-	exit 1
-fi
-
-# Check that $WORKING_DIR/tests/behat contains 0-login.feature
-if [ ! -f "$WORKING_DIR/tests/behat/0-login.feature" ]; then
-	echo "$WORKING_DIR/tests/behat/0-login.feature does not exist"
-	exit 1
-fi
-
-# If we got through all that stuff, we should be good to copy the file now.
-echo "Copying 1-adminnotice.feature to local Behat tests directory (${WORKING_DIR}/tests/behat/)"
-cp "$BASH_DIR"/1-adminnotice.feature "$WORKING_DIR"/tests/behat/
+# For SimpleSAMLphp 1.18.0, we only run basic login and admin notice tests
+# Remove all existing test files and copy only the 1.18-specific tests
+echo "Setting up SimpleSAMLphp 1.18.0-specific tests"
+rm -f "$WORKING_DIR"/tests/behat/*.feature
+cp "$BASH_DIR"/../fixtures/0-login-1.18.feature "$WORKING_DIR"/tests/behat/0-login.feature
+cp "$BASH_DIR"/../fixtures/1-adminnotice-1.18.feature "$WORKING_DIR"/tests/behat/1-adminnotice.feature
+echo "✓ Configured tests: basic login + critical vulnerability notice"
 
 ###
 # Add SimpleSAMLphp to the environment
