@@ -104,10 +104,10 @@ echo "✓ Configured tests: basic login + critical vulnerability notice"
 # SimpleSAMLphp is installed to ~/code/private, and then symlinked into the
 # web root
 ###
-echo "Setting up SimpleSAMLphp"
+echo "Setting up SimpleSAMLphp 1.18.0"
 rm -rf "$PREPARE_DIR"/private
 mkdir "$PREPARE_DIR"/private
-wget https://github.com/simplesamlphp/simplesamlphp/releases/download/v1.18.4/simplesamlphp-1.18.4.tar.gz -O "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
+wget https://github.com/simplesamlphp/simplesamlphp/releases/download/v1.18.0/simplesamlphp-1.18.0.tar.gz -O "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
 tar -zxvf "$PREPARE_DIR"/simplesamlphp-latest.tar.gz -C "$PREPARE_DIR"/private
 ORIG_SIMPLESAMLPHP_DIR=$(ls "$PREPARE_DIR"/private)
 mv "$PREPARE_DIR"/private/"$ORIG_SIMPLESAMLPHP_DIR" "$PREPARE_DIR"/private/simplesamlphp
@@ -128,6 +128,9 @@ echo "\$wordpress_admin_username = '${WORDPRESS_ADMIN_USERNAME}';" >> "$PREPARE_
 echo "\$wordpress_admin_email = '${WORDPRESS_ADMIN_EMAIL}';" >> "$PREPARE_DIR"/private/simplesamlphp/config/authsources.php
 cat "$BASH_DIR"/authsources.php.additions >> "$PREPARE_DIR"/private/simplesamlphp/config/authsources.php
 cat "$BASH_DIR"/config.php.additions >> "$PREPARE_DIR"/private/simplesamlphp/config/config.php
+
+# Copy config-prepare.php to mu-plugins to define SIMPLESAMLPHP_CONFIG_DIR early
+cp "$FIXTURES_DIR"/config-prepare.php "$PREPARE_DIR"/wp-content/mu-plugins/config-prepare.php
 
 # Copy identify provider configuration files into their appropriate locations
 cp "$BASH_DIR"/saml20-idp-hosted.php  "$PREPARE_DIR"/private/simplesamlphp/metadata/saml20-idp-hosted.php
