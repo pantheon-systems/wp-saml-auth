@@ -16,10 +16,12 @@ SimpleSAMLphp 1.18.0 has known test compatibility issues with the Goutte headles
 
 **Limited Test Coverage:**
 
-Due to redirect handling differences in SimpleSAMLphp 1.18.0, the test suite for this version only runs:
+Due to redirect handling differences in SimpleSAMLphp 1.18.0, the test suite for this version **skips all Pantheon WordPress upstream tests** and only runs:
 
 - **Basic login test**: Verifies that users can authenticate successfully
 - **Critical vulnerability notice test**: Confirms that administrators see the CVE-2023-26881 security alert
+
+The Pantheon upstream tests (comments, users, terms, etc.) are skipped because they require reliable admin login, which is problematic with 1.18.0's redirect handling.
 
 **Why Limited Testing:**
 
@@ -38,7 +40,16 @@ Production users should upgrade to SimpleSAMLphp 2.3.7 or later. The limited tes
 
 #### SimpleSAMLphp 2.0.0+
 
-SimpleSAMLphp 2.0.0 and later versions work well with the Behat test suite. Core authentication flows are fully tested.
+SimpleSAMLphp 2.0.0 and later versions work well with the Behat test suite.
+
+**Full Test Coverage:**
+
+- **Pantheon WordPress upstream tests**: All standard WordPress functionality (comments, users, terms, themes, plugins, etc.)
+- **SAML-specific tests**:
+  - Basic login with employee credentials
+  - Basic login with student credentials
+  - Invalid password error handling
+  - Security warning admin notice (2.0.0 only, as it's below the recommended version)
 
 #### redirect_to Parameter Limitation
 
