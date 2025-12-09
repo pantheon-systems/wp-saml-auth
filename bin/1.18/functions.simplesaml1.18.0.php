@@ -15,6 +15,12 @@ add_filter( 'wp_saml_auth_option', function( $value, $option_name ){
     if ( 'connection_type' === $option_name ) {
         return 'internal';
     }
+
+    // Set auth_source to match the authentication source configured in SimpleSAMLphp's authsources.php
+    // This is required when connection_type is 'simplesamlphp' for the plugin to find the correct IdP config
+    if ( 'auth_source' === $option_name ) {
+        return 'example-userpass';
+    }
     if ( 'internal_config' === $option_name ) {
         $value['idp']['entityId'] = home_url( '/simplesaml/saml2/idp/metadata.php' );
         $value['idp']['singleSignOnService']['url'] = home_url( '/simplesaml/saml2/idp/SSOService.php' );
@@ -24,10 +30,10 @@ add_filter( 'wp_saml_auth_option', function( $value, $option_name ){
     }
     // From https://commons.lbl.gov/display/IDMgmt/Attribute+Definitions#AttributeDefinitions-uiduid
     if ( 'user_login_attribute' === $option_name ) {
-        return 'urn:oid:0.9.2342.19200300.100.1.1';
+        return 'uid';
     }
     if ( 'user_email_attribute' === $option_name ) {
-        return 'urn:oid:0.9.2342.19200300.100.1.3';
+        return 'mail';
     }
     if ( 'permit_wp_login' === $option_name ) {
         return false;
