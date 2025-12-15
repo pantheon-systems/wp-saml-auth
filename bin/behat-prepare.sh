@@ -20,6 +20,8 @@ if [ -z "$TERMINUS_SITE" ] || [ -z "$TERMINUS_ENV" ]; then
 	exit 1
 fi
 
+SITE_ENV="${TERMINUS_SITE}.${TERMINUS_ENV}"
+
 ###
 # Create a new environment for this particular test run.
 ###
