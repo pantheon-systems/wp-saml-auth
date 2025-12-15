@@ -72,6 +72,7 @@ main() {
 	# Maybe install the database.
 	if [ -z "$SKIP_DB" ]; then
 		echo "Installing database"
+		echo "DEBUG [install-wp-tests.sh main()]: DB_NAME='$DB_NAME' DB_USER='$DB_USER' DB_PASS='$DB_PASS' DB_HOST='$DB_HOST'"
 		install_db "$DB_NAME" "$DB_USER" "$DB_PASS" "$DB_HOST"
 	fi
 
