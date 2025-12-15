@@ -1,0 +1,89 @@
+name: Cleanup Behat Environments
+
+on:
+  schedule:
+    # Run once a day at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  cleanup:
+    name: Cleanup old Behat environments
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Install Terminus
+        uses: pantheon-systems/terminus-github-actions@v1
+        with:
+          pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
+
+      - name: Set Pantheon site id
+        run: echo "TERMINUS_SITE=wp-saml-auth" >> $GITHUB_ENV
+
+      - name: Cleanup old CI environments
+        run: |
+          set -ex
+
+          TERMINUS_USER_ID=$(terminus auth:whoami --field=id 2>&1)
+          if [[ ! $TERMINUS_USER_ID =~ ^[A-Za-z0-9-]{36}$ ]]; then
+            echo "Terminus unauthenticated; skipping cleanup"
+            exit 0
+          fi
+
+          echo "Cleaning up old ci environments from $TERMINUS_SITE"
+
+          # Get the list of environments in TSV format
+          ENV_LIST_TSV=$(terminus env:list "$TERMINUS_SITE" --fields=id,created --format=tsv 2>/dev/null)
+
+          # Check if ENV_LIST_TSV is empty
+          if [ -z "$ENV_LIST_TSV" ]; then
+            echo "Warning: Failed to retrieve environment list or no environments found. Skipping cleanup."
+            exit 0
+          fi
+
+          # Get the IDs of all 'ci' environments, sorted by creation date (oldest first)
+          OLDEST_CI_ENVS=$(echo "$ENV_LIST_TSV" | \
+            grep '^ci' | \
+            sort -k2,2 | \
+            awk '{print $1}')
+
+          if [ -z "$OLDEST_CI_ENVS" ]; then
+            echo "No 'ci' prefixed environments found to cleanup."
+            exit 0
+          fi
+
+          # Count environments
+          ENV_COUNT=$(echo "$OLDEST_CI_ENVS" | wc -l)
+          echo "Found $ENV_COUNT 'ci' environments"
+
+          # Delete all ci environments older than 7 days
+          for ENV_ID in $OLDEST_CI_ENVS; do
+            # Get environment creation date
+            ENV_CREATED=$(echo "$ENV_LIST_TSV" | grep "^${ENV_ID}" | awk '{print $2}')
+
+            # Calculate age in days
+            if [ -n "$ENV_CREATED" ]; then
+              ENV_AGE_SECONDS=$(($(date +%s) - $(date -d "$ENV_CREATED" +%s 2>/dev/null || date -j -f "%Y-%m-%d %H:%M:%S" "$ENV_CREATED" +%s)))
+              ENV_AGE_DAYS=$((ENV_AGE_SECONDS / 86400))
+
+              if [ $ENV_AGE_DAYS -gt 7 ]; then
+                echo "Deleting environment: $TERMINUS_SITE.$ENV_ID (${ENV_AGE_DAYS} days old)"
+                terminus multidev:delete "$TERMINUS_SITE.$ENV_ID" --delete-branch --yes || true
+              else
+                echo "Keeping environment: $TERMINUS_SITE.$ENV_ID (${ENV_AGE_DAYS} days old)"
+              fi
+            fi
+          done
+
+          echo "Cleanup completed"
