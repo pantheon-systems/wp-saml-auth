@@ -98,10 +98,14 @@ class Simple {
 	 *                                   NULL, we will return to the current page.
 	 */
 <<<<<<< HEAD
+<<<<<<< HEAD
 	public function logout( $params = null ) {
 =======
 	public function logout( string|array|NULL $params = null ): void {
 >>>>>>> f723c7d (Update lint)
+=======
+	public function logout( $params = null ) {
+>>>>>>> 3fd0b8d (updates to pass php 7.4 tests)
 		$GLOBALS['wp_saml_auth_current_user'] = false;
 	}
 
