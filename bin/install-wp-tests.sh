@@ -17,10 +17,17 @@ main() {
 	local TMPDIR="${TMPDIR:-/tmp}"
 	local DB_NAME="${DB_NAME:-wordpress_test}"
 	local DB_USER="${DB_USER:-root}"
+	# Ensure DB_PASS reads from environment variable
 	local DB_PASS="${DB_PASSWORD:-}"
 	local DB_HOST="${DB_HOST:-127.0.0.1}"
 	local WP_VERSION="${WP_VERSION:-latest}"
 	local SKIP_DB=""
+
+	# Export environment variables to ensure they're available to child processes
+	export DB_PASSWORD="${DB_PASSWORD:-}"
+	export DB_NAME="${DB_NAME}"
+	export DB_USER="${DB_USER}"
+	export DB_HOST="${DB_HOST}"
 
 	# Parse command-line arguments
 	for i in "$@"; do
@@ -65,6 +72,9 @@ main() {
 			;;
 		esac
 	done
+
+	# Re-export DB_PASSWORD after parsing args in case --dbpass was provided
+	export DB_PASSWORD="$DB_PASS"
 
 	WP_TESTS_DIR=${WP_TESTS_DIR:-$TMPDIR/wordpress-tests-lib}
 	WP_CORE_DIR=${WP_CORE_DIR:-$TMPDIR/wordpress/}
