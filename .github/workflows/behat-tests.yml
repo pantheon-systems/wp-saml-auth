@@ -41,10 +41,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
       - name: Setup PHP ${{ matrix.php }}
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@d59004228537ca90c8dca680592a08a675bf52b6 # v2
         with:
           php-version: ${{ matrix.php }}
           extensions: mysqli, imagick
@@ -88,7 +88,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -96,19 +96,19 @@ jobs:
           lfs: false
 
       - name: Setup PHP 8.2
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@d59004228537ca90c8dca680592a08a675bf52b6 # v2
         with:
           php-version: "8.2"
           tools: composer:v2
           coverage: none
 
       - name: Install Terminus
-        uses: pantheon-systems/terminus-github-actions@v1
+        uses: pantheon-systems/terminus-github-actions@8e024bd89ff46ed2aa4e0663c6b54c87a94344f8 # v1.2.7
         with:
           pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
 
       - name: SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@dc588b651fe13675774614f8e6a936a468676387 # v0.9.0
         with:
           ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
           log-public-key: true
