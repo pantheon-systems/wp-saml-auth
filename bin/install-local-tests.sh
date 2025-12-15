@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
-echo "DEBUG: About to source helpers.sh from $(dirname "$0")"
 # shellcheck source=bin/helpers.sh
 source "$(dirname "$0")/helpers.sh"
-echo "DEBUG: Successfully sourced helpers.sh"
 
 main() {
   # Initialize variables with default values (check env vars first)
@@ -51,13 +49,8 @@ main() {
   # Run install-wp-tests.sh
   echo "Installing local tests into ${TMPDIR}"
   echo "Using WordPress version: ${WP_VERSION}"
-  echo "DEBUG [install-local-tests.sh]: DB_PASSWORD env var: '${DB_PASSWORD}'"
-  echo "DEBUG [install-local-tests.sh]: DB_PASS local var: '${DB_PASS}'"
-  echo "DEBUG [install-local-tests.sh]: About to build ARGS array"
 
   ARGS=(--version="$WP_VERSION" --tmpdir="$TMPDIR" --dbname="$DB_NAME" --dbuser="$DB_USER" --dbpass="$DB_PASS" --dbhost="$DB_HOST")
-
-  echo "DEBUG [install-local-tests.sh]: ARGS array: ${ARGS[*]}"
 
   if [ -n "$SKIP_DB" ]; then
     echo "Skipping database creation"

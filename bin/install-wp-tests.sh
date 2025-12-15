@@ -1,16 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
-echo "DEBUG [install-wp-tests.sh]: About to source helpers.sh from $(dirname "$0")"
-if [ -f "$(dirname "$0")/helpers.sh" ]; then
-	echo "DEBUG [install-wp-tests.sh]: helpers.sh exists"
-else
-	echo "DEBUG [install-wp-tests.sh]: helpers.sh NOT FOUND"
-	ls -la "$(dirname "$0")/"
-fi
 # shellcheck source=bin/helpers.sh
 source "$(dirname "$0")/helpers.sh"
-echo "DEBUG [install-wp-tests.sh]: Successfully sourced helpers.sh"
 
 main() {
 	# Initialize variables with default values (check env vars first)
@@ -33,13 +25,11 @@ main() {
 	for i in "$@"; do
 		# Skip 'bash' argument
 		if [[ $i == "bash" ]]; then
-			echo "Ignoring 'bash' argument"
 			continue
 		fi
 
 		# Skip the script path argument
 		if [[ $i == *install-wp-tests.sh ]]; then
-			echo "Ignoring script path argument"
 			continue
 		fi
 
@@ -82,7 +72,6 @@ main() {
 	# Maybe install the database.
 	if [ -z "$SKIP_DB" ]; then
 		echo "Installing database"
-		echo "DEBUG [install-wp-tests.sh main()]: DB_NAME='$DB_NAME' DB_USER='$DB_USER' DB_PASS='$DB_PASS' DB_HOST='$DB_HOST'"
 		install_db "$DB_NAME" "$DB_USER" "$DB_PASS" "$DB_HOST"
 	fi
 
