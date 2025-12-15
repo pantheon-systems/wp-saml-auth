@@ -10,7 +10,4 @@ bin/install-wp-tests.sh
 bin/install-local-tests.sh
 bin/phpunit-test.sh
 .phpunit*
-
-# Local dev
 .idea
-.codacy
