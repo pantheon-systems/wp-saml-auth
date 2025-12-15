@@ -19,19 +19,12 @@ if [ -z "$TERMINUS_SITE" ] || [ -z "$TERMINUS_ENV" ]; then
 	echo "TERMINUS_SITE and TERMINUS_ENV environment variables must be set"
 	exit 1
 fi
-SITE_ENV="$TERMINUS_SITE.$TERMINUS_ENV"
+
 ###
 # Create a new environment for this particular test run.
 ###
-# Check if environment exists, create only if it doesn't
-if ! terminus env:list "$TERMINUS_SITE" --format=list | grep -q "^${TERMINUS_ENV}$"; then
-	terminus env:create "$TERMINUS_SITE".dev "$TERMINUS_ENV"
-fi
+terminus env:create "$TERMINUS_SITE".dev "$TERMINUS_ENV"
 terminus env:wipe "$SITE_ENV" --yes
-
-# Save environment info for cleanup
-mkdir -p /tmp/behat-envs
-echo "$SITE_ENV" > "/tmp/behat-envs/site_env_${TERMINUS_ENV}.txt"
 
 ###
 # Get all necessary environment details.
@@ -82,9 +75,7 @@ rm -rf "$PREPARE_DIR"/wp-content/plugins/wp-saml-auth/.git
 
 # Add extra tests if we're running 2.0.0
 if [ "$SIMPLESAMLPHP_VERSION" == '2.0.0' ]; then
-	# Use WORKING_DIR from environment if set, otherwise use default
-	WORKING_DIR="${WORKING_DIR:-$HOME/pantheon-systems/wp-saml-auth}"
-
+	WORKING_DIR="/home/tester/pantheon-systems/wp-saml-auth"
 	# Check that the WORKING _DIRECTORY exists
 	if [ ! -d "$WORKING_DIR" ]; then
 		echo "WORKING_DIR ($WORKING_DIR) does not exist"
@@ -139,20 +130,6 @@ rm "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
 # For the purposes of the Behat tests, we're using SimpleSAMLphp as an identity
 # provider with its exampleauth module enabled
 ###
-# Try -full, then fallback
-mkdir -p "$PREPARE_DIR/private/simplesamlphp"
-if ! curl -fsSL "$SIMPLESAMLPHP_DOWNLOAD_URL" -o "$PREPARE_DIR/simplesamlphp-latest.tar.gz"; then
-  echo "Falling back to non-full SimpleSAMLphp tarball..."
-  curl -fsSL "$FALLBACK_SSP_URL" -o "$PREPARE_DIR/simplesamlphp-latest.tar.gz"
-fi
-
-tar -zxvf "$PREPARE_DIR/simplesamlphp-latest.tar.gz" -C "$PREPARE_DIR/private"
-ORIG_SSP_DIR=$(
-  find "$PREPARE_DIR/private" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' \
-  | grep -E '^simplesamlphp-[0-9]' | head -n1
-)
-mv "$PREPARE_DIR/private/$ORIG_SSP_DIR" "$PREPARE_DIR/private/simplesamlphp"
-rm "$PREPARE_DIR/simplesamlphp-latest.tar.gz"
 
 # Create the authsources.php with dynamic user variables.
 cat > "$PREPARE_DIR/private/simplesamlphp/config/authsources.php" <<EOF
@@ -207,7 +184,6 @@ touch "$PREPARE_DIR"/private/simplesamlphp/modules/exampleauth/enable
 
 # Generate a certificate SimpleSAMLphp uses for encryption
 # Because these files are in ~/code/private, they're inaccessible from the web
-echo "Operating on: $TWIG_TEMPLATE_PATH"
 openssl req -newkey rsa:2048 -new -x509 -days 3652 -nodes -out "$PREPARE_DIR"/private/simplesamlphp/cert/saml.crt -keyout "$PREPARE_DIR"/private/simplesamlphp/cert/saml.pem -batch
 
 TWIG_TEMPLATE_PATH="$PREPARE_DIR/private/simplesamlphp/modules/core/templates/loginuserpass.twig"
@@ -250,7 +226,7 @@ git commit -m "Include SimpleSAMLphp and its configuration files"
 git push
 
 # Sometimes Pantheon takes a little time to refresh the filesystem
-terminus workflow:wait "$SITE_ENV"
+terminus build:workflow:wait "$SITE_ENV"
 
 ###
 # Set up WordPress, theme, and plugins for the test run
@@ -259,7 +235,6 @@ terminus workflow:wait "$SITE_ENV"
 {
   terminus wp "$SITE_ENV" -- core install --title="$TERMINUS_ENV"-"$TERMINUS_SITE" --url="$PANTHEON_SITE_URL" --admin_user="$WORDPRESS_ADMIN_USERNAME" --admin_email="$WORDPRESS_ADMIN_EMAIL" --admin_password="$WORDPRESS_ADMIN_PASSWORD"
 } &> /dev/null
-
 terminus wp "$SITE_ENV" -- option update home "https://$PANTHEON_SITE_URL"
 terminus wp "$SITE_ENV" -- option update siteurl "https://$PANTHEON_SITE_URL"
 terminus wp "$SITE_ENV" -- plugin activate wp-native-php-sessions wp-saml-auth
@@ -279,4 +254,4 @@ terminus wp "$SITE_ENV" -- eval '
     }
 '
 
-terminus env:clear-cache "$SITE_ENV"
+terminus env:clear-cache "$TERMINUS_SITE"."$TERMINUS_ENV"
