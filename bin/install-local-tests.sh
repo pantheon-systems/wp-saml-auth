@@ -49,6 +49,8 @@ main() {
   # Run install-wp-tests.sh
   echo "Installing local tests into ${TMPDIR}"
   echo "Using WordPress version: ${WP_VERSION}"
+  echo "DEBUG: DB_PASSWORD env var: '${DB_PASSWORD}'"
+  echo "DEBUG: DB_PASS value: '${DB_PASS}'"
 
   ARGS=(--version="$WP_VERSION" --tmpdir="$TMPDIR" --dbname="$DB_NAME" --dbuser="$DB_USER" --dbpass="$DB_PASS" --dbhost="$DB_HOST")
 
