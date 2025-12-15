@@ -228,8 +228,14 @@ git config user.name "Pantheon"
 git commit -m "Include SimpleSAMLphp and its configuration files"
 git push
 
-# Sometimes Pantheon takes a little time to refresh the filesystem
-terminus workflow:wait "$SITE_ENV"
+# Wait for Pantheon to process the git push and initialize the environment
+sleep 10
+
+# Wait for any workflows to complete
+terminus workflow:wait "$SITE_ENV" --max=5 || true
+
+# Give the environment a bit more time to be fully ready
+sleep 5
 
 ###
 # Set up WordPress, theme, and plugins for the test run
