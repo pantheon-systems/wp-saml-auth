@@ -2,7 +2,9 @@
 set -e
 
 # shellcheck disable=SC1091
+echo "DEBUG: About to source helpers.sh from $(dirname "$0")"
 source "$(dirname "$0")/helpers.sh"
+echo "DEBUG: Successfully sourced helpers.sh"
 
 main() {
   # Initialize variables with default values (check env vars first)
