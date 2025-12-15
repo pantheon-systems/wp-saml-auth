@@ -61,6 +61,8 @@ main() {
     ARGS=("${ARGS[@]}" --skip-db=true)
   fi
 
+  # Export DB_PASSWORD to ensure it's available to child process
+  export DB_PASSWORD="$DB_PASS"
   bash "$(dirname "$0")/install-wp-tests.sh" "${ARGS[@]}"
 
   # Run PHPUnit
