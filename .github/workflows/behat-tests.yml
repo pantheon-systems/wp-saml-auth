@@ -48,7 +48,7 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           extensions: mysqli, imagick
-          tools: composer:v2
+          tools: composer:v2, wp-cli
           coverage: none
 
       - name: Prepare Composer deps for PHPUnit
