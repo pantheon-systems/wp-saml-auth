@@ -2,6 +2,9 @@ name: PHPUnit & Behat
 
 on:
   pull_request:
+  push:
+    branches:
+      - SRE-1395-squashed
   workflow_dispatch: {}
 
 jobs:
