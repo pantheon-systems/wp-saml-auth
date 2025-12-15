@@ -144,20 +144,7 @@ class Test_Authentication extends WP_UnitTestCase {
 		$GLOBALS['wp_saml_auth_current_user'] = $user;
 	}
 
-	/**
-	* @param string $value
-	* @param string|null $option_name
-	* @return string
-	*/
-<<<<<<< HEAD
-<<<<<<< HEAD
 	public function filter_wp_saml_auth_option( $value, $option_name ) {
-=======
-	public function filter_wp_saml_auth_option( $value, string|null $option_name ): string {
->>>>>>> f603254 (Updates function for php 7 and 8.4)
-=======
-	public function filter_wp_saml_auth_option( $value, $option_name ) {
->>>>>>> 3fd0b8d (updates to pass php 7.4 tests)
 		if ( isset( $this->options[ $option_name ] ) ) {
 			return $this->options[ $option_name ];
 		}
