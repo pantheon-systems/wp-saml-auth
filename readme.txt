@@ -309,6 +309,7 @@ Minimum supported PHP version is 7.3.
 
 
 == Changelog ==
+= 2.2.1-dev =
 
 <<<<<<< HEAD
 <<<<<<< HEAD
