@@ -310,11 +310,19 @@ Minimum supported PHP version is 7.3.
 
 == Changelog ==
 
+<<<<<<< HEAD
 = 2.2.1-dev =
 * Adds PHP 8.4 compatibility [[#410](https://github.com/pantheon-systems/wp-saml-auth/pull/410)].
 * Increases minimum supported PHP version to 7.4.
 
 = 2.2.0 (June 9, 2025) =
+=======
+
+= 2.2.1-dev =
+* Confirmed PHP 8.4 compatibility [[#410](https://github.com/pantheon-systems/wp-saml-auth/pull/410)]
+
+= 2.2.0 (9 June 2024) =
+>>>>>>> ae3d08c (Updates the readme files)
 * Add a hook to modify returned attributes. [[#379](https://github.com/pantheon-systems/wp-saml-auth/pull/379/)]
 * Updates [`onelogin/php-saml`](https://github.com/SAML-Toolkits/php-saml) to 4.2.0. [[#402](https://github.com/pantheon-systems/wp-saml-auth/pull/402/)]
 * Adds warnings and the option to disable SAML when using a vulnerable version of simplesamlphp [[#402](https://github.com/pantheon-systems/wp-saml-auth/pull/402/)]
