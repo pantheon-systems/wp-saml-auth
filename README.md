@@ -1,11 +1,11 @@
 # WP SAML Auth #
-**Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [outlandish-josh](https://profiles.wordpress.org/outlandish-josh/), [jazzs3quence](https://profiles.wordpress.org/jazzs3quence/), [lcatlett](https://profiles.wordpress.org/lcatlett/)  
-**Tags:** authentication, SAML  
+**Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [outlandish-josh](https://profiles.wordpress.org/outlandish-josh/), [jazzs3quence](https://profiles.wordpress.org/jazzs3quence/), [lcatlett](https://profiles.wordpress.org/lcatlett/)
+**Tags:** authentication, SAML
 **Requires at least:** 6.4
 **Tested up to:** 6.8.1
 **Requires PHP:** 7.4
-**Stable tag:** 2.2.1-dev  
-**License:** GPLv2 or later  
+**Stable tag:** 2.2.1-dev
+**License:** GPLv2 or later
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html
 
 SAML authentication for WordPress.
@@ -313,7 +313,7 @@ Increases minimum supported PHP version to 7.4.
 ### 2.2.0 ###
 Security Notice: The recommended version of SimpleSAMLphp library is 2.3.7 or later when using the simplesamlphp SAML authentication type. SimpleSAMLphp 2.0.0 or later is required to fix CVE-2023-26881 (XML signature validation bypass vulnerability).
 
-New: With "Enforce Security Requirements" enabled, SimpleSAMLphp versions below 2.0.0 will be blocked. 
+New: With "Enforce Security Requirements" enabled, SimpleSAMLphp versions below 2.0.0 will be blocked.
 
 WP SAML Auth 2.2.0 requires WordPress version 6.4 or later.
 

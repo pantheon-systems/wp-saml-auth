@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
-# shellcheck disable=SC1091
 echo "DEBUG: About to source helpers.sh from $(dirname "$0")"
+# shellcheck source=bin/helpers.sh
 source "$(dirname "$0")/helpers.sh"
 echo "DEBUG: Successfully sourced helpers.sh"
 
