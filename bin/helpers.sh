@@ -244,7 +244,8 @@ install_db() {
 	local DB_HOST=${4:-"127.0.0.1"}
 
 	echo "Creating database: $1 on $4..."
-	echo "DEBUG: install_db called with DB_PASS='$3' (local var='$DB_PASS')"
+	echo "DEBUG [install_db]: Param 1 (DB_NAME): '$1', Param 2 (DB_USER): '$2', Param 3 (DB_PASS): '$3', Param 4 (DB_HOST): '$4'"
+	echo "DEBUG [install_db]: Local vars - DB_NAME='$DB_NAME', DB_USER='$DB_USER', DB_PASS='$DB_PASS', DB_HOST='$DB_HOST'"
 
 	# parse DB_HOST for port or socket references
 	IFS=':' read -ra PARTS <<< "${DB_HOST}"
