@@ -732,7 +732,7 @@ class WP_SAML_Auth {
 		// a) User wants SimpleSAMLphp but installation is broken/incomplete
 		// b) User is using OneLogin but hasn't explicitly set connection_type='internal' (legacy default)
 		// - Result: Check && $connection_type === 'simplesamlphp' and show warning "unable to determine version"
-		// - FUTURE IMPROVEMENT: Help users distinguish between cases a) and b) with better messaging 
+		// - FUTURE IMPROVEMENT: Help users distinguish between cases a) and b) with better messaging. 
 
 
 		// Scenario 1 - Using 'internal' (default) connection type.
@@ -760,7 +760,7 @@ class WP_SAML_Auth {
 			}
 		}
 
-		// Scenario 2 - If we have a SimpleSAMLphp version but the connection type is set, we haven't set up SimpleSAMLphp correctly.
+		// Scenario 2 - If we do not have a SimpleSAMLphp version but the connection type is set, we haven't set up SimpleSAMLphp correctly.
 		if ( ! $simplesamlphp_version && $connection_type === 'simplesamlphp' ) {
 			// Only show this notice if we're on the settings page.
 			if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'wp-saml-auth-settings' ) {
