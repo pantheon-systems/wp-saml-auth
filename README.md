@@ -313,7 +313,7 @@ Increases minimum supported PHP version to 7.4.
 ### 2.2.0 ###
 Security Notice: The recommended version of SimpleSAMLphp library is 2.3.7 or later when using the simplesamlphp SAML authentication type. SimpleSAMLphp 2.0.0 or later is required to fix CVE-2023-26881 (XML signature validation bypass vulnerability).
 
-New: With "Enforce Security Requirements" enabled, SimpleSAMLphp versions below 2.0.0 will be blocked. 
+New: With "Enforce Security Requirements" enabled, SimpleSAMLphp versions below 2.0.0 will be blocked.
 
 WP SAML Auth 2.2.0 requires WordPress version 6.4 or later.
 

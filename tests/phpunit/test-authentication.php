@@ -143,13 +143,13 @@ class Test_Authentication extends WP_UnitTestCase {
 
 		$GLOBALS['wp_saml_auth_current_user'] = $user;
 	}
-
 	/**
-	* @param string $value
-	* @param string|null $option_name
-	* @return string
-	*/
+	 * @param string $value
+	 * @param string|null $option_name
+	 * @return string
+	 */
 	public function filter_wp_saml_auth_option( $value, $option_name ) {
+
 		if ( isset( $this->options[ $option_name ] ) ) {
 			return $this->options[ $option_name ];
 		}

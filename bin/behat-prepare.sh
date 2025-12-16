@@ -20,6 +20,8 @@ if [ -z "$TERMINUS_SITE" ] || [ -z "$TERMINUS_ENV" ]; then
 	exit 1
 fi
 
+SITE_ENV="${TERMINUS_SITE}.${TERMINUS_ENV}"
+
 ###
 # Create a new environment for this particular test run.
 ###
@@ -75,7 +77,8 @@ rm -rf "$PREPARE_DIR"/wp-content/plugins/wp-saml-auth/.git
 
 # Add extra tests if we're running 2.0.0
 if [ "$SIMPLESAMLPHP_VERSION" == '2.0.0' ]; then
-	WORKING_DIR="/home/tester/pantheon-systems/wp-saml-auth"
+	# Use WORKING_DIR from environment if set, otherwise use current directory
+	WORKING_DIR="${WORKING_DIR:-$(pwd)}"
 	# Check that the WORKING _DIRECTORY exists
 	if [ ! -d "$WORKING_DIR" ]; then
 		echo "WORKING_DIR ($WORKING_DIR) does not exist"
@@ -225,8 +228,14 @@ git config user.name "Pantheon"
 git commit -m "Include SimpleSAMLphp and its configuration files"
 git push
 
-# Sometimes Pantheon takes a little time to refresh the filesystem
-terminus build:workflow:wait "$SITE_ENV"
+# Wait for Pantheon to process the git push and initialize the environment
+sleep 10
+
+# Wait for any workflows to complete
+terminus workflow:wait "$SITE_ENV" --max=5 || true
+
+# Give the environment a bit more time to be fully ready
+sleep 5
 
 ###
 # Set up WordPress, theme, and plugins for the test run

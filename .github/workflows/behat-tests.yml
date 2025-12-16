@@ -1,0 +1,189 @@
+name: PHPUnit & Behat
+
+on:
+  pull_request:
+  workflow_dispatch: {}
+
+jobs:
+  phpunit:
+    name: PHPUnit (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.4', '8.0', '8.1', '8.2', '8.3']
+
+    services:
+      mariadb:
+        image: mariadb:10.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      WP_TESTS_DIR: /tmp/wordpress-tests-lib
+      WP_CORE_DIR: /tmp/wordpress/
+      DB_NAME: wordpress_test
+      DB_USER: root
+      DB_PASSWORD: root
+      DB_HOST: 127.0.0.1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Setup PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@d59004228537ca90c8dca680592a08a675bf52b6 # v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mysqli, imagick
+          tools: composer:v2, wp-cli
+          coverage: none
+
+      - name: Prepare Composer deps for PHPUnit
+        run: |
+          PHP_MM=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
+          echo "Running PHPUnit deps setup on PHP ${PHP_MM}"
+
+          # On PHP 7.4 / 8.0 we don't need Behat at all, and it pulls in
+          # symfony/yaml 6.x which requires php >= 8.1.
+          if [ "$PHP_MM" = "7.4" ] || [ "$PHP_MM" = "8.0" ]; then
+            echo "PHP ${PHP_MM}: removing Behat-related dev deps for PHPUnit job"
+            composer remove --dev \
+              behat/behat \
+              behat/gherkin \
+              --no-update --no-interaction
+
+            # Remove composer.lock to allow fresh dependency resolution for this PHP version
+            rm -f composer.lock
+          fi
+
+          composer update
+          composer install -n --prefer-dist
+          chmod +x bin/*.sh
+
+      - name: Run Tests
+        run: |
+          composer test:install:withdb
+          composer phpunit
+
+  behat:
+    name: Behat (SSP ${{ matrix.ssp }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ssp: ["1.18.0", "2.0.0", "2.4.0"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          submodules: recursive
+          lfs: false
+
+      - name: Setup PHP 8.2
+        uses: shivammathur/setup-php@d59004228537ca90c8dca680592a08a675bf52b6 # v2
+        with:
+          php-version: "8.2"
+          tools: composer:v2
+          coverage: none
+
+      - name: Install Terminus
+        uses: pantheon-systems/terminus-github-actions@8e024bd89ff46ed2aa4e0663c6b54c87a94344f8 # v1.2.7
+        with:
+          pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
+
+      - name: SSH agent
+        uses: webfactory/ssh-agent@dc588b651fe13675774614f8e6a936a468676387 # v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
+          log-public-key: true
+
+      - name: Configure SSH (no strict host key checking)
+        run: |
+          mkdir -p ~/.ssh
+          printf "Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile=/dev/null\n" > ~/.ssh/config
+
+      - name: Set Pantheon site id
+        run: echo "TERMINUS_SITE=wp-saml-auth" >> $GITHUB_ENV
+
+      - name: Compute Pantheon env vars
+        env:
+          SSP: ${{ matrix.ssp }}
+          TERMINUS_SITE: ${{ env.TERMINUS_SITE }}
+        run: |
+          set -e
+          ssp_num="${SSP//./}"
+          suffix=$(printf "%04d" $(( GITHUB_RUN_NUMBER % 10000 )) )
+          env_id="ci${ssp_num}${suffix}"
+          TERMINUS_ENV="${env_id:0:10}"
+          echo "TERMINUS_ENV=$TERMINUS_ENV" >> $GITHUB_ENV
+          echo "SIMPLESAMLPHP_VERSION=$SSP" >> $GITHUB_ENV
+          echo "PANTHEON_SITE_URL=${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io" >> $GITHUB_ENV
+          echo "Using env: $TERMINUS_SITE.$TERMINUS_ENV -> https://${TERMINUS_ENV}-${TERMINUS_SITE}.pantheonsite.io"
+
+      - name: Install Composer deps
+        run: composer install --no-progress --no-interaction
+
+      - name: Prepare Behat environment
+        env:
+          WORDPRESS_ADMIN_USERNAME: pantheon
+          WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
+          WORDPRESS_ADMIN_PASSWORD: pantheon
+          WORKING_DIR: ${{ github.workspace }}
+        run: |
+          set -eux
+          if [ "${{ matrix.ssp }}" = "1.18.0" ]; then
+            bash bin/1.18/behat-prepare-simplesaml1.18.0.sh
+          else
+            bash bin/behat-prepare.sh
+          fi
+
+      - name: Wait for Pantheon workflow
+        run: |
+          SITE_ENV="${TERMINUS_SITE}.${TERMINUS_ENV}"
+          terminus workflow:wait "$SITE_ENV"
+
+      - name: Wait until site responds
+        run: |
+          set -e
+          URL="https://${PANTHEON_SITE_URL}"
+          echo "Waiting for $URL ..."
+          for i in $(seq 1 60); do
+            if curl -fsSL -o /dev/null "$URL"; then
+              echo "OK"; exit 0
+            fi
+            sleep 5
+          done
+          echo "Site never became ready: $URL"
+          exit 1
+
+      - name: Run Behat
+        env:
+          WORDPRESS_ADMIN_USERNAME: pantheon
+          WORDPRESS_ADMIN_EMAIL: no-reply@getpantheon.com
+          WORDPRESS_ADMIN_PASSWORD: pantheon
+        run: |
+          set -e
+          echo ""
+          echo "=========================================================================="
+          echo "Running Behat on https://${PANTHEON_SITE_URL}/wp-login.php"
+          echo "with SimpleSAMLphp version ${SIMPLESAMLPHP_VERSION}"
+          echo "=========================================================================="
+          echo ""
+          ./bin/behat-test.sh --strict
+
+      - name: Cleanup Behat environment
+        if: ${{ always() }}
+        run: bash bin/behat-cleanup.sh

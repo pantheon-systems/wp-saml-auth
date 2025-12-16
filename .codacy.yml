@@ -1,0 +1,14 @@
+---
+engines:
+  # Disable PHPCS in Codacy because the project uses custom Pantheon-WP coding standards
+  # that are not available in Codacy's Docker container. PHPCS is already running in
+  # GitHub Actions with the correct standards via 'composer lint'.
+  phpcs:
+    enabled: false
+
+exclude_paths:
+  - 'bin/**'
+  - 'node_modules/**'
+  - 'tests/**'
+  - 'vendor/**'
+  - 'simplesamlphp/**'

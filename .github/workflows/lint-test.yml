@@ -7,16 +7,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
-      - uses: pantheon-systems/validate-readme-spacing@v1
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: pantheon-systems/validate-readme-spacing@229ea162621009cf8e09bf2beba405017150130e # v1.0.5
   wporg-validation:
     name: WP.org Validator
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
       - name: WP.org Validator
-        uses: pantheon-systems/action-wporg-validator@v1.1.5
+        uses: pantheon-systems/action-wporg-validator@c31410aab94fc92305aec9cba6bce46040ebe3d4 # v1.1.5
         with:
           type: plugin
   lint:
@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
       - name: Lint
         run: |
           composer install
@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
       - name: Run ShellCheck
         run: |
           shellcheck --version

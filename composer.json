@@ -38,7 +38,7 @@
         "phpunit": "vendor/bin/phpunit",
         "test": "@phpunit",
         "test:install": "bin/install-local-tests.sh --skip-db=true",
-        "test:install:withdb": "bin/install-local-tests.sh"
+        "test:install:withdb": "bin/install-local-tests.sh --dbname=${DB_NAME:-wordpress_test} --dbuser=${DB_USER:-root} --dbpass=${DB_PASSWORD:-root} --dbhost=${DB_HOST:-127.0.0.1}"
     },
     "autoload": {
         "psr-4": { "PantheonSystems\\WPSamlAuth\\Behat\\": "tests/behat/bootstrap/" }
