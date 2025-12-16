@@ -702,37 +702,37 @@ class WP_SAML_Auth {
 		// - Only OneLogin is bundled with the plugin.
 		//
 		// - We need to check BOTH library detection AND version status AND connection_type together (lines 758, 781, ~820)
-		//   to ensure warnings ONLY show when SimpleSAMLphp is genuinely configured and in use.
+		// to ensure warnings ONLY show when SimpleSAMLphp is genuinely configured and in use.
 		//
 		// - An early return like `if ( $connection_type !== 'simplesamlphp' ) return;` 
-		// 	 would NOT work for Scenario 3: OneLogin users with default config would 
-		//   still fall through (because connection_type equals 'simplesamlphp' by default)
-		//   and see inappropriate warnings.
+		// would NOT work for Scenario 3: OneLogin users with default config would 
+		// still fall through (because connection_type equals 'simplesamlphp' by default)
+		// and see inappropriate warnings.
 
 		// Scenario 1: User is using OneLogin/internal connector with explicit config
-		//   - SimpleSAMLphp may or may not be installed on server
-		//   - connection_type = 'internal' (explicitly set in filter)
-		//.  - SimpleSAMLphp version not checked because connection_type !== 'simplesamlphp'
-		//   - Result: Don't show SimpleSAMLphp warnings.
+		// - SimpleSAMLphp may or may not be installed on server
+		// - connection_type = 'internal' (explicitly set in filter)
+		// .  - SimpleSAMLphp version not checked because connection_type !== 'simplesamlphp'
+		// - Result: Don't show SimpleSAMLphp warnings.
 		//
 		// Scenario 2: User is trying to use SimpleSAMLphp
-		//   - SimpleSAMLphp is not installed (library not detected)
-		//   - connection_type = 'simplesamlphp' (explicitly set or default)
-		//   - Result: Show SimpleSAMLphp error message.
+		// - SimpleSAMLphp is not installed (library not detected)
+		// - connection_type = 'simplesamlphp' (explicitly set or default)
+		// - Result: Show SimpleSAMLphp error message.
 		//
 		// Scenario 3: User is actively using SimpleSAMLphp
-		//   - SimpleSAMLphp is installed (library detected)
-		//   - connection_type = 'simplesamlphp' (explicitly set or default)
-		//   - Result: Show appropriate SimpleSAMLphp version warnings (critical/warning/unknown)
+		// - SimpleSAMLphp is installed (library detected)
+		// - connection_type = 'simplesamlphp' (explicitly set or default)
+		// - Result: Show appropriate SimpleSAMLphp version warnings (critical/warning/unknown)
 		//
 		// Scenario 4: Ambiguous - we don't know if library is detected, but config says SimpleSAMLphp
-		//   - connection_type = 'simplesamlphp' (could be explicitly set OR default value)
-		//   - $simplesamlphp_version_status = 'unknown' (can't get library version number)
-		//   - Something is up, but we CAN'T KNOW WHAT EXACTLY:
-		//     a) User wants SimpleSAMLphp but installation is broken/incomplete
-		//     b) User is using OneLogin but hasn't explicitly set connection_type='internal' (legacy default)
-		//   - Result: Check && $connection_type === 'simplesamlphp' and show warning "unable to determine version"
-		//   - FUTURE IMPROVEMENT: Help users distinguish between cases a) and b) with better messaging 
+		// - connection_type = 'simplesamlphp' (could be explicitly set OR default value)
+		// - $simplesamlphp_version_status = 'unknown' (can't get library version number)
+		// - Something is up, but we CAN'T KNOW WHAT EXACTLY:
+		// a) User wants SimpleSAMLphp but installation is broken/incomplete
+		// b) User is using OneLogin but hasn't explicitly set connection_type='internal' (legacy default)
+		// - Result: Check && $connection_type === 'simplesamlphp' and show warning "unable to determine version"
+		// - FUTURE IMPROVEMENT: Help users distinguish between cases a) and b) with better messaging 
 
 
 		// Scenario 1 - Using 'internal' (default) connection type.
