@@ -695,7 +695,47 @@ class WP_SAML_Auth {
 		$simplesamlphp_version_status = $this->check_simplesamlphp_version( $simplesamlphp_version );
 		$plugin_page = 'https://wordpress.org/plugins/wp-saml-auth';
 
-		// Using 'internal' (default) connection type.
+
+		// SimpleSAMLphp version and connection type validation
+		//
+		// - SimpleSAMLphp is NOT bundled with the plugin (users must download/install separately)
+		// - Only OneLogin is bundled with the plugin.
+		//
+		// - We need to check BOTH library detection AND version status AND connection_type together (lines 758, 781, ~820)
+		//   to ensure warnings ONLY show when SimpleSAMLphp is genuinely configured and in use.
+		//
+		// - An early return like `if ( $connection_type !== 'simplesamlphp' ) return;` 
+		// 	 would NOT work for Scenario 3: OneLogin users with default config would 
+		//   still fall through (because connection_type equals 'simplesamlphp' by default)
+		//   and see inappropriate warnings.
+
+		// Scenario 1: User is using OneLogin/internal connector with explicit config
+		//   - SimpleSAMLphp may or may not be installed on server
+		//   - connection_type = 'internal' (explicitly set in filter)
+		//.  - SimpleSAMLphp version not checked because connection_type !== 'simplesamlphp'
+		//   - Result: Don't show SimpleSAMLphp warnings.
+		//
+		// Scenario 2: User is trying to use SimpleSAMLphp
+		//   - SimpleSAMLphp is not installed (library not detected)
+		//   - connection_type = 'simplesamlphp' (explicitly set or default)
+		//   - Result: Show SimpleSAMLphp error message.
+		//
+		// Scenario 3: User is actively using SimpleSAMLphp
+		//   - SimpleSAMLphp is installed (library detected)
+		//   - connection_type = 'simplesamlphp' (explicitly set or default)
+		//   - Result: Show appropriate SimpleSAMLphp version warnings (critical/warning/unknown)
+		//
+		// Scenario 4: Ambiguous - we don't know if library is detected, but config says SimpleSAMLphp
+		//   - connection_type = 'simplesamlphp' (could be explicitly set OR default value)
+		//   - $simplesamlphp_version_status = 'unknown' (can't get library version number)
+		//   - Something is up, but we CAN'T KNOW WHAT EXACTLY:
+		//     a) User wants SimpleSAMLphp but installation is broken/incomplete
+		//     b) User is using OneLogin but hasn't explicitly set connection_type='internal' (legacy default)
+		//   - Result: Check && $connection_type === 'simplesamlphp' and show warning "unable to determine version"
+		//   - FUTURE IMPROVEMENT: Help users distinguish between cases a) and b) with better messaging 
+
+
+		// Scenario 1 - Using 'internal' (default) connection type.
 		if ( 'internal' === $connection_type ) {
 			if ( file_exists( WP_SAML_AUTH_AUTOLOADER ) ) {
 				require_once WP_SAML_AUTH_AUTOLOADER;
@@ -720,7 +760,7 @@ class WP_SAML_Auth {
 			}
 		}
 
-		// If we have a SimpleSAMLphp version but the connection type is set, we haven't set up SimpleSAMLphp correctly.
+		// Scenario 2 - If we have a SimpleSAMLphp version but the connection type is set, we haven't set up SimpleSAMLphp correctly.
 		if ( ! $simplesamlphp_version && $connection_type === 'simplesamlphp' ) {
 			// Only show this notice if we're on the settings page.
 			if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'wp-saml-auth-settings' ) {
@@ -743,9 +783,9 @@ class WP_SAML_Auth {
 			);
 		}
 
-		// Check SimpleSAMLphp version.
-		if ( $simplesamlphp_version !== false ) {
-			if ( 'critical' === $simplesamlphp_version_status && $connection_type === 'simplesamlphp' ) {
+		// Scenario 3 - Check SimpleSAMLphp version warnings (see documentation above for scenario 3 details).
+		if ( $simplesamlphp_version !== false && $connection_type === 'simplesamlphp' ) {
+			if ( 'critical' === $simplesamlphp_version_status ) {
 				$min_version = self::get_option( 'critical_simplesamlphp_version' );
 				wp_admin_notice(
 					sprintf(
@@ -764,7 +804,7 @@ class WP_SAML_Auth {
 						],
 					]
 				);
-			} elseif ( 'warning' === $simplesamlphp_version_status && $connection_type === 'simplesamlphp' ) {
+			} elseif ( 'warning' === $simplesamlphp_version_status ) {
 				$min_version = self::get_option( 'min_simplesamlphp_version' );
 				wp_admin_notice(
 					sprintf(
@@ -784,6 +824,7 @@ class WP_SAML_Auth {
 					]
 				);
 			}
+			// Scenario 4 - Unable to determine SimpleSAMLphp version.
 		} elseif ( 'unknown' === $simplesamlphp_version_status && $connection_type === 'simplesamlphp' ) {
 			// Only show this notice if we're on the settings page.
 			if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'wp-saml-auth-settings' ) {
