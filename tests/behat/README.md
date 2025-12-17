@@ -10,6 +10,7 @@ WP SAML Auth supports two SAML connection types:
 ### Current Test Implementation
 
 Tests currently run with a single connection type, configured in `bin/fixtures/functions.php`:
+
 - Currently set to `connection_type='simplesamlphp'` to test SimpleSAMLphp functionality and warning messages
 - The plugin's default is `'internal'` (OneLogin connector)
 
@@ -32,6 +33,7 @@ For thorough validation, tests should cover both connection types across all sce
 | 2.4.0 | ✓ NO warning (current) | ✓ NO warning (not using SimpleSAMLphp) |
 
 This comprehensive approach validates:
+
 - Both connectors work independently
 - Warnings only show when using SimpleSAMLphp (`connection_type='simplesamlphp'`)
 - Warnings correctly suppress for OneLogin users (`connection_type='internal'`)
