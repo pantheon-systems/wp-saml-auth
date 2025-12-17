@@ -1,5 +1,53 @@
 # Behat Integration Tests
 
+## Connection Type Testing
+
+WP SAML Auth supports two SAML connection types:
+
+1. **`internal`** (default) - Uses the bundled OneLogin SAML PHP library
+2. **`simplesamlphp`** - Uses separately-installed SimpleSAMLphp library
+
+### Current Test Implementation
+
+Tests currently run with a single connection type, configured in `bin/fixtures/functions.php`:
+- Currently set to `connection_type='simplesamlphp'` to test SimpleSAMLphp functionality and warning messages
+- The plugin's default is `'internal'` (OneLogin connector)
+
+### Recommended Comprehensive Test Coverage
+
+For thorough validation, tests should cover both connection types across all scenarios:
+
+**Functionality Tests (login, authentication):**
+| SimpleSAMLphp Version | `connection_type='simplesamlphp'` | `connection_type='internal'` |
+|-----------------------|----------------------------------|------------------------------|
+| 1.18.0 | ✓ Test SAML auth works | ✓ Test OneLogin works |
+| 2.0.0 | ✓ Test SAML auth works | ✓ Test OneLogin works |
+| 2.4.0 | ✓ Test SAML auth works | ✓ Test OneLogin works |
+
+**Warning Message Tests:**
+| SimpleSAMLphp Version | `connection_type='simplesamlphp'` | `connection_type='internal'` |
+|-----------------------|----------------------------------|------------------------------|
+| 1.18.0 | ✓ Critical warning shows | ✓ NO warning (not using SimpleSAMLphp) |
+| 2.0.0 | ✓ Security warning shows | ✓ NO warning (not using SimpleSAMLphp) |
+| 2.4.0 | ✓ NO warning (current) | ✓ NO warning (not using SimpleSAMLphp) |
+
+This comprehensive approach validates:
+- Both connectors work independently
+- Warnings only show when using SimpleSAMLphp (`connection_type='simplesamlphp'`)
+- Warnings correctly suppress for OneLogin users (`connection_type='internal'`)
+- The `&& $connection_type === 'simplesamlphp'` conditional checks function correctly
+
+### Historical Context
+
+**May 2019:** The plugin's default connection type was set to `'internal'` (bundled OneLogin library).
+*Commit: [8866ecd](https://github.com/pantheon-systems/wp-saml-auth/commit/8866ecd) - "Remove 'connection_type' option because 'internal' is the only supported"*
+
+**June 2025:** SimpleSAMLphp security warnings were added to alert users of vulnerable versions (CVE-2023-26881).
+*PR #402: [89a3d5e](https://github.com/pantheon-systems/wp-saml-auth/pull/402) - "SITE-4575: Update SimpleSAMLphp security requirements to 2.3.7"*
+
+**December 2025:** Test configuration was updated to use `connection_type='simplesamlphp'` to enable testing of SimpleSAMLphp-specific functionality and warning messages.
+*Branch: `newAdaptWarningMessage` - Commit: [d2c743a](https://github.com/pantheon-systems/wp-saml-auth/commit/d2c743a) - "Fix SimpleSamlPHP fonctionnality"*
+
 ## SimpleSAMLphp Version Testing
 
 The Behat test suite validates SAML authentication against multiple SimpleSAMLphp versions:
