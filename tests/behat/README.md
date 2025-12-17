@@ -117,12 +117,3 @@ The tests use:
 - **Pantheon multidev environments**: Temporary test environments created per test run
 - **SimpleSAMLphp**: Deployed on Pantheon alongside WordPress for integration testing
 
-## Running Tests Locally
-
-Tests are designed to run in CI/CD via GitHub Actions. Running locally requires:
-
-- Terminus CLI with Pantheon authentication
-- Access to the `wp-saml-auth` Pantheon site
-- SimpleSAMLphp installation on the Pantheon environment
-
-See `.github/workflows/behat-tests.yml` for the complete test setup.
