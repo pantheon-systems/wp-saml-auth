@@ -64,6 +64,15 @@ jobs:
       - name: Setup WP-CLI
         uses: godaddy-wordpress/setup-wp-cli@1
 
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}-${{ matrix.php }}
+          restore-keys: |
+            composer-${{ hashFiles('composer.lock') }}-
+            composer-
+
       - name: Install Composer dependencies
         run: |
           if [ "${{ matrix.php }}" = "7.4" ] || [ "${{ matrix.php }}" = "8.0" ]; then
@@ -72,10 +81,7 @@ jobs:
           fi
           composer install --no-interaction --no-progress --prefer-dist
 
-
       - name: Run PHPUnit
-        env:
-          WP_VERSION: 6.8.3
         run: |
           chmod +x bin/*.sh
           bash bin/phpunit-test.sh
