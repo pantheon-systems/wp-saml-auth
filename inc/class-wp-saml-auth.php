@@ -718,10 +718,18 @@ class WP_SAML_Auth {
 					]
 				);
 			}
+			return;
 		}
 
-		// Scenario 2 - If we do not have a SimpleSAMLphp version but the connection type is set, we haven't set up SimpleSAMLphp correctly.
-		if ( ! $simplesamlphp_version && $connection_type === 'simplesamlphp' ) {
+		// Early return if not using SimpleSAMLphp connection type.
+		if ( 'simplesamlphp' !== $connection_type ) {
+			return;
+		}
+
+		// All scenarios below are for SimpleSAMLphp connection type.
+
+		// Scenario 2 - If we do not have a SimpleSAMLphp version, we haven't set up SimpleSAMLphp correctly.
+		if ( ! $simplesamlphp_version ) {
 			// Only show this notice if we're on the settings page.
 			if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'wp-saml-auth-settings' ) {
 				return;
@@ -741,51 +749,50 @@ class WP_SAML_Auth {
 					],
 				]
 			);
+			return;
 		}
 
-		// Scenario 3 - Check SimpleSAMLphp version warnings (see documentation above for scenario 3 details).
-		if ( $simplesamlphp_version !== false && $connection_type === 'simplesamlphp' ) {
-			if ( 'critical' === $simplesamlphp_version_status ) {
-				$min_version = self::get_option( 'critical_simplesamlphp_version' );
-				wp_admin_notice(
-					sprintf(
-						// Translators: 1 is the installed version of SimpleSAMLphp, 2 is the minimum version and 3 is the most secure version.
-						__( '<strong>Security Alert:</strong> The SimpleSAMLphp version used by the WP SAML Auth plugin (%1$s) has a critical security vulnerability (CVE-2023-26881). Please update to version %2$s or later. <a href="%3$s">Learn more</a>.', 'wp-saml-auth' ),
-						esc_html( $simplesamlphp_version ),
-						esc_html( $min_version ),
-						esc_url( admin_url( 'options-general.php?page=wp-saml-auth-settings' ) )
-					),
-					[
-						'type' => 'error',
-						'dismissible' => false,
-						'attributes' => [
-							'data-slug' => 'wp-saml-auth',
-							'data-type' => 'simplesamlphp-critical-vulnerability',
-						],
-					]
-				);
-			} elseif ( 'warning' === $simplesamlphp_version_status ) {
-				$min_version = self::get_option( 'min_simplesamlphp_version' );
-				wp_admin_notice(
-					sprintf(
-						// Translators: 1 is the installed version of SimpleSAMLphp, 2 is the minimum version and 3 is the most secure version.
-						__( '<strong>Security Recommendation:</strong> The  SimpleSAMLphp version used by the WP SAML Auth plugin (%1$s) is older than the recommended secure version. Please consider updating to version %2$s or later. <a href="%3$s">Learn more</a>.', 'wp-saml-auth' ),
-						esc_html( $simplesamlphp_version ),
-						esc_html( $min_version ),
-						esc_url( admin_url( 'options-general.php?page=wp-saml-auth-settings' ) )
-					),
-					[
-						'type' => 'warning',
-						'dismissible' => true,
-						'attributes' => [
-							'data-slug' => 'wp-saml-auth',
-							'data-type' => 'simplesamlphp-version-warning',
-						],
-					]
-				);
-			}
+		// Scenario 3 - Check SimpleSAMLphp version warnings.
+		if ( 'critical' === $simplesamlphp_version_status ) {
+			$min_version = self::get_option( 'critical_simplesamlphp_version' );
+			wp_admin_notice(
+				sprintf(
+					// Translators: 1 is the installed version of SimpleSAMLphp, 2 is the minimum version and 3 is the most secure version.
+					__( '<strong>Security Alert:</strong> The SimpleSAMLphp version used by the WP SAML Auth plugin (%1$s) has a critical security vulnerability (CVE-2023-26881). Please update to version %2$s or later. <a href="%3$s">Learn more</a>.', 'wp-saml-auth' ),
+					esc_html( $simplesamlphp_version ),
+					esc_html( $min_version ),
+					esc_url( admin_url( 'options-general.php?page=wp-saml-auth-settings' ) )
+				),
+				[
+					'type' => 'error',
+					'dismissible' => false,
+					'attributes' => [
+						'data-slug' => 'wp-saml-auth',
+						'data-type' => 'simplesamlphp-critical-vulnerability',
+					],
+				]
+			);
+		} elseif ( 'warning' === $simplesamlphp_version_status ) {
+			$min_version = self::get_option( 'min_simplesamlphp_version' );
+			wp_admin_notice(
+				sprintf(
+					// Translators: 1 is the installed version of SimpleSAMLphp, 2 is the minimum version and 3 is the most secure version.
+					__( '<strong>Security Recommendation:</strong> The  SimpleSAMLphp version used by the WP SAML Auth plugin (%1$s) is older than the recommended secure version. Please consider updating to version %2$s or later. <a href="%3$s">Learn more</a>.', 'wp-saml-auth' ),
+					esc_html( $simplesamlphp_version ),
+					esc_html( $min_version ),
+					esc_url( admin_url( 'options-general.php?page=wp-saml-auth-settings' ) )
+				),
+				[
+					'type' => 'warning',
+					'dismissible' => true,
+					'attributes' => [
+						'data-slug' => 'wp-saml-auth',
+						'data-type' => 'simplesamlphp-version-warning',
+					],
+				]
+			);
+		} elseif ( 'unknown' === $simplesamlphp_version_status ) {
 			// Scenario 4 - Unable to determine SimpleSAMLphp version.
-		} elseif ( 'unknown' === $simplesamlphp_version_status && $connection_type === 'simplesamlphp' ) {
 			// Only show this notice if we're on the settings page.
 			if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'wp-saml-auth-settings' ) {
 				return;
