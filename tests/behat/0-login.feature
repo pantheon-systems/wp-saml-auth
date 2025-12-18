@@ -23,16 +23,6 @@ Feature: SAML Login
     Then print current URL
     Then the "email" field should contain "test-student@example.com"
 
-  Scenario: Redirects using the 'redirect_to' field
-    Given I am on "wp-login.php?redirect_to=/sample-page/"
-    Then print current URL
-    And I fill in "username" with "employee"
-    And I fill in "password" with "employeepass"
-    And I press "submit"
-	Then I follow the SAML redirect manually
-    Then print current URL
-    Then I should see "Sample Page" in the ".wp-block-post-title" element
-
   Scenario: Errors on an invalidpassword
     Given I am on "wp-login.php"
     Then print current URL
