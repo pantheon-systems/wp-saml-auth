@@ -1,0 +1,15 @@
+# behat-1.18.yml
+# Minimal test configuration for SimpleSAMLphp 1.18.0
+# Only runs basic SAML login and security notice tests
+default:
+  suites:
+    saml-only:
+      paths:
+        - tests/behat
+      contexts:
+        - Behat\MinkExtension\Context\MinkContext
+        - PantheonSystems\WPSamlAuth\Behat\AdminLogIn
+  extensions:
+    Behat\MinkExtension:
+      # base_url set by ENV
+      goutte: ~
