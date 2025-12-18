@@ -92,28 +92,30 @@ class WP_SAML_Auth {
 			$auth_config    = self::get_option( 'internal_config' );
 			$this->provider = new OneLogin\Saml2\Auth( $auth_config );
 		} else {
-			$this->simplesamlphp_class = 'SimpleSAML\Auth\Simple';
-			
-			// if object doesn't exist, find the autoloader.
-			if ( ! class_exists( $this->simplesamlphp_class ) ) {
+			// Check if SimpleSAMLphp class is already autoloaded (2.x first, then 1.18).
+			if ( class_exists( 'SimpleSAML\Auth\Simple' ) ) {
+				$this->simplesamlphp_class = 'SimpleSAML\Auth\Simple';
+			} elseif ( ! class_exists( 'SimpleSAML_Auth_Simple' ) ) {
+				// Neither class exists, find and load the autoloader.
 				$simplesamlphp_autoloader = self::get_simplesamlphp_autoloader();
 
-				// If the autoloader exists, load it.
 				if ( ! empty( $simplesamlphp_autoloader ) && file_exists( $simplesamlphp_autoloader ) ) {
 					require_once $simplesamlphp_autoloader;
 				} else {
-					// Autoloader not found.
 					$this->maybe_log_error( $simplesamlphp_autoloader );
 					return;
 				}
-			}
 
-			// test again in case `require_once $simplesamlphp_autoloader` didn't find it.
-			if ( ! class_exists( $this->simplesamlphp_class ) ) {
-				$this->maybe_log_error();
-				return;
+				// After loading, determine which class is available.
+				if ( class_exists( 'SimpleSAML\Auth\Simple' ) ) {
+					$this->simplesamlphp_class = 'SimpleSAML\Auth\Simple';
+				} elseif ( ! class_exists( 'SimpleSAML_Auth_Simple' ) ) {
+					$this->maybe_log_error();
+					return;
+				}
 			}
-   
+			// else: SimpleSAML_Auth_Simple exists, use default class name.
+
 			$this->provider = new $this->simplesamlphp_class( self::get_option( 'auth_source' ) );
 		}
 	}
