@@ -797,29 +797,27 @@ class WP_SAML_Auth {
 			return;
 		}
 
-		if ( 'unknown' === $simplesamlphp_version_status ) {
-			// Scenario 4 - Unable to determine SimpleSAMLphp version.
-			// Only show this notice if we're on the settings page.
-			if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'wp-saml-auth-settings' ) {
-				return;
-			}
-			wp_admin_notice(
-				sprintf(
-					// Translators: 1 is the minimum recommended version of SimpleSAMLphp. 2 is a link to the WP SAML Auth settings page.
-					__( '<strong>Warning:</strong> WP SAML Auth was unable to determine your SimpleSAMLphp version. Please ensure you are using version %1$s or later for security. <a href="%2$s">Learn more</a>.', 'wp-saml-auth' ),
-					esc_html( self::get_option( 'min_simplesamlphp_version' ) ),
-					esc_url( admin_url( 'options-general.php?page=wp-saml-auth-settings' ) )
-				),
-				[
-					'type' => 'warning',
-					'dismissible' => true,
-					'attributes' => [
-						'data-slug' => 'wp-saml-auth',
-						'data-type' => 'simplesamlphp-version-unknown',
-					],
-				]
-			);
+		// Scenario 4 - Unable to determine SimpleSAMLphp version ("unknown").
+		// Only show this notice if we're on the settings page.
+		if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'wp-saml-auth-settings' ) {
+			return;
 		}
+		wp_admin_notice(
+			sprintf(
+				// Translators: 1 is the minimum recommended version of SimpleSAMLphp. 2 is a link to the WP SAML Auth settings page.
+				__( '<strong>Warning:</strong> WP SAML Auth was unable to determine your SimpleSAMLphp version. Please ensure you are using version %1$s or later for security. <a href="%2$s">Learn more</a>.', 'wp-saml-auth' ),
+				esc_html( self::get_option( 'min_simplesamlphp_version' ) ),
+				esc_url( admin_url( 'options-general.php?page=wp-saml-auth-settings' ) )
+			),
+			[
+				'type' => 'warning',
+				'dismissible' => true,
+				'attributes' => [
+					'data-slug' => 'wp-saml-auth',
+					'data-type' => 'simplesamlphp-version-unknown',
+				],
+			]
+		);
 	}
 
 	/**
