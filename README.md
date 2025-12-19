@@ -306,14 +306,6 @@ There is no third step. Because SimpleSAMLphp loads WordPress, which has WP Nati
 
 ## Upgrade Notice ##
 
-### 2.2.1-dev ###
-* Adds PHP 8.4 compatibility [[#410](https://github.com/pantheon-systems/wp-saml-auth/pull/410)].
-* Increases minimum supported PHP version to 7.4.
-* Compatible with WordPress 6.9
-* Fix warning message on the plugin's settings page for users who aren't using SimpleSAML [[#445](https://github.com/pantheon-systems/wp-saml-auth/pull/445)].
-* Fix behat tests and adapt 1.18 version testing [[#447](https://github.com/pantheon-systems/wp-saml-auth/pull/447)].
-* Skip SimpleSAMLphp autoloader discovery when the SimpleSAML\Auth\Simple class is already loaded [[#444](https://github.com/pantheon-systems/wp-saml-auth/pull/444)].
-
 ### 2.2.0 ###
 Security Notice: The recommended version of SimpleSAMLphp library is 2.3.7 or later when using the simplesamlphp SAML authentication type. SimpleSAMLphp 2.0.0 or later is required to fix CVE-2023-26881 (XML signature validation bypass vulnerability).
 
