@@ -92,31 +92,51 @@ class WP_SAML_Auth {
 			$auth_config    = self::get_option( 'internal_config' );
 			$this->provider = new OneLogin\Saml2\Auth( $auth_config );
 		} else {
-			$simplesamlphp_autoloader = self::get_simplesamlphp_autoloader();
-
-			// If the autoloader exists, load it.
-			if ( ! empty( $simplesamlphp_autoloader ) && file_exists( $simplesamlphp_autoloader ) ) {
-				require_once $simplesamlphp_autoloader;
-			} else {
-				// Autoloader not found.
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					$error_message = sprintf(
-						// Translators: %s is the path to the SimpleSAMLphp autoloader file (if found).
-						__( 'WP SAML Auth: SimpleSAMLphp autoloader could not be loaded for set_provider. Path determined: %s', 'wp-saml-auth' ),
-						empty( $simplesamlphp_autoloader ) ? '[empty]' : esc_html( $simplesamlphp_autoloader )
-					);
-					error_log( $error_message );
-				}
-				return;
-			}
-
+			// Check if SimpleSAMLphp class is already autoloaded (2.x first, then 1.18).
 			if ( class_exists( 'SimpleSAML\Auth\Simple' ) ) {
 				$this->simplesamlphp_class = 'SimpleSAML\Auth\Simple';
+			} elseif ( ! class_exists( 'SimpleSAML_Auth_Simple' ) ) {
+				// Neither class exists, find and load the autoloader.
+				$simplesamlphp_autoloader = self::get_simplesamlphp_autoloader();
+
+				if ( ! empty( $simplesamlphp_autoloader ) && file_exists( $simplesamlphp_autoloader ) ) {
+					require_once $simplesamlphp_autoloader;
+				} else {
+					$this->log_autoloader_error( $simplesamlphp_autoloader );
+					return;
+				}
+
+				// After loading, determine which class is available.
+				if ( class_exists( 'SimpleSAML\Auth\Simple' ) ) {
+					$this->simplesamlphp_class = 'SimpleSAML\Auth\Simple';
+				} elseif ( ! class_exists( 'SimpleSAML_Auth_Simple' ) ) {
+					$this->log_autoloader_error();
+					return;
+				}
 			}
-			if ( ! class_exists( $this->simplesamlphp_class ) ) {
-				return;
-			}
+			// else: SimpleSAML_Auth_Simple exists, use default class name.
+
 			$this->provider = new $this->simplesamlphp_class( self::get_option( 'auth_source' ) );
+		}
+	}
+  
+	/**
+	 * Log autoloader error when WP_DEBUG is set
+	 *
+	 * @param string $path Path to autoloader
+	 * @return void
+	 */
+	protected function log_autoloader_error( $path = '' ) {
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			$error_message = empty( $path )
+				? __( 'WP SAML Auth: SimpleSAMLphp autoloader could not be loaded for set_provider.', 'wp-saml-auth' )
+				: sprintf(
+					// Translators: %s is the path to the SimpleSAMLphp autoloader file (if found).
+					__( 'WP SAML Auth: SimpleSAMLphp autoloader could not be loaded for set_provider. Path determined: %s', 'wp-saml-auth' ),
+					esc_html( $path )
+				);
+
+			error_log( $error_message );
 		}
 	}
 
