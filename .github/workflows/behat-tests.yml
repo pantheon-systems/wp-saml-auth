@@ -118,7 +118,7 @@ jobs:
           pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
 
       - name: SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.9.1
         with:
           ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
           log-public-key: true
