@@ -298,11 +298,6 @@ If you're using the SimpleSAMLphp connection type:
 
 == Upgrade Notice ==
 
-= 2.2.1-dev =
-Minimum supported PHP version is 7.4.
-Adds PHP 8.4 compatibility.
-Compatible with WordPress 6.9.
-
 = 2.2.0 =
 Security Notice: The recommended version of SimpleSAMLphp library is 2.3.7 or later when using the simplesamlphp SAML authentication type. SimpleSAMLphp 2.0.0 or later is required to fix CVE-2023-26881 (XML signature validation bypass vulnerability).
 
