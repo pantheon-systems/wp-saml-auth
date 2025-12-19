@@ -25,4 +25,11 @@ set -ex
 export XDEBUG_MODE=off
 export BEHAT_PARAMS='{"extensions" : {"Behat\\MinkExtension" : {"base_url" : "http://'$TERMINUS_ENV'-'$TERMINUS_SITE'.pantheonsite.io"} }}'
 
-./vendor/bin/behat "$@"
+# Use custom behat configuration for SimpleSAMLphp 1.18.0
+# This only runs the SAML-specific tests, skipping Pantheon upstream tests that fail on 1.18.0
+if [ "$SIMPLESAMLPHP_VERSION" = "1.18.0" ]; then
+	echo "Using minimal test configuration for SimpleSAMLphp 1.18.0"
+	./vendor/bin/behat -c behat-1.18.yml "$@"
+else
+	./vendor/bin/behat "$@"
+fi

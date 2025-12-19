@@ -1,8 +1,8 @@
 === WP SAML Auth ===
-Contributors: getpantheon, danielbachhuber, Outlandish Josh, jspellman, jazzs3quence
+Contributors: getpantheon, danielbachhuber, Outlandish Josh, jspellman, jazzs3quence, AnaisPantheor
 Tags: authentication, SAML
 Requires at least: 6.4
-Tested up to: 6.8.1
+Tested up to: 6.9
 Requires PHP: 7.4
 Stable tag: 2.3.0-dev
 License: GPLv2 or later
@@ -326,8 +326,11 @@ Minimum supported PHP version is 7.3.
 * Adds `wp_saml_auth_internal_config` filter to allow customization of the OneLogin SAML configuration [[#497](https://github.com/pantheon-systems/wp-saml-auth/pull/497)].
 * Adds PHP 8.4 compatibility [[#410](https://github.com/pantheon-systems/wp-saml-auth/pull/410)].
 * Increases minimum supported PHP version to 7.4.
+* Compatible with WordPress 6.9
+* Fix warning message on the plugin's settings page for users who aren't using SimpleSAML [[#445](https://github.com/pantheon-systems/wp-saml-auth/pull/445)].
+* Skip SimpleSAMLphp autoloader discovery when the SimpleSAML\Auth\Simple class is already loaded [[#444](https://github.com/pantheon-systems/wp-saml-auth/pull/444)].
 
-= 2.2.0 (June 9, 2025) =
+= 2.2.0 (9 June 2024) =
 * Add a hook to modify returned attributes. [[#379](https://github.com/pantheon-systems/wp-saml-auth/pull/379/)]
 * Updates [`onelogin/php-saml`](https://github.com/SAML-Toolkits/php-saml) to 4.2.0. [[#402](https://github.com/pantheon-systems/wp-saml-auth/pull/402/)]
 * Adds warnings and the option to disable SAML when using a vulnerable version of simplesamlphp [[#402](https://github.com/pantheon-systems/wp-saml-auth/pull/402/)]

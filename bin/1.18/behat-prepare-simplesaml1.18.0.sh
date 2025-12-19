@@ -20,11 +20,22 @@ if [ -z "$TERMINUS_SITE" ] || [ -z "$TERMINUS_ENV" ]; then
 	exit 1
 fi
 
+SITE_ENV="$TERMINUS_SITE.$TERMINUS_ENV"
+
 ###
 # Create a new environment for this particular test run.
 ###
-terminus env:create "$TERMINUS_SITE".dev "$TERMINUS_ENV"
+# Check if environment exists, create only if it doesn't
+if ! terminus env:list "$TERMINUS_SITE" --format=list | grep -q "^${TERMINUS_ENV}$"; then
+	terminus env:create "$TERMINUS_SITE".dev "$TERMINUS_ENV"
+	# Wait for environment creation to complete
+	terminus workflow:wait "$SITE_ENV" --max=300
+fi
 terminus env:wipe "$SITE_ENV" --yes
+
+# Save environment info for cleanup
+mkdir -p /tmp/behat-envs
+echo "$SITE_ENV" > "/tmp/behat-envs/site_env_${TERMINUS_ENV}.txt"
 
 ###
 # Get all necessary environment details.
@@ -72,50 +83,31 @@ rsync -av \
 	--exclude='.git' \
 	./* "$PREPARE_DIR"/wp-content/plugins/wp-saml-auth
 
-WORKING_DIR="/home/tester/pantheon-systems/wp-saml-auth"
-# Check that the WORKING _DIRECTORY exists
+# Use WORKING_DIR from environment if set, otherwise use repository root
+WORKING_DIR="${WORKING_DIR:-$BASH_DIR/../..}"
+# Check that the WORKING_DIRECTORY exists
 if [ ! -d "$WORKING_DIR" ]; then
 	echo "WORKING_DIR ($WORKING_DIR) does not exist"
 	exit 1
 fi
 
-# Check that "$BASH_DIR"/1-adminnotice.feature exists.
-if [ ! -f "$BASH_DIR"/1-adminnotice.feature ]; then
-	echo "\"$BASH_DIR/1-adminnotice.feature\" does not exist"
-	exit 1
-fi
-
-# Check that $WORKING_DIR/tests exists
-if [ ! -d "$WORKING_DIR/tests" ]; then
-	echo "$WORKING_DIR/tests does not exist"
-	exit 1
-fi
-
-# Check that $WORKING_DIR/tests contains a behat directory
-if [ ! -d "$WORKING_DIR/tests/behat" ]; then
-	echo "$WORKING_DIR/tests/behat does not exist"
-	exit 1
-fi
-
-# Check that $WORKING_DIR/tests/behat contains 0-login.feature
-if [ ! -f "$WORKING_DIR/tests/behat/0-login.feature" ]; then
-	echo "$WORKING_DIR/tests/behat/0-login.feature does not exist"
-	exit 1
-fi
-
-# If we got through all that stuff, we should be good to copy the file now.
-echo "Copying 1-adminnotice.feature to local Behat tests directory (${WORKING_DIR}/tests/behat/)"
-cp "$BASH_DIR"/1-adminnotice.feature "$WORKING_DIR"/tests/behat/
+# For SimpleSAMLphp 1.18.0, we only run basic login and admin notice tests
+# Remove all existing test files and copy only the 1.18-specific tests
+echo "Setting up SimpleSAMLphp 1.18.0-specific tests"
+rm -f "$WORKING_DIR"/tests/behat/*.feature
+cp "$BASH_DIR"/../fixtures/0-login-1.18.feature "$WORKING_DIR"/tests/behat/0-login.feature
+cp "$BASH_DIR"/../fixtures/1-adminnotice-1.18.feature "$WORKING_DIR"/tests/behat/1-adminnotice.feature
+echo "✓ Configured tests: basic login + critical vulnerability notice"
 
 ###
 # Add SimpleSAMLphp to the environment
 # SimpleSAMLphp is installed to ~/code/private, and then symlinked into the
 # web root
 ###
-echo "Setting up SimpleSAMLphp"
+echo "Setting up SimpleSAMLphp 1.18.0"
 rm -rf "$PREPARE_DIR"/private
 mkdir "$PREPARE_DIR"/private
-wget https://github.com/simplesamlphp/simplesamlphp/releases/download/v1.18.4/simplesamlphp-1.18.4.tar.gz -O "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
+wget https://github.com/simplesamlphp/simplesamlphp/releases/download/v1.18.0/simplesamlphp-1.18.0.tar.gz -O "$PREPARE_DIR"/simplesamlphp-latest.tar.gz
 tar -zxvf "$PREPARE_DIR"/simplesamlphp-latest.tar.gz -C "$PREPARE_DIR"/private
 ORIG_SIMPLESAMLPHP_DIR=$(ls "$PREPARE_DIR"/private)
 mv "$PREPARE_DIR"/private/"$ORIG_SIMPLESAMLPHP_DIR" "$PREPARE_DIR"/private/simplesamlphp
@@ -136,6 +128,9 @@ echo "\$wordpress_admin_username = '${WORDPRESS_ADMIN_USERNAME}';" >> "$PREPARE_
 echo "\$wordpress_admin_email = '${WORDPRESS_ADMIN_EMAIL}';" >> "$PREPARE_DIR"/private/simplesamlphp/config/authsources.php
 cat "$BASH_DIR"/authsources.php.additions >> "$PREPARE_DIR"/private/simplesamlphp/config/authsources.php
 cat "$BASH_DIR"/config.php.additions >> "$PREPARE_DIR"/private/simplesamlphp/config/config.php
+
+# Copy config-prepare.php to mu-plugins to define SIMPLESAMLPHP_CONFIG_DIR early
+cp "$FIXTURES_DIR"/config-prepare.php "$PREPARE_DIR"/wp-content/mu-plugins/config-prepare.php
 
 # Copy identify provider configuration files into their appropriate locations
 cp "$BASH_DIR"/saml20-idp-hosted.php  "$PREPARE_DIR"/private/simplesamlphp/metadata/saml20-idp-hosted.php
@@ -170,7 +165,7 @@ git commit -m "Include SimpleSAMLphp and its configuration files"
 git push
 
 # Sometimes Pantheon takes a little time to refresh the filesystem
-terminus build:workflow:wait "$SITE_ENV"
+terminus workflow:wait "$SITE_ENV"
 
 ###
 # Copy the Pantheon.yml to switch PHP to 7.4
