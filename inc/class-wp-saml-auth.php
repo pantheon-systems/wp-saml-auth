@@ -772,7 +772,10 @@ class WP_SAML_Auth {
 					],
 				]
 			);
-		} elseif ( 'warning' === $simplesamlphp_version_status ) {
+			return;
+		}
+
+		if ( 'warning' === $simplesamlphp_version_status ) {
 			$min_version = self::get_option( 'min_simplesamlphp_version' );
 			wp_admin_notice(
 				sprintf(
@@ -791,7 +794,10 @@ class WP_SAML_Auth {
 					],
 				]
 			);
-		} elseif ( 'unknown' === $simplesamlphp_version_status ) {
+			return;
+		}
+
+		if ( 'unknown' === $simplesamlphp_version_status ) {
 			// Scenario 4 - Unable to determine SimpleSAMLphp version.
 			// Only show this notice if we're on the settings page.
 			if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'wp-saml-auth-settings' ) {
