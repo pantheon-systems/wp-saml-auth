@@ -102,7 +102,7 @@ class WP_SAML_Auth {
 				if ( ! empty( $simplesamlphp_autoloader ) && file_exists( $simplesamlphp_autoloader ) ) {
 					require_once $simplesamlphp_autoloader;
 				} else {
-					$this->maybe_log_error( $simplesamlphp_autoloader );
+					$this->log_autoloader_error( $simplesamlphp_autoloader );
 					return;
 				}
 
@@ -110,7 +110,7 @@ class WP_SAML_Auth {
 				if ( class_exists( 'SimpleSAML\Auth\Simple' ) ) {
 					$this->simplesamlphp_class = 'SimpleSAML\Auth\Simple';
 				} elseif ( ! class_exists( 'SimpleSAML_Auth_Simple' ) ) {
-					$this->maybe_log_error();
+					$this->log_autoloader_error();
 					return;
 				}
 			}
@@ -121,12 +121,12 @@ class WP_SAML_Auth {
 	}
   
 	/**
-	 * Use error_log when WP_DEBUG is set
+	 * Log autoloader error when WP_DEBUG is set
 	 *
 	 * @param string $path Path to autoloader
 	 * @return void
 	 */
-	protected function maybe_log_error( $path = '' ) {
+	protected function log_autoloader_error( $path = '' ) {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			$error_message = empty( $path )
 				? __( 'WP SAML Auth: SimpleSAMLphp autoloader could not be loaded for set_provider.', 'wp-saml-auth' )
