@@ -4,7 +4,7 @@ Tags: authentication, SAML
 Requires at least: 6.4
 Tested up to: 6.9
 Requires PHP: 7.4
-Stable tag: 2.2.1-dev
+Stable tag: 2.3.0-dev
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -201,6 +201,18 @@ If you need to adapt authentication behavior based on the SAML response, you can
         return $ret;
     }, 10, 2 );
 
+If you're using the OneLogin connection type and need to modify the `internal_config` (e.g. to set `requestedAuthnContext` to `false`), you can use the `wp_saml_auth_internal_config` filter:
+
+    /**
+     * Modify the OneLogin SAML configuration.
+     */
+    add_filter( 'wp_saml_auth_internal_config', function( $config ) {
+        $config['security'] = array(
+            'requestedAuthnContext' => false,
+        );
+        return $config;
+    } );
+
 If you have installed SimpleSAMLphp to a non-default path, you can set that path via the `wp_saml_auth_simplesamlphp_path_array` filter. By default, it is assumed that SimpleSAMLphp is installed into one of the following paths:
 * `ABSPATH . 'simplesaml'`
 * `ABSPATH . 'private/simplesamlphp'`
@@ -310,7 +322,8 @@ Minimum supported PHP version is 7.3.
 
 == Changelog ==
 
-= 2.2.1-dev =
+= 2.3.0-dev =
+* Adds `wp_saml_auth_internal_config` filter to allow customization of the OneLogin SAML configuration [[#497](https://github.com/pantheon-systems/wp-saml-auth/pull/497)].
 * Adds PHP 8.4 compatibility [[#410](https://github.com/pantheon-systems/wp-saml-auth/pull/410)].
 * Increases minimum supported PHP version to 7.4.
 * Compatible with WordPress 6.9
