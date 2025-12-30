@@ -91,7 +91,9 @@ class WP_SAML_Auth_CLI {
 	protected static function scaffold_config_function( $assoc_args ) {
 		$defaults   = [
 			'type'                   => 'internal',
-			'simplesamlphp_autoload' => __DIR__ . '/simplesamlphp/lib/_autoload.php',
+			// SimpleSAMLphp autoloader path is auto-detected. Only set if using a non-standard location.
+			// 'simplesamlphp_autoload' => __DIR__ . '/simplesamlphp/vendor/autoload.php', // v2.x
+			// 'simplesamlphp_autoload' => __DIR__ . '/simplesamlphp/lib/_autoload.php', // v1.x
 			'auth_source'            => 'default-sp',
 			'auto_provision'         => true,
 			'permit_wp_login'        => true,
