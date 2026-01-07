@@ -538,6 +538,7 @@ class WP_SAML_Auth {
 			ABSPATH . 'simplesaml',
 			ABSPATH . 'private/simplesamlphp',
 			ABSPATH . 'simplesamlphp',
+			ABSPATH . 'vendor/simplesamlphp/simplesamlphp', // Composer installation path.
 			plugin_dir_path( __DIR__ ) . 'simplesamlphp',
 		] );
 
@@ -545,7 +546,13 @@ class WP_SAML_Auth {
 			$trimmed_base = rtrim( $base_path, '/\\' );
 
 			if ( is_dir( $trimmed_base ) ) {
-				// If an autoloader exists in a guessed path, try to include it.
+				// Check for SimpleSAMLphp 2.x autoloader first (vendor/autoload.php).
+				$simplesamlphp_autoloader_path = $trimmed_base . '/vendor/autoload.php';
+				if ( file_exists( $simplesamlphp_autoloader_path ) ) {
+					return $simplesamlphp_autoloader_path;
+				}
+
+				// Fall back to SimpleSAMLphp 1.x autoloader (lib/_autoload.php).
 				$simplesamlphp_autoloader_path = $trimmed_base . '/lib/_autoload.php';
 				if ( file_exists( $simplesamlphp_autoloader_path ) ) {
 					return $simplesamlphp_autoloader_path;
