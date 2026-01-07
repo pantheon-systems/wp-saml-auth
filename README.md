@@ -49,6 +49,8 @@ To install SimpleSAMLphp locally for testing purposes, the [Identity Provider Qu
 
 Because SAML authentication is handled as a part of the login flow, your SAML identity provider will need to send responses back to `wp-login.php`. For instance, if your domain is `pantheon.io`, then you'd use `http://pantheon.io/wp-login.php` as your `AssertionConsumerService` configuration value.
 
+**Where to add configuration code:** When using the filter-based configuration approach, add your code to a location that loads before the plugin initializes. You can [create a custom must-use plugin](https://docs.pantheon.io/guides/wordpress-configurations/mu-plugin) or add the code to your theme's `functions.php` file (note: theme-based configuration will need to be migrated if you switch themes).
+
 To configure the plugin with a filter, or for additional detail on each setting, use this code snippet:
 
     function wpsax_filter_option( $value, $option_name ) {
@@ -106,14 +108,23 @@ To configure the plugin with a filter, or for additional detail on each setting,
             /**
              * Path to SimpleSAMLphp autoloader.
              *
-             * Follow the standard implementation by installing SimpleSAMLphp
-             * alongside the plugin, and provide the path to its autoloader.
-             * Alternatively, this plugin will work if it can find the
-             * `SimpleSAML_Auth_Simple` class.
+             * SimpleSAMLphp v2.x uses 'vendor/autoload.php'
+             * SimpleSAMLphp v1.x uses 'lib/_autoload.php'
+             *
+             * The plugin will automatically search for SimpleSAMLphp in common
+             * installation paths and detect the correct autoloader for both versions.
+             *
+             * You typically don't need to set this - leave it commented out to use auto-detection.
+             * Only set this value if SimpleSAMLphp is in a non-standard location.
+             *
+             * Examples:
+             * - SimpleSAMLphp v2.x: dirname( __FILE__ ) . '/simplesamlphp/vendor/autoload.php'
+             * - SimpleSAMLphp v1.x: dirname( __FILE__ ) . '/simplesamlphp/lib/_autoload.php'
+             * - Composer (site root): ABSPATH . 'vendor/autoload.php'
              *
              * @param string
              */
-            'simplesamlphp_autoload' => dirname( __FILE__ ) . '/simplesamlphp/lib/_autoload.php',
+            // 'simplesamlphp_autoload' => dirname( __FILE__ ) . '/simplesamlphp/vendor/autoload.php',
             /**
              * Authentication source to pass to SimpleSAMLphp
              *
@@ -216,26 +227,57 @@ If you're using the OneLogin connection type and need to modify the `internal_co
         return $config;
     } );
 
-If you have installed SimpleSAMLphp to a non-default path, you can set that path via the `wp_saml_auth_simplesamlphp_path_array` filter. By default, it is assumed that SimpleSAMLphp is installed into one of the following paths:
+### Installing SimpleSAMLphp
+
+The plugin supports both SimpleSAMLphp v1.x and v2.x. The autoloader is automatically detected:
+
+**SimpleSAMLphp v2.x** uses `vendor/autoload.php`
+**SimpleSAMLphp v1.x** uses `lib/_autoload.php`
+
+#### Default Search Paths
+
+The plugin automatically searches for SimpleSAMLphp in these locations:
 * `ABSPATH . 'simplesaml'`
 * `ABSPATH . 'private/simplesamlphp'`
 * `ABSPATH . 'simplesamlphp'`
+* `ABSPATH . 'vendor/simplesamlphp/simplesamlphp'` (Composer installation)
+* `plugin_dir_path . 'simplesamlphp'`
+
+For each path, the plugin checks for both `vendor/autoload.php` (v2.x) and `lib/_autoload.php` (v1.x).
+
+**This means Composer installations work automatically!** If you run `composer require simplesamlphp/simplesamlphp` in your site root, the plugin will find it without any additional configuration.
+
+#### Composer Installation (Advanced)
+
+If you install SimpleSAMLphp via Composer to a **custom location** (not the standard `vendor/simplesamlphp/simplesamlphp`), you can specify the autoloader path:
+
+```php
+add_filter( 'wp_saml_auth_option', function( $value, $option_name ) {
+    if ( 'simplesamlphp_autoload' === $option_name ) {
+        // Point to your custom Composer vendor autoloader
+        return '/custom/path/vendor/autoload.php';
+    }
+    return $value;
+}, 10, 2 );
+```
+
+#### Custom Installation Paths
+
+If SimpleSAMLphp is installed in a non-default location, you can set custom search paths with the `wp_saml_auth_simplesamlphp_path_array` filter:
 
 ```php
 add_filter( 'wp_saml_auth_simplesamlphp_path_array', function( $simplesamlphp_path_array ) {
-    // Override default paths with a defined path.
-    return [ ABSPATH . 'path/to/simplesamlphp' ];
-}
+    // Override default paths with custom paths
+    return [ '/custom/path/to/simplesamlphp' ];
+} );
 ```
 
-You can also define an explicit path to the SimpleSAMLphp autoloader file (defaults to the `lib/_autoload.php` file under the SimpleSAMLphp path) with the `wp_saml_auth_ssp_autoloader` filter.
+Or define an explicit autoloader path with the `wp_saml_auth_ssp_autoloader` filter:
 
 ```php
 add_filter( 'wp_saml_auth_ssp_autoloader', function( $ssp_autoloader ) {
-    if ( ! file_exists( $ssp_autoloader ) ) {
-        return ABSPATH . 'path/to/simplesamlphp/autoload.php';
-    }
-}
+    return ABSPATH . 'path/to/simplesamlphp/vendor/autoload.php';
+} );
 ```
 
 ## WP-CLI Commands ##
@@ -261,6 +303,8 @@ This plugin implements a variety of [WP-CLI](https://wp-cli.org) commands. All c
       scaffold-config      Scaffold a configuration filter to customize WP SAML Auth usage.
 
 Use `wp help saml-auth <command>` to learn more about each command.
+
+**Note:** The `scaffold-config` command generates a configuration function with default values. The `simplesamlphp_autoload` option is not included in the scaffolded output because the plugin auto-detects SimpleSAMLphp installations. Only add this option manually if SimpleSAMLphp is in a non-standard location.
 
 ## Contributing ##
 
