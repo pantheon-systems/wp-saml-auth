@@ -381,7 +381,8 @@ Minimum supported PHP version is 7.3.
 * Fix warning message on the plugin's settings page for users who aren't using SimpleSAML [[#445](https://github.com/pantheon-systems/wp-saml-auth/pull/445)][[#451](https://github.com/pantheon-systems/wp-saml-auth/pull/451)].
 * Skip SimpleSAMLphp autoloader discovery when the SimpleSAML\Auth\Simple class is already loaded [[#444](https://github.com/pantheon-systems/wp-saml-auth/pull/444)].
 * Adds `wp_saml_auth_internal_config` filter to allow customization of the OneLogin SAML configuration [[#497](https://github.com/pantheon-systems/wp-saml-auth/pull/497)].
-* Fix autoloader detection logic for Composer-installed SimpleSAMLphp.
+* Fix autoloader detection logic for Composer-installed SimpleSAMLphp.[[#452](https://github.com/pantheon-systems/wp-saml-auth/pull/452)]
+* Fix incorrect warning display when SimpleSAMLphp version detection succeeds. [[#455](https://github.com/pantheon-systems/wp-saml-auth/pull/455)]
 
 ### 2.2.0 (9 June 2024) ###
 * Add a hook to modify returned attributes. [[#379](https://github.com/pantheon-systems/wp-saml-auth/pull/379/)] (props @anthonybaxter-uwu)
