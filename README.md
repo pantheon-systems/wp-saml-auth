@@ -5,7 +5,6 @@
 **Tested up to:** 6.9  
 **Requires PHP:** 7.4  
 **Stable tag:** 2.3.0  
->>>>>>> 7791720 (Allow customizing the configuration used for OneLogin with a filter (#433))
 **License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -375,7 +374,7 @@ Minimum supported PHP version is 7.3.
 
 ## Changelog ##
 
-### 2.3.0-dev ###
+### 2.3.0 (January 8, 2026) ###
 * Adds PHP 8.4 compatibility [[#410](https://github.com/pantheon-systems/wp-saml-auth/pull/410)].
 * Increases minimum supported PHP version to 7.4.
 * Compatible with WordPress 6.9
