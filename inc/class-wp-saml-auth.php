@@ -837,6 +837,10 @@ class WP_SAML_Auth {
 			return;
 		}
 
+		// Version is OK - no warnings needed.
+		if ( 'ok' === $simplesamlphp_version_status ) {
+			return;
+		}
 		// Scenario 4 - Unable to determine SimpleSAMLphp version ("unknown").
 		// Only show this notice if we're on the settings page.
 		if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'wp-saml-auth-settings' ) {
