@@ -32,13 +32,15 @@ Behat requires a Pantheon site. Once you've created the site, you'll need [insta
     * Drop the `-dev` from the version number in `README.md`, `readme.txt`, and `wp-saml-auth.php`.
     * Commit these changes with the message `Release X.Y.Z`
     * Push the release branch up.
-1. Open a Pull Request to merge `release_X.Y.Z` into `main`. Your PR should consist of all commits to `develop` since the last release, and one commit to update the version number. The PR name should also be `Release X.Y.Z`.
+1. Open a Pull Request to merge `release_X.Y.Z` into `master`. Your PR should consist of all commits to `develop` since the last release, and one commit to update the version number. The PR name should also be `Release X.Y.Z`.
 1. After all tests pass and you have received approval from a [CODEOWNER](./CODEOWNERS), merge the PR into `master`. A merge commit is preferred in this case. _Never_ squash to `master`.
 1. CI will create a tag, commit the assets to it, and draft a [new release](https://github.com/pantheon-systems/wp-saml-auth/releases).
 1. Open the release draft, review the changelog, assert the assets (vendor) have been added, and publish the release when ready.
 1. Wait for the [_Release wp-saml-auth plugin to wp.org_ action](https://github.com/pantheon-systems/wp-saml-auth/actions/workflows/wordpress-plugin-deploy.yml) to finish deploying to the WordPress.org plugin repository. If all goes well, users with SVN commit access for that plugin will receive an emailed diff of changes.
 1. Check WordPress.org: Ensure that the changes are live on [the plugin repository](https://wordpress.org/plugins/wp-saml-auth/). This may take a few minutes.
 1. Following the release, prepare the next dev version with the following steps:
+    * `git checkout master`
+    * `git pull origin master`
     * `git checkout develop`
     * `git rebase master`
     * Update the version number in all locations, incrementing the version by one patch version, and add the `-dev` flag (e.g. after releasing `1.2.3`, the new verison will be `1.2.4-dev`)
