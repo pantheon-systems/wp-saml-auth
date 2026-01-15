@@ -299,7 +299,7 @@ Use `wp help saml-auth <command>` to learn more about each command.
 
 == Contributing ==
 
-See [CONTRIBUTING.md](https://github.com/pantheon-systems/wp-saml-auth/blob/main/CONTRIBUTING.md) for information on contributing.
+See [CONTRIBUTING.md](https://github.com/pantheon-systems/wp-saml-auth/blob/master/CONTRIBUTING.md) for information on contributing.
 
 == Frequently Asked Questions ==
 
