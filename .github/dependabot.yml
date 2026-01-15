@@ -27,10 +27,10 @@ updates:
     interval: weekly
     timezone: America/Los_Angeles
     day: tuesday
-  target-branch: "develop"
+  target-branch: "main"
   open-pull-requests-limit: 99
 - package-ecosystem: "github-actions"
-  target-branch: "develop"
+  target-branch: "main"
   directory: "/"
   schedule:
     interval: daily
