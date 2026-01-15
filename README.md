@@ -12,6 +12,8 @@ SAML authentication for WordPress.
 
 ## Description ##
 
+[![CircleCI](https://circleci.com/gh/pantheon-systems/wp-saml-auth/tree/master.svg?style=svg)](https://circleci.com/gh/pantheon-systems/wp-saml-auth/tree/master) [![Actively Maintained](https://img.shields.io/badge/Pantheon-Actively_Maintained-yellow?logo=pantheon&color=FFDC28)](https://pantheon.io/docs/oss-support-levels#actively-maintained-support)
+
 SAML authentication for WordPress, using the bundled OneLogin SAML library or optionally installed [SimpleSAMLphp](https://simplesamlphp.org/). OneLogin provides a SAML authentication bridge; SimpleSAMLphp provides SAML plus a variety of other authentication mechanisms. This plugin acts as a bridge between WordPress and the authentication library.
 
 If your organization uses Google Apps, [integrating Google Apps with WP SAML Auth](https://pantheon.io/docs/wordpress-google-sso/) takes just a few steps.
@@ -305,7 +307,7 @@ Use `wp help saml-auth <command>` to learn more about each command.
 
 ## Contributing ##
 
-See [CONTRIBUTING.md](https://github.com/pantheon-systems/wp-saml-auth/blob/main/CONTRIBUTING.md) for information on contributing.
+See [CONTRIBUTING.md](https://github.com/pantheon-systems/wp-saml-auth/blob/master/CONTRIBUTING.md) for information on contributing.
 
 ## Security Policy ##
 ### Reporting Security Bugs
