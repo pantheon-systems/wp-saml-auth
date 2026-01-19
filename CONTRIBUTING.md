@@ -38,7 +38,7 @@ Behat requires a Pantheon site. Once you've created the site, you'll need [insta
 1. Open a Pull Request to merge `release_X.Y.Z` into `release`. Your PR should consist of all commits to `main` since the last release, and one commit to update the version number. The PR name should also be `Release X.Y.Z`.
 1. After all tests pass and you have received approval from a CODEOWNER (including resolving any merge conflicts), merge the PR into `release`. Use a "merge" commit, do no not rebase or squash. If the GitHub UI doesn't offer a "Merge commit" option (only showing "Squash and merge" or "Rebase and merge"), merge from the terminal instead:
     `git checkout release`
-    `git merge --no-ff release_X.Y.Z`
+    `git merge release_X.Y.Z`
     `git push origin release`
 1. After merging to the `release` branch, a draft Release will be automatically created by the build-tag-release workflow. This draft release will be automatically pre-filled with release notes. 
 1. Confirm that the necessary assets are present in the newly created tag, and test on a WP install if desired. 
