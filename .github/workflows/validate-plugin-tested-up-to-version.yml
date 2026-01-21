@@ -16,4 +16,4 @@ jobs:
         with:
           fetch-depth: 0
       - uses: jazzsequence/action-validate-plugin-version@v2
-        branch: 'develop'
+        branch: 'main'
