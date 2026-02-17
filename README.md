@@ -224,6 +224,30 @@ If you're using the OneLogin connection type and need to modify the `internal_co
         return $config;
     } );
 
+In multisite environments, you can prevent auto-provisioned users from being automatically added to sites using the `wp_saml_auth_auto_add_to_blog` filter. By default, WordPress multisite adds new users to the site where they log in (typically site ID 1) with the `default_role`.
+
+    /**
+     * Prevent auto-provisioned users from being added to any site.
+     * Users will be created as network users only.
+     */
+    add_filter( 'wp_saml_auth_auto_add_to_blog', '__return_false' );
+
+You can also prevent users from being added only to specific sites:
+
+    /**
+     * Prevent auto-provisioned users from being added to site ID 1,
+     * but allow them to be added to other sites.
+     */
+    add_filter( 'wp_saml_auth_auto_add_to_blog', function( $add_user, $blog_id ) {
+        // Don't add users to site ID 1
+        if ( 1 === $blog_id ) {
+            return false;
+        }
+        return $add_user;
+    }, 10, 2 );
+
+When this filter returns `false`, users are created as network users without being added to the site. This is useful for large multisite installations where you want to manage site membership separately from authentication.
+
 ### Installing SimpleSAMLphp
 
 The plugin supports both SimpleSAMLphp v1.x and v2.x. The autoloader is automatically detected:
