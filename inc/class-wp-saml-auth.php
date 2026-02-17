@@ -495,7 +495,7 @@ class WP_SAML_Auth {
 			}
 		}
 
-		$user_id   = wp_insert_user( $user_args );
+		$user_id = wp_insert_user( $user_args );
 		if ( is_wp_error( $user_id ) ) {
 			return $user_id;
 		}
