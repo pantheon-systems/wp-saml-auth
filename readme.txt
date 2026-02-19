@@ -248,6 +248,16 @@ You can also prevent users from being added only to specific sites:
 
 When this filter returns `false`, users are created as network users without being added to the site. This is useful for large multisite installations where you want to manage site membership separately from authentication.
 
+**Note for developers using the `wp_saml_auth_new_user_authenticated` action:** When this filter returns `false`, the user passed to `wp_saml_auth_new_user_authenticated` will have no role on the current site. If your hook relies on `$user->roles`, check for an empty array:
+
+    add_action( 'wp_saml_auth_new_user_authenticated', function( $user, $attributes ) {
+        if ( empty( $user->roles ) ) {
+            // Network-only user, no role on this site.
+            return;
+        }
+        // Your existing logic.
+    }, 10, 2 );
+
 == Installing SimpleSAMLphp ==
 
 The plugin supports both SimpleSAMLphp v1.x and v2.x. The autoloader is automatically detected:
@@ -390,6 +400,7 @@ Minimum supported PHP version is 7.3.
 
 = 2.3.1-dev =
 * Adds `wp_saml_auth_auto_add_to_blog` filter to control whether auto-provisioned users are added to sites in multisite environments.
+* When `wp_saml_auth_auto_add_to_blog` returns `false`, the `wp_saml_auth_new_user_authenticated` action will receive a user with no role on the current site. Hooks relying on `$user->roles` being non-empty should account for this.
 
 = 2.3.0 (January 8, 2026) =
 * Adds PHP 8.4 compatibility [[#410](https://github.com/pantheon-systems/wp-saml-auth/pull/410)].
