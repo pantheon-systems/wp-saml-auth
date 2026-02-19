@@ -407,8 +407,8 @@ Minimum supported PHP version is 7.3.
 ## Changelog ##
 
 ### 2.3.1-dev ###
-* Adds `wp_saml_auth_auto_add_to_blog` filter to control whether auto-provisioned users are added to sites in multisite environments.
-* When `wp_saml_auth_auto_add_to_blog` returns `false`, the `wp_saml_auth_new_user_authenticated` action will receive a user with no role on the current site. Hooks relying on `$user->roles` being non-empty should account for this.
+* Adds `wp_saml_auth_auto_add_to_blog` filter to control whether auto-provisioned users are added to sites in multisite environments [[#465](https://github.com/pantheon-systems/wp-saml-auth/pull/465)].
+* When `wp_saml_auth_auto_add_to_blog` returns `false`, the `wp_saml_auth_new_user_authenticated` action will receive a user with no role on the current site. Hooks relying on `$user->roles` being non-empty should account for this [[#465](https://github.com/pantheon-systems/wp-saml-auth/pull/465)].
 
 ### 2.3.0 (January 8, 2026) ###
 * Adds PHP 8.4 compatibility [[#410](https://github.com/pantheon-systems/wp-saml-auth/pull/410)].
