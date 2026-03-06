@@ -398,7 +398,7 @@ Minimum supported PHP version is 7.3.
 
 == Changelog ==
 
-= 2.3.1 (6 March 2026) =
+= 2.3.1 (March 6, 2026) =
 * Adds `wp_saml_auth_auto_add_to_blog` filter to control whether auto-provisioned users are added to sites in multisite environments [[#465](https://github.com/pantheon-systems/wp-saml-auth/pull/465)].
 * When `wp_saml_auth_auto_add_to_blog` returns `false`, the `wp_saml_auth_new_user_authenticated` action will receive a user with no role on the current site. Hooks relying on `$user->roles` being non-empty should account for this [[#465](https://github.com/pantheon-systems/wp-saml-auth/pull/465)].
 
