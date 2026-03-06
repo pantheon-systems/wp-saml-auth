@@ -502,18 +502,6 @@ class WP_SAML_Auth {
 
 		$user = get_user_by( 'id', $user_id );
 
-		if ( is_multisite() && empty( $user->roles ) ) {
-			error_log(
-				sprintf(
-					'[WP SAML Auth] User "%s" (ID %d) created as a network-only user with no role on site %d. '
-					. 'See https://github.com/pantheon-systems/wp-saml-auth for details.',
-					$user->user_login,
-					$user->ID,
-					get_current_blog_id()
-				)
-			);
-		}
-
 		/**
 		 * Runs after the user has been authenticated in WordPress.
 		 *
