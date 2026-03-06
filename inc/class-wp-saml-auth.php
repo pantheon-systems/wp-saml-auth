@@ -472,7 +472,30 @@ class WP_SAML_Auth {
 		 * @param array $attributes Attributes from the SAML response.
 		 */
 		$user_args = apply_filters( 'wp_saml_auth_insert_user', $user_args, $attributes );
-		$user_id   = wp_insert_user( $user_args );
+
+		// In multisite, check if we should prevent auto-adding users to sites.
+		if ( is_multisite() ) {
+			/**
+			 * Controls whether auto-provisioned users should be added to sites in multisite.
+			 *
+			 * In multisite environments, when wp_insert_user() is called with a 'role' parameter,
+			 * WordPress automatically adds the user to the current site. During SAML login, this is
+			 * typically the main site (ID 1). Setting this filter to false will create network users
+			 * without adding them to any site.
+			 *
+			 * @param bool  $auto_add_to_blog Whether to add the user to sites. Default true.
+			 * @param int   $blog_id          The current blog ID where the user would be added.
+			 * @param array $user_args        Arguments passed to wp_insert_user().
+			 * @param array $attributes       Attributes from the SAML response.
+			 */
+			$auto_add_to_blog = apply_filters( 'wp_saml_auth_auto_add_to_blog', true, get_current_blog_id(), $user_args, $attributes );
+
+			if ( ! $auto_add_to_blog && isset( $user_args['role'] ) ) {
+				unset( $user_args['role'] );
+			}
+		}
+
+		$user_id = wp_insert_user( $user_args );
 		if ( is_wp_error( $user_id ) ) {
 			return $user_id;
 		}
@@ -480,7 +503,11 @@ class WP_SAML_Auth {
 		$user = get_user_by( 'id', $user_id );
 
 		/**
-		 * Runs after the user has been authenticated in WordPress
+		 * Runs after the user has been authenticated in WordPress.
+		 *
+		 * Note: Since 2.3.1, in multisite environments with the
+		 * wp_saml_auth_auto_add_to_blog filter returning false,
+		 * the user may have no role on the current site.
 		 *
 		 * @param WP_User $user       The new user object.
 		 * @param array   $attributes All attributes received from the SAML Response
