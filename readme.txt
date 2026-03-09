@@ -4,7 +4,7 @@ Tags: authentication, SAML
 Requires at least: 6.4
 Tested up to: 6.9
 Requires PHP: 7.4
-Stable tag: 2.3.1-dev
+Stable tag: 2.3.2-dev
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -398,7 +398,9 @@ Minimum supported PHP version is 7.3.
 
 == Changelog ==
 
-= 2.3.1-dev =
+= 2.3.2-dev =
+
+= 2.3.1 (March 6, 2026) =
 * Adds `wp_saml_auth_auto_add_to_blog` filter to control whether auto-provisioned users are added to sites in multisite environments [[#465](https://github.com/pantheon-systems/wp-saml-auth/pull/465)].
 * When `wp_saml_auth_auto_add_to_blog` returns `false`, the `wp_saml_auth_new_user_authenticated` action will receive a user with no role on the current site. Hooks relying on `$user->roles` being non-empty should account for this [[#465](https://github.com/pantheon-systems/wp-saml-auth/pull/465)].
 
