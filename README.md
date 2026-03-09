@@ -4,7 +4,7 @@
 **Requires at least:** 6.4  
 **Tested up to:** 6.9  
 **Requires PHP:** 7.4  
-**Stable tag:** 2.3.1  
+**Stable tag:** 2.3.2  
 **License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -405,6 +405,8 @@ WP SAML Auth 2.2.0 requires WordPress version 6.4 or later.
 Minimum supported PHP version is 7.3.
 
 ## Changelog ##
+
+### 2.3.2 (9 March 2026) ###
 
 ### 2.3.1 (March 6, 2026) ###
 * Adds `wp_saml_auth_auto_add_to_blog` filter to control whether auto-provisioned users are added to sites in multisite environments [[#465](https://github.com/pantheon-systems/wp-saml-auth/pull/465)].
