@@ -228,7 +228,6 @@ class WP_SAML_Auth {
 		 * Fires before the user is logged out.
 		 */
 		do_action( 'wp_saml_auth_pre_logout' );
-		$provider = $this->get_provider();
 		if ( 'internal' === self::get_option( 'connection_type' ) ) {
 			$internal_config = self::get_option( 'internal_config' );
 			/**
@@ -240,6 +239,7 @@ class WP_SAML_Auth {
 			if ( empty( $internal_config['idp']['singleLogoutService']['url'] ) ) {
 				return;
 			}
+			$provider = $this->get_provider();
 			$args = [
 				'parameters'   => [],
 				'nameId'       => null,
@@ -258,6 +258,7 @@ class WP_SAML_Auth {
 				$args['sessionIndex']
 			);
 		} else {
+			$provider = $this->get_provider();
 			$provider->logout( add_query_arg( 'loggedout', true, wp_login_url() ) );
 		}
 	}
