@@ -89,17 +89,20 @@ function wpsa_filter_option( $value, $option_name ) {
 		 */
 		'internal_config'        => [
 			// Validation of SAML responses is required.
-			'strict'  => true,
-			'debug'   => defined( 'WP_DEBUG' ) && WP_DEBUG ? true : false,
-			'baseurl' => home_url(),
-			'sp'      => [
+			'strict'   => true,
+			'debug'    => defined( 'WP_DEBUG' ) && WP_DEBUG ? true : false,
+			'baseurl'  => home_url(),
+			'security' => [
+				'rejectUnsolicitedResponsesWithInResponseTo' => true,
+			],
+			'sp'       => [
 				'entityId'                 => 'urn:' . parse_url( home_url(), PHP_URL_HOST ),
 				'assertionConsumerService' => [
 					'url'     => home_url(),
 					'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST',
 				],
 			],
-			'idp'     => [
+			'idp'      => [
 				// Required: Set based on provider's supplied value.
 				'entityId'                 => '',
 				'singleSignOnService'      => [

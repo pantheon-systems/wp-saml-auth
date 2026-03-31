@@ -336,7 +336,10 @@ class WP_SAML_Auth {
 		$provider = $this->get_provider();
 		if ( is_a( $provider, 'OneLogin\Saml2\Auth' ) ) {
 			if ( ! empty( $_POST['SAMLResponse'] ) ) {
-				$provider->processResponse();
+				// Retrieve the stored request ID for InResponseTo validation.
+				$request_id = $this->get_saml_request_id();
+				$provider->processResponse( $request_id );
+				$this->clear_saml_request_id();
 				if ( ! $provider->isAuthenticated() ) {
 					// Translators: Includes error reason from OneLogin.
 					return new WP_Error( 'wp_saml_auth_unauthenticated', sprintf( __( 'User is not authenticated with SAML IdP. Reason: %s', 'wp-saml-auth' ), $provider->getLastErrorReason() ) );
@@ -376,7 +379,13 @@ class WP_SAML_Auth {
 				 */
 				$parameters = apply_filters( 'wp_saml_auth_login_parameters', [] );
 
-				$provider->login( $redirect_to, $parameters, $force_authn );
+				// Use $stay=true to prevent exit, so we can store the request ID.
+				$sso_url = $provider->login( $redirect_to, $parameters, $force_authn, false, true );
+				$this->save_saml_request_id( $provider->getLastRequestID() );
+				header( 'Pragma: no-cache' );
+				header( 'Cache-Control: no-cache, must-revalidate' );
+				header( 'Location: ' . $sso_url );
+				exit();
 			}
 		} elseif ( is_a( $provider, $this->simplesamlphp_class ) ) {
 			$redirect_to = filter_input( INPUT_GET, 'redirect_to', FILTER_SANITIZE_URL );
@@ -898,5 +907,45 @@ class WP_SAML_Auth {
 	 */
 	public function load_textdomain() {
 		load_plugin_textdomain( 'wp-saml-auth', false, dirname( plugin_basename( __FILE__ ), 2 ) . '/languages' );
+	}
+
+	/**
+	 * Save the SAML AuthnRequest ID for InResponseTo validation.
+	 *
+	 * Stores the request ID as a short-lived transient and sets a cookie
+	 * to tie the transient to this specific login attempt.
+	 *
+	 * @param string $request_id The AuthnRequest ID.
+	 */
+	private function save_saml_request_id( $request_id ) {
+		$nonce = wp_generate_password( 12, false );
+		$key   = 'wp_saml_auth_req_' . $nonce;
+		set_transient( $key, $request_id, 5 * MINUTE_IN_SECONDS );
+		setcookie( 'wp_saml_auth_nonce', $nonce, time() + 5 * MINUTE_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true );
+	}
+
+	/**
+	 * Retrieve the stored SAML AuthnRequest ID.
+	 *
+	 * @return string|null The stored request ID, or null if not found.
+	 */
+	private function get_saml_request_id() {
+		if ( empty( $_COOKIE['wp_saml_auth_nonce'] ) ) {
+			return null;
+		}
+		$key        = 'wp_saml_auth_req_' . sanitize_key( $_COOKIE['wp_saml_auth_nonce'] );
+		$request_id = get_transient( $key );
+		return $request_id ? $request_id : null;
+	}
+
+	/**
+	 * Clear the stored SAML AuthnRequest ID after use.
+	 */
+	private function clear_saml_request_id() {
+		if ( ! empty( $_COOKIE['wp_saml_auth_nonce'] ) ) {
+			$key = 'wp_saml_auth_req_' . sanitize_key( $_COOKIE['wp_saml_auth_nonce'] );
+			delete_transient( $key );
+			setcookie( 'wp_saml_auth_nonce', '', time() - 3600, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true );
+		}
 	}
 }
