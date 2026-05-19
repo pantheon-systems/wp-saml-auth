@@ -58,6 +58,6 @@ Behat requires a Pantheon site. Once you've created the site, you'll need [insta
     * `git checkout -b release-XYZ-dev`
     * `git push origin release-XYZ-dev`
     * Create a pull request on GitHub UI from `release-XYZ-dev` to `main` to trigger all required status checks
-    * _Wait for all required status checks to pass in CI. Once all tests pass, push to main from the terminal:_
+    * _Wait for all required status checks to pass in CI and for the PR to be approved. Once all tests pass and you have approval, push to main from the terminal:_
     * `git checkout main && git push origin main`
     * _Note: While main is typically protected, having an open PR with passing tests allows direct push to main, which is the preferred method here._
