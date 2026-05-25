@@ -1,5 +1,5 @@
 # WP SAML Auth #
-**Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [outlandish-josh](https://profiles.wordpress.org/outlandish-josh/), [jazzs3quence](https://profiles.wordpress.org/jazzs3quence/), [lcatlett](https://profiles.wordpress.org/lcatlett/), [AnaisPantheor](https://profiles.wordpress.org/AnaisPantheor/)  
+**Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [outlandish-josh](https://profiles.wordpress.org/outlandish-josh/), [jazzs3quence](https://profiles.wordpress.org/jazzs3quence/), [lcatlett](https://profiles.wordpress.org/lcatlett/), [AnaisPantheor](https://profiles.wordpress.org/AnaisPantheor/), [metasim](https://profiles.wordpress.org/metasim/)  
 **Tags:** authentication, SAML  
 **Requires at least:** 6.4  
 **Tested up to:** 6.9  
@@ -407,6 +407,7 @@ Minimum supported PHP version is 7.3.
 ## Changelog ##
 
 ### 2.3.3-dev ###
+* Adds PHP 8.5 compatibility [[#PENDING](https://github.com/pantheon-systems/wp-saml-auth/pull/PENDING)].
 
 ### 2.3.2 (15 May 2026) ###
 * Update dependencies [[#477](https://github.com/pantheon-systems/wp-saml-auth/pull/477)].
