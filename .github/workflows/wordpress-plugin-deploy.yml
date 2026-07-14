@@ -2,6 +2,8 @@ name: Release wp-saml-auth plugin to wp.org
 on:
   release:
     types: [released]
+permissions:
+  contents: read
 
 jobs:
   release:
