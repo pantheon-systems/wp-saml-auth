@@ -349,7 +349,7 @@ class WP_SAML_Auth {
 					// to the IDP. However, when $permit_wp_login=false, hitting wp-login will always
 					// trigger the IDP redirect.
 					if ( ( $permit_wp_login && false === stripos( $redirect_to, 'action=wp-saml-auth' ) )
-						|| ( ! $permit_wp_login && false === stripos( $redirect_to, parse_url( wp_login_url(), PHP_URL_PATH ) ) ) ) {
+						|| ( ! $permit_wp_login && false === stripos( $redirect_to, wp_parse_url( wp_login_url(), PHP_URL_PATH ) ) ) ) {
 						add_filter(
 							'login_redirect',
 							function () use ( $redirect_to ) {
