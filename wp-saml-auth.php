@@ -6,11 +6,16 @@
  * Author: Pantheon
  * Author URI: https://pantheon.io
  * Plugin URI: https://wordpress.org/plugins/wp-saml-auth/
+ * License: GPL-2.0-or-later
  * Text Domain: wp-saml-auth
  * Domain Path: /languages
  *
  * @package Wp_Saml_Auth
  */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 /**
  * Bootstrap the WP SAML Auth plugin.
