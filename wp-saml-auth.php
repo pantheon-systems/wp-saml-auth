@@ -93,7 +93,7 @@ function wpsa_filter_option( $value, $option_name ) {
 			'debug'   => defined( 'WP_DEBUG' ) && WP_DEBUG ? true : false,
 			'baseurl' => home_url(),
 			'sp'      => [
-				'entityId'                 => 'urn:' . parse_url( home_url(), PHP_URL_HOST ),
+				'entityId'                 => 'urn:' . wp_parse_url( home_url(), PHP_URL_HOST ),
 				'assertionConsumerService' => [
 					'url'     => home_url(),
 					'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST',
