@@ -22,7 +22,7 @@
     "require-dev": {
         "behat/behat": "^3.14",
         "behat/gherkin": "4.9.0",
-        "pantheon-systems/pantheon-wordpress-upstream-tests": "dev-master",
+        "pantheon-systems/pantheon-wordpress-upstream-tests": "dev-fix/replace-goutte-with-browserkit-driver",
         "pantheon-systems/pantheon-wp-coding-standards": "^2.0",
         "phpunit/phpunit": "^9",
         "symfony/filesystem": "^5",
