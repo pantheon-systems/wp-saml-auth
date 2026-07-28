@@ -173,7 +173,7 @@ cat > "$PREPARE_DIR/private/simplesamlphp/config/authsources.php" <<EOF
     'collationattacker:collationattackerpass' => [
         'uid' => 'collationattacker',
         'eduPersonAffiliation' => 'employee',
-        'mail' => 'coll\xc3\xa1tionvictim@example.com',
+        'mail' => 'collátionvictim@example.com',
     ],
 ];
 
