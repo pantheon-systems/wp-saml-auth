@@ -115,6 +115,114 @@ class Test_Authentication extends WP_UnitTestCase {
 		$this->assertFalse( WP_SAML_Auth::get_instance()->get_provider()->isAuthenticated() );
 	}
 
+	public function data_saml_lookup_field_comparison() {
+		return array(
+			'exact email authenticates'          => array( 'email', 'wpreport@example.test', true ),
+			'case-variant email authenticates'   => array( 'email', 'WpReport@Example.test', true ),
+			'accent-variant email is rejected'   => array( 'email', 'wpréport@example.test', false ),
+			'exact login authenticates'          => array( 'login', 'wpreport', true ),
+			'case-variant login authenticates'   => array( 'login', 'WpReport', true ),
+			'accent-variant login is rejected'   => array( 'login', 'wpréport', false ),
+		);
+	}
+
+	/**
+	 * SITE-6023: an attacker who signs in via SAML for the first time with an
+	 * accented variant of a victim's email/login must NOT be authenticated as
+	 * the victim.
+	 *
+	 * This exercises the disclosed attack directly: auto_provision is left at
+	 * its default (true), so a first-time SAML sign-on would normally create a
+	 * new user. Because the accent-insensitive database collation makes
+	 * get_user_by() return the victim, the pre-fix plugin skips provisioning and
+	 * logs the attacker straight into the victim's account. The fix rejects the
+	 * near-match before that happens. Case-only differences stay valid
+	 * (RFC 5321; WordPress usernames are case-insensitive).
+	 *
+	 * @dataProvider data_saml_lookup_field_comparison
+	 */
+	public function test_saml_lookup_field_comparison( $get_user_by, $saml_value, $expect_login ) {
+		$this->options['get_user_by'] = $get_user_by;
+
+		$victim_id = $this->factory->user->create( array(
+			'user_login' => 'wpreport',
+			'user_email' => 'wpreport@example.test',
+		) );
+
+		// Precondition: the database lookup finds the victim for every variant.
+		// With an accent-insensitive collation (e.g. utf8mb4_unicode_520_ci),
+		// this collision is what makes the account takeover possible.
+		$found = get_user_by( $get_user_by, $saml_value );
+		$this->assertInstanceOf( 'WP_User', $found );
+		$this->assertEquals( $victim_id, $found->ID );
+
+		if ( ! $expect_login ) {
+			// The rejection cases only reproduce the vulnerability if the users
+			// table collation actually treats the accented value as equal. If a
+			// future WordPress/DB change made it accent-sensitive, get_user_by()
+			// above would still match by case only, but the fix's mismatch check
+			// would no longer be the thing under test. Skip loudly rather than
+			// pass for the wrong reason.
+			$this->skip_unless_accent_insensitive( $get_user_by );
+		}
+
+		$attribute = 'email' === $get_user_by ? 'mail' : 'uid';
+		$user = $this->saml_signon_with_attributes( array( $attribute => array( $saml_value ) ) );
+
+		if ( $expect_login ) {
+			$this->assertInstanceOf( 'WP_User', $user );
+			$this->assertEquals( $victim_id, $user->ID );
+			$this->assertEquals( $victim_id, get_current_user_id() );
+			return;
+		}
+
+		// The near-match must be rejected, no one logged in...
+		$this->assertInstanceOf( 'WP_Error', $user );
+		$this->assertEquals( 'wp_saml_auth_attribute_mismatch', $user->get_error_code() );
+		$this->assertEquals( 0, get_current_user_id() );
+
+		// ...and, crucially, auto-provision must not have silently created a
+		// second (attacker) account. Only the victim we seeded should exist.
+		$this->assertCount( 1, get_users( array( 'search' => 'wpreport', 'search_columns' => array( 'user_login', 'user_email' ) ) ) );
+	}
+
+	/**
+	 * Skip the test unless the users table's collation treats an accented
+	 * character as equal to its unaccented form. The SITE-6023 collision only
+	 * exists under an accent-insensitive collation (e.g. utf8mb4_unicode_520_ci).
+	 *
+	 * @param string $get_user_by Lookup field ('email' or 'login'), used to pick
+	 *                            the column whose collation governs the lookup.
+	 */
+	private function skip_unless_accent_insensitive( $get_user_by ) {
+		global $wpdb;
+		$column = 'email' === $get_user_by ? 'user_email' : 'user_login';
+		$collation = $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COLLATION_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = %s',
+				DB_NAME,
+				$wpdb->users,
+				$column
+			)
+		);
+		if ( empty( $collation ) ) {
+			$this->markTestSkipped( "Could not determine collation of {$wpdb->users}.{$column}." );
+		}
+		$accent_insensitive = $wpdb->get_var( "SELECT 'wpréport' = 'wpreport' COLLATE {$collation}" );
+		if ( '1' !== (string) $accent_insensitive ) {
+			$this->markTestSkipped(
+				"SITE-6023 regression requires an accent-insensitive collation on {$wpdb->users}.{$column}; "
+				. "found '{$collation}', which is accent-sensitive, so the account-takeover collision cannot be reproduced here."
+			);
+		}
+	}
+
+	private function saml_signon_with_attributes( array $attributes ) {
+		$GLOBALS['wp_saml_auth_current_user'] = $attributes;
+		$_GET['action'] = 'wp-saml-auth';
+		return wp_signon();
+	}
+
 	private function saml_signon( $username ) {
 		$this->set_saml_auth_user( $username );
 		$_GET['action'] = 'wp-saml-auth';
