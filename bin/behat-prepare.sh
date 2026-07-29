@@ -166,10 +166,17 @@ cat > "$PREPARE_DIR/private/simplesamlphp/config/authsources.php" <<EOF
         'eduPersonAffiliation' => 'employee',
         'mail' => '${WORDPRESS_ADMIN_EMAIL}',
     ],
-    // SITE-6023: attacker whose asserted email is an accented variant of the
-    // seeded victim (collationvictim@example.com). An accent-insensitive DB
-    // collation makes get_user_by() match the victim; the plugin must reject
-    // this near-match rather than authenticate as the victim.
+    // SITE-6023: a legitimate victim who auto-provisions via SAML, and an
+    // attacker whose asserted email is an accented variant of the victim's.
+    // An accent-insensitive DB collation makes get_user_by() match the victim,
+    // so the plugin must reject the attacker's near-match rather than
+    // authenticate as the victim. The Behat scenario provisions the victim
+    // first, then asserts the attacker login is rejected.
+    'collationvictim:collationvictimpass' => [
+        'uid' => 'collationvictim',
+        'eduPersonAffiliation' => 'employee',
+        'mail' => 'collationvictim@example.com',
+    ],
     'collationattacker:collationattackerpass' => [
         'uid' => 'collationattacker',
         'eduPersonAffiliation' => 'employee',
@@ -261,11 +268,6 @@ terminus wp "$SITE_ENV" -- option update home "https://$PANTHEON_SITE_URL"
 terminus wp "$SITE_ENV" -- option update siteurl "https://$PANTHEON_SITE_URL"
 terminus wp "$SITE_ENV" -- plugin activate wp-native-php-sessions wp-saml-auth
 terminus wp "$SITE_ENV" -- theme activate "$TERMINUS_SITE"
-# SITE-6023: seed a victim whose email is the unaccented form of the
-# collationattacker IdP account's asserted email. The account-takeover Behat
-# scenario logs in as the attacker and asserts the login is rejected rather
-# than authenticated as this victim.
-terminus wp "$SITE_ENV" -- user create collationvictim collationvictim@example.com --role=administrator --user_pass=collationvictimpass
 terminus wp "$SITE_ENV" -- rewrite structure '/%year%/%monthnum%/%day%/%postname%/'
 # Create writeable directories in /files (aka wp-content/uploads) that SimpleSAMLphp might need.
 terminus wp "$SITE_ENV" -- eval '
