@@ -127,17 +127,23 @@ class Test_Authentication extends WP_UnitTestCase {
 	}
 
 	/**
-	 * SITE-6023: an attacker who signs in via SAML for the first time with an
-	 * accented variant of a victim's email/login must NOT be authenticated as
-	 * the victim.
+	 * SITE-6023: SAML user lookup must compare the asserted value against the
+	 * matched user's stored value, so a value that only matches by collation is
+	 * rejected while legitimate variants still authenticate.
 	 *
-	 * This exercises the disclosed attack directly: auto_provision is left at
+	 * The data provider covers both lookup modes (email, login) with three
+	 * kinds of value:
+	 *  - exact: authenticates.
+	 *  - case-variant (User@Example vs user@example): authenticates, because
+	 *    case is normalized (RFC 5321; WordPress usernames are case-insensitive).
+	 *  - accent-variant (wpréport vs wpreport): rejected.
+	 *
+	 * The accent-variant case is the disclosed attack. auto_provision is left at
 	 * its default (true), so a first-time SAML sign-on would normally create a
-	 * new user. Because the accent-insensitive database collation makes
+	 * new user; because the accent-insensitive database collation makes
 	 * get_user_by() return the victim, the pre-fix plugin skips provisioning and
 	 * logs the attacker straight into the victim's account. The fix rejects the
-	 * near-match before that happens. Case-only differences stay valid
-	 * (RFC 5321; WordPress usernames are case-insensitive).
+	 * near-match before that happens.
 	 *
 	 * @dataProvider data_saml_lookup_field_comparison
 	 */
