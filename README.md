@@ -407,7 +407,9 @@ Minimum supported PHP version is 7.3.
 ## Changelog ##
 
 ### 2.3.3 (11 August 2026) ###
+* **Security:** Fixes an account takeover where an accent-insensitive database collation could match a SAML attribute to the wrong WordPress user. User lookup is now verified with a case-insensitive, accent-sensitive comparison [[#495](https://github.com/pantheon-systems/wp-saml-auth/pull/495)].
 * Adds PHP 8.5 compatibility [[#482](https://github.com/pantheon-systems/wp-saml-auth/pull/482)].
+* Updates dependencies [[#492](https://github.com/pantheon-systems/wp-saml-auth/pull/492)][[#494](https://github.com/pantheon-systems/wp-saml-auth/pull/494)].
 
 ### 2.3.2 (15 May 2026) ###
 * Update dependencies [[#477](https://github.com/pantheon-systems/wp-saml-auth/pull/477)].
