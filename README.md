@@ -1,10 +1,10 @@
 # WP SAML Auth #
-**Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [outlandish-josh](https://profiles.wordpress.org/outlandish-josh/), [jazzs3quence](https://profiles.wordpress.org/jazzs3quence/), [lcatlett](https://profiles.wordpress.org/lcatlett/), [AnaisPantheor](https://profiles.wordpress.org/AnaisPantheor/)  
+**Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [outlandish-josh](https://profiles.wordpress.org/outlandish-josh/), [jazzs3quence](https://profiles.wordpress.org/jazzs3quence/), [lcatlett](https://profiles.wordpress.org/lcatlett/), [AnaisPantheor](https://profiles.wordpress.org/AnaisPantheor/), [metasim](https://profiles.wordpress.org/metasim/)  
 **Tags:** authentication, SAML  
 **Requires at least:** 6.4  
 **Tested up to:** 6.9  
 **Requires PHP:** 7.4  
-**Stable tag:** 2.3.2  
+**Stable tag:** 2.3.3  
 **License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -406,9 +406,11 @@ Minimum supported PHP version is 7.3.
 
 ## Changelog ##
 
+### 2.3.3 (11 August 2026) ###
+* Adds PHP 8.5 compatibility [[#482](https://github.com/pantheon-systems/wp-saml-auth/pull/482)].
+
 ### 2.3.2 (15 May 2026) ###
 * Update dependencies [[#477](https://github.com/pantheon-systems/wp-saml-auth/pull/477)].
-
 
 ### 2.3.1 (March 6, 2026) ###
 * Adds `wp_saml_auth_auto_add_to_blog` filter to control whether auto-provisioned users are added to sites in multisite environments [[#465](https://github.com/pantheon-systems/wp-saml-auth/pull/465)].

@@ -1,16 +1,21 @@
 <?php
 /**
  * Plugin Name: WP SAML Auth
- * Version: 2.3.2
+ * Version: 2.3.3
  * Description: SAML authentication for WordPress, using SimpleSAMLphp.
  * Author: Pantheon
  * Author URI: https://pantheon.io
  * Plugin URI: https://wordpress.org/plugins/wp-saml-auth/
+ * License: GPL-2.0-or-later
  * Text Domain: wp-saml-auth
  * Domain Path: /languages
  *
  * @package Wp_Saml_Auth
  */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 /**
  * Bootstrap the WP SAML Auth plugin.
@@ -93,7 +98,7 @@ function wpsa_filter_option( $value, $option_name ) {
 			'debug'   => defined( 'WP_DEBUG' ) && WP_DEBUG ? true : false,
 			'baseurl' => home_url(),
 			'sp'      => [
-				'entityId'                 => 'urn:' . parse_url( home_url(), PHP_URL_HOST ),
+				'entityId'                 => 'urn:' . wp_parse_url( home_url(), PHP_URL_HOST ),
 				'assertionConsumerService' => [
 					'url'     => home_url(),
 					'binding' => 'urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST',
