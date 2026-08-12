@@ -4,7 +4,7 @@ Tags: authentication, SAML
 Requires at least: 6.4
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 2.3.3
+Stable tag: 2.3.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -397,6 +397,9 @@ Minimum supported PHP version is 7.3.
 
 
 == Changelog ==
+
+= 2.3.4 (12 August 2026) =
+* Restores the `vendor` directory to the WordPress.org package. 2.3.3 shipped without it, which broke SAML login for sites that took the update [[#499](https://github.com/pantheon-systems/wp-saml-auth/pull/499)].
 
 = 2.3.3 (11 August 2026) =
 * **Security:** Fixes an account takeover where an accent-insensitive database collation could match a SAML attribute to the wrong WordPress user. User lookup is now verified with a case-insensitive, accent-sensitive comparison [[#495](https://github.com/pantheon-systems/wp-saml-auth/pull/495)].
