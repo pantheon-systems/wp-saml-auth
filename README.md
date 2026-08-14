@@ -260,10 +260,7 @@ When this filter returns `false`, users are created as network users without bei
 
 ### Installing SimpleSAMLphp
 
-The plugin supports both SimpleSAMLphp v1.x and v2.x. The autoloader is automatically detected:
-
-**SimpleSAMLphp v2.x** uses `vendor/autoload.php`
-**SimpleSAMLphp v1.x** uses `lib/_autoload.php`
+The plugin targets SimpleSAMLphp v2.x, which uses `vendor/autoload.php`. Older v1.x installs (using `lib/_autoload.php`) may still be auto-detected, but are no longer tested and should be upgraded to v2.x.
 
 #### Default Search Paths
 
@@ -274,7 +271,7 @@ The plugin automatically searches for SimpleSAMLphp in these locations:
 * `ABSPATH . 'vendor/simplesamlphp/simplesamlphp'` (Composer installation)
 * `plugin_dir_path . 'simplesamlphp'`
 
-For each path, the plugin checks for both `vendor/autoload.php` (v2.x) and `lib/_autoload.php` (v1.x).
+For each path, the plugin checks for `vendor/autoload.php` (v2.x), falling back to the untested `lib/_autoload.php` (v1.x).
 
 **This means Composer installations work automatically!** If you run `composer require simplesamlphp/simplesamlphp` in your site root, the plugin will find it without any additional configuration. You still need to configure both SimpleSAMLphp (config files, metadata) and the WP SAML Auth plugin settings as documented below.
 
