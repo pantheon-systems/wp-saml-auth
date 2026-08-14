@@ -2,7 +2,6 @@
 .github
 .wordpress-org
 tests
-vendor
 bin
 .DS_Store
 Thumbs.db

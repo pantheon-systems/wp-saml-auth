@@ -2,9 +2,9 @@
 **Contributors:** [getpantheon](https://profiles.wordpress.org/getpantheon/), [danielbachhuber](https://profiles.wordpress.org/danielbachhuber/), [outlandish-josh](https://profiles.wordpress.org/outlandish-josh/), [jazzs3quence](https://profiles.wordpress.org/jazzs3quence/), [lcatlett](https://profiles.wordpress.org/lcatlett/), [AnaisPantheor](https://profiles.wordpress.org/AnaisPantheor/), [metasim](https://profiles.wordpress.org/metasim/)  
 **Tags:** authentication, SAML  
 **Requires at least:** 6.4  
-**Tested up to:** 6.9  
+**Tested up to:** 7.0  
 **Requires PHP:** 7.4  
-**Stable tag:** 2.3.3-dev  
+**Stable tag:** 2.3.5-dev  
 **License:** GPLv2 or later  
 **License URI:** http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -260,10 +260,7 @@ When this filter returns `false`, users are created as network users without bei
 
 ### Installing SimpleSAMLphp
 
-The plugin supports both SimpleSAMLphp v1.x and v2.x. The autoloader is automatically detected:
-
-**SimpleSAMLphp v2.x** uses `vendor/autoload.php`
-**SimpleSAMLphp v1.x** uses `lib/_autoload.php`
+The plugin targets SimpleSAMLphp v2.x, which uses `vendor/autoload.php`. Older v1.x installs (using `lib/_autoload.php`) may still be auto-detected, but are no longer tested and should be upgraded to v2.x.
 
 #### Default Search Paths
 
@@ -274,7 +271,7 @@ The plugin automatically searches for SimpleSAMLphp in these locations:
 * `ABSPATH . 'vendor/simplesamlphp/simplesamlphp'` (Composer installation)
 * `plugin_dir_path . 'simplesamlphp'`
 
-For each path, the plugin checks for both `vendor/autoload.php` (v2.x) and `lib/_autoload.php` (v1.x).
+For each path, the plugin checks for `vendor/autoload.php` (v2.x), falling back to the untested `lib/_autoload.php` (v1.x).
 
 **This means Composer installations work automatically!** If you run `composer require simplesamlphp/simplesamlphp` in your site root, the plugin will find it without any additional configuration. You still need to configure both SimpleSAMLphp (config files, metadata) and the WP SAML Auth plugin settings as documented below.
 
@@ -406,8 +403,15 @@ Minimum supported PHP version is 7.3.
 
 ## Changelog ##
 
-### 2.3.3-dev ###
+### 2.3.5-dev ###
+
+### 2.3.4 (12 August 2026) ###
+* Restores the `vendor` directory to the WordPress.org package. 2.3.3 shipped without it, which broke SAML login for sites that took the update [[#499](https://github.com/pantheon-systems/wp-saml-auth/pull/499)].
+
+### 2.3.3 (11 August 2026) ###
+* **Security:** Fixes an account takeover where an accent-insensitive database collation could match a SAML attribute to the wrong WordPress user. User lookup is now verified with a case-insensitive, accent-sensitive comparison [[#495](https://github.com/pantheon-systems/wp-saml-auth/pull/495)].
 * Adds PHP 8.5 compatibility [[#482](https://github.com/pantheon-systems/wp-saml-auth/pull/482)].
+* Updates dependencies [[#492](https://github.com/pantheon-systems/wp-saml-auth/pull/492)][[#494](https://github.com/pantheon-systems/wp-saml-auth/pull/494)].
 
 ### 2.3.2 (15 May 2026) ###
 * Update dependencies [[#477](https://github.com/pantheon-systems/wp-saml-auth/pull/477)].
