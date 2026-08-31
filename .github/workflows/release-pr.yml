@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Create Draft Release PR
-        uses: pantheon-systems/plugin-release-actions/release-pr@main
+        uses: pantheon-systems/plugin-release-actions/release-pr@554b455c9cb024ccf20147a27656fb198ce6f0cc # main 2026-08-13T21:25:05Z
         with:
           gh_token: ${{ github.token }}
           readme_md: README.md

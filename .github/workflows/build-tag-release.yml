@@ -16,7 +16,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     - name: Build, tag, and release
-      uses: pantheon-systems/plugin-release-actions/build-tag-release@main
+      uses: pantheon-systems/plugin-release-actions/build-tag-release@554b455c9cb024ccf20147a27656fb198ce6f0cc # main 2026-08-13T21:25:05Z
       with:
         gh_token: ${{ secrets.GITHUB_TOKEN }}
         build_composer_assets: "true"
