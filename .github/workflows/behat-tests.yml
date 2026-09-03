@@ -44,12 +44,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
       - name: Setup PHP ${{ matrix.php }}
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
         with:
           php-version: ${{ matrix.php }}
           extensions: mysqli, intl, mbstring
@@ -62,10 +62,10 @@ jobs:
           sudo apt-get install -y mysql-client sendmail rsync
 
       - name: Setup WP-CLI
-        uses: godaddy-wordpress/setup-wp-cli@1
+        uses: godaddy-wordpress/setup-wp-cli@80c9a89bd347082429795c0f12acf567e2c390d4 # 1
 
       - name: Cache Composer dependencies
-        uses: actions/cache@v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: vendor
           key: composer-${{ hashFiles('composer.lock') }}-${{ matrix.php }}
@@ -95,11 +95,11 @@ jobs:
       fail-fast: false
       max-parallel: 1
       matrix:
-        ssp: ["1.18.0", "2.0.0", "2.4.0"]
+        ssp: ["2.0.0", "2.4.0"]
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -107,19 +107,19 @@ jobs:
           lfs: false
 
       - name: Setup PHP 8.2
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
         with:
           php-version: "8.2"
           tools: composer:v2
           coverage: none
 
       - name: Install Terminus
-        uses: pantheon-systems/terminus-github-actions@v1
+        uses: pantheon-systems/terminus-github-actions@b0a005d0e886678b25cb6cd7833cf8d8cf779900 # v1.2.9
         with:
           pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
 
       - name: SSH agent
-        uses: webfactory/ssh-agent@v0.9.1
+        uses: webfactory/ssh-agent@e83874834305fe9a4a2997156cb26c5de65a8555 # v0.10.0
         with:
           ssh-private-key: ${{ secrets.SITE_OWNER_SSH_PRIVATE_KEY }}
           log-public-key: true
@@ -158,11 +158,7 @@ jobs:
           WORKING_DIR: ${{ github.workspace }}
         run: |
           set -eux
-          if [ "${{ matrix.ssp }}" = "1.18.0" ]; then
-            bash bin/1.18/behat-prepare-simplesaml1.18.0.sh
-          else
-            bash bin/behat-prepare.sh
-          fi
+          bash bin/behat-prepare.sh
 
       - name: Wait for Pantheon workflow
         run: |
@@ -201,3 +197,27 @@ jobs:
       - name: Cleanup Behat environment
         if: ${{ always() }}
         run: bash bin/behat-cleanup.sh
+
+  behat-cleanup-stale:
+    name: Cleanup stale ci- environments
+    runs-on: ubuntu-latest
+    needs: behat
+    if: ${{ always() }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Terminus
+        uses: pantheon-systems/terminus-github-actions@b0a005d0e886678b25cb6cd7833cf8d8cf779900 # v1.2.9
+        with:
+          pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
+
+      - name: Set Pantheon site id
+        run: echo "TERMINUS_SITE=wp-saml-auth" >> $GITHUB_ENV
+
+      - name: Cleanup stale ci environments
+        run: bash bin/behat-cleanup-stale.sh
