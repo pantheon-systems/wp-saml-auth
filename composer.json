@@ -41,27 +41,17 @@
         "test:install:withdb": "bin/install-local-tests.sh"
     },
     "autoload": {
-        "psr-4": { "PantheonSystems\\WPSamlAuth\\Behat\\": "tests/behat/bootstrap/" }
+        "psr-4": {
+            "PantheonSystems\\WPSamlAuth\\Behat\\": "tests/behat/bootstrap/"
+        }
     },
     "config": {
         "allow-plugins": {
             "dealerdirect/phpcodesniffer-composer-installer": true,
             "pantheon-systems/wpunit-helpers": true
         },
-        "audit": {
-            "ignore": {
-                "GHSA-g446-98w2-8p5w": "Dev-only: guzzlehttp/guzzle via behat test deps (fabpot/goutte pins ^6, no 6.x patch exists). No prod exposure. VUL-24497.",
-                "GHSA-h95v-h523-3mw8": "Dev-only: guzzlehttp/guzzle via behat test deps (fabpot/goutte pins ^6, no 6.x patch exists). No prod exposure. VUL-24497.",
-                "GHSA-wm3w-8rrp-j577": "Dev-only: guzzlehttp/guzzle via behat test deps (fabpot/goutte pins ^6, no 6.x patch exists). No prod exposure. VUL-24497.",
-                "GHSA-f283-ghqc-fg79": "Dev-only: guzzlehttp/guzzle via behat test deps (fabpot/goutte pins ^6, no 6.x patch exists). No prod exposure. VUL-24497.",
-                "GHSA-94pj-82f3-465w": "Dev-only: guzzlehttp/guzzle via behat test deps (fabpot/goutte pins ^6, no 6.x patch exists). No prod exposure. VUL-24497.",
-                "GHSA-cwxw-98qj-8qjx": "Dev-only: guzzlehttp/guzzle via behat test deps (fabpot/goutte pins ^6, no 6.x patch exists). No prod exposure. VUL-24497.",
-                "GHSA-wpwq-4j6v-78m3": "Dev-only: guzzlehttp/guzzle via behat test deps (fabpot/goutte pins ^6, no 6.x patch exists). No prod exposure. VUL-24497.",
-                "GHSA-c2w2-prh8-qm98": "Dev-only: guzzlehttp/psr7 via behat test deps (guzzlehttp/guzzle ^6 pulls psr7 ^1.9, no 1.x patch exists). No prod exposure. VUL-25210.",
-                "GHSA-vm85-hxw5-5432": "Dev-only: guzzlehttp/psr7 via behat test deps (guzzlehttp/guzzle ^6 pulls psr7 ^1.9, no 1.x patch exists). No prod exposure. VUL-25210.",
-                "GHSA-hq7v-mx3g-29hw": "Dev-only: guzzlehttp/psr7 via behat test deps (guzzlehttp/guzzle ^6 pulls psr7 ^1.9, no 1.x patch exists). No prod exposure. VUL-25210.",
-                "GHSA-34xg-wgjx-8xph": "Dev-only: guzzlehttp/psr7 via behat test deps (guzzlehttp/guzzle ^6 pulls psr7 ^1.9, no 1.x patch exists). No prod exposure. VUL-25210."
-            }
+        "platform": {
+            "php": "7.4.33"
         }
     }
 }

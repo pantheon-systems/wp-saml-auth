@@ -166,6 +166,22 @@ cat > "$PREPARE_DIR/private/simplesamlphp/config/authsources.php" <<EOF
         'eduPersonAffiliation' => 'employee',
         'mail' => '${WORDPRESS_ADMIN_EMAIL}',
     ],
+    // SITE-6023: a legitimate victim who auto-provisions via SAML, and an
+    // attacker whose asserted email is an accented variant of the victim's.
+    // An accent-insensitive DB collation makes get_user_by() match the victim,
+    // so the plugin must reject the attacker's near-match rather than
+    // authenticate as the victim. The Behat scenario provisions the victim
+    // first, then asserts the attacker login is rejected.
+    'collationvictim:collationvictimpass' => [
+        'uid' => 'collationvictim',
+        'eduPersonAffiliation' => 'employee',
+        'mail' => 'collationvictim@example.com',
+    ],
+    'collationattacker:collationattackerpass' => [
+        'uid' => 'collationattacker',
+        'eduPersonAffiliation' => 'employee',
+        'mail' => 'collátionvictim@example.com',
+    ],
 ];
 
 // Prevent global attributes from being auto-injected

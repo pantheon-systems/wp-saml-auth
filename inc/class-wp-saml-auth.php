@@ -445,6 +445,16 @@ class WP_SAML_Auth {
 
 		$existing_user = get_user_by( $get_user_by, $attributes[ $attribute ][0] );
 		if ( $existing_user ) {
+			$field_map = [
+				'email' => 'user_email',
+				'login' => 'user_login',
+				'slug'  => 'user_nicename',
+			];
+			$user_field = isset( $field_map[ $get_user_by ] ) ? $field_map[ $get_user_by ] : $get_user_by;
+			if ( mb_strtolower( $existing_user->$user_field, 'UTF-8' ) !== mb_strtolower( $attributes[ $attribute ][0], 'UTF-8' ) ) {
+				return new WP_Error( 'wp_saml_auth_attribute_mismatch', esc_html__( 'SAML attribute does not exactly match the existing user. Please contact your administrator.', 'wp-saml-auth' ) );
+			}
+
 			/**
 			 * Runs after a existing user has been authenticated in WordPress
 			 *

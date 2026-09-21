@@ -8,6 +8,17 @@ updates:
     day: tuesday
   target-branch: "develop"
   open-pull-requests-limit: 99
+  groups:
+    composer-security:
+      applies-to: security-updates
+      update-types:
+      - minor
+      - patch
+    composer-minor-patch:
+      applies-to: version-updates
+      update-types:
+      - minor
+      - patch
   ignore:
   - dependency-name: onelogin/php-saml
     versions:
@@ -29,8 +40,30 @@ updates:
     day: tuesday
   target-branch: "main"
   open-pull-requests-limit: 99
+  groups:
+    npm-security:
+      applies-to: security-updates
+      update-types:
+      - minor
+      - patch
+    npm-minor-patch:
+      applies-to: version-updates
+      update-types:
+      - minor
+      - patch
 - package-ecosystem: "github-actions"
   target-branch: "main"
   directory: "/"
   schedule:
     interval: daily
+  groups:
+    github-actions-security:
+      applies-to: security-updates
+      update-types:
+      - minor
+      - patch
+    github-actions-minor-patch:
+      applies-to: version-updates
+      update-types:
+      - minor
+      - patch
