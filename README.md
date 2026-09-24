@@ -218,9 +218,7 @@ If you're using the OneLogin connection type and need to modify the `internal_co
      * Modify the OneLogin SAML configuration.
      */
     add_filter( 'wp_saml_auth_internal_config', function( $config ) {
-        $config['security'] = array(
-            'requestedAuthnContext' => false,
-        );
+        $config['security']['requestedAuthnContext'] = false;
         return $config;
     } );
 
