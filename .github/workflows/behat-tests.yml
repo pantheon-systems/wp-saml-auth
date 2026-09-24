@@ -114,7 +114,7 @@ jobs:
           coverage: none
 
       - name: Install Terminus
-        uses: pantheon-systems/terminus-github-actions@b0a005d0e886678b25cb6cd7833cf8d8cf779900 # v1.2.9
+        uses: pantheon-systems/terminus-github-actions@8fb365801c4abd633407f65ecb475a540ddb38f1 # v1.2.10
         with:
           pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
 
@@ -212,7 +212,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Terminus
-        uses: pantheon-systems/terminus-github-actions@b0a005d0e886678b25cb6cd7833cf8d8cf779900 # v1.2.9
+        uses: pantheon-systems/terminus-github-actions@8fb365801c4abd633407f65ecb475a540ddb38f1 # v1.2.10
         with:
           pantheon-machine-token: ${{ secrets.TERMINUS_TOKEN }}
 
