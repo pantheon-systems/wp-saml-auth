@@ -89,34 +89,60 @@ class WP_SAML_Auth {
 			if ( ! class_exists( 'OneLogin\Saml2\Auth' ) ) {
 				return;
 			}
-			$auth_config    = self::get_option( 'internal_config' );
+			$auth_config = self::get_option( 'internal_config' );
+			/**
+			 * Permit the internal_config array to be customized.
+			 *
+			 * @param array $auth_config The internal configuration array for OneLogin.
+			 */
+			$auth_config    = apply_filters( 'wp_saml_auth_internal_config', $auth_config );
 			$this->provider = new OneLogin\Saml2\Auth( $auth_config );
 		} else {
-			$simplesamlphp_autoloader = self::get_simplesamlphp_autoloader();
-
-			// If the autoloader exists, load it.
-			if ( ! empty( $simplesamlphp_autoloader ) && file_exists( $simplesamlphp_autoloader ) ) {
-				require_once $simplesamlphp_autoloader;
-			} else {
-				// Autoloader not found.
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					$error_message = sprintf(
-						// Translators: %s is the path to the SimpleSAMLphp autoloader file (if found).
-						__( 'WP SAML Auth: SimpleSAMLphp autoloader could not be loaded for set_provider. Path determined: %s', 'wp-saml-auth' ),
-						empty( $simplesamlphp_autoloader ) ? '[empty]' : esc_html( $simplesamlphp_autoloader )
-					);
-					error_log( $error_message );
-				}
-				return;
-			}
-
+			// Check if SimpleSAMLphp class is already autoloaded (2.x first, then 1.18).
 			if ( class_exists( 'SimpleSAML\Auth\Simple' ) ) {
 				$this->simplesamlphp_class = 'SimpleSAML\Auth\Simple';
+			} elseif ( ! class_exists( 'SimpleSAML_Auth_Simple' ) ) {
+				// Neither class exists, find and load the autoloader.
+				$simplesamlphp_autoloader = self::get_simplesamlphp_autoloader();
+
+				if ( ! empty( $simplesamlphp_autoloader ) && file_exists( $simplesamlphp_autoloader ) ) {
+					require_once $simplesamlphp_autoloader;
+				} else {
+					$this->log_autoloader_error( $simplesamlphp_autoloader );
+					return;
+				}
+
+				// After loading, determine which class is available.
+				if ( class_exists( 'SimpleSAML\Auth\Simple' ) ) {
+					$this->simplesamlphp_class = 'SimpleSAML\Auth\Simple';
+				} elseif ( ! class_exists( 'SimpleSAML_Auth_Simple' ) ) {
+					$this->log_autoloader_error();
+					return;
+				}
 			}
-			if ( ! class_exists( $this->simplesamlphp_class ) ) {
-				return;
-			}
+			// else: SimpleSAML_Auth_Simple exists, use default class name.
+
 			$this->provider = new $this->simplesamlphp_class( self::get_option( 'auth_source' ) );
+		}
+	}
+  
+	/**
+	 * Log autoloader error when WP_DEBUG is set
+	 *
+	 * @param string $path Path to autoloader
+	 * @return void
+	 */
+	protected function log_autoloader_error( $path = '' ) {
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			$error_message = empty( $path )
+				? __( 'WP SAML Auth: SimpleSAMLphp autoloader could not be loaded for set_provider.', 'wp-saml-auth' )
+				: sprintf(
+					// Translators: %s is the path to the SimpleSAMLphp autoloader file (if found).
+					__( 'WP SAML Auth: SimpleSAMLphp autoloader could not be loaded for set_provider. Path determined: %s', 'wp-saml-auth' ),
+					esc_html( $path )
+				);
+
+			error_log( $error_message );
 		}
 	}
 
@@ -205,6 +231,12 @@ class WP_SAML_Auth {
 		$provider = $this->get_provider();
 		if ( 'internal' === self::get_option( 'connection_type' ) ) {
 			$internal_config = self::get_option( 'internal_config' );
+			/**
+			 * Permit the internal_config array to be customized.
+			 *
+			 * @param array $internal_config The internal configuration array for OneLogin.
+			 */
+			$internal_config = apply_filters( 'wp_saml_auth_internal_config', $internal_config );
 			if ( empty( $internal_config['idp']['singleLogoutService']['url'] ) ) {
 				return;
 			}
@@ -317,7 +349,7 @@ class WP_SAML_Auth {
 					// to the IDP. However, when $permit_wp_login=false, hitting wp-login will always
 					// trigger the IDP redirect.
 					if ( ( $permit_wp_login && false === stripos( $redirect_to, 'action=wp-saml-auth' ) )
-						|| ( ! $permit_wp_login && false === stripos( $redirect_to, parse_url( wp_login_url(), PHP_URL_PATH ) ) ) ) {
+						|| ( ! $permit_wp_login && false === stripos( $redirect_to, wp_parse_url( wp_login_url(), PHP_URL_PATH ) ) ) ) {
 						add_filter(
 							'login_redirect',
 							function () use ( $redirect_to ) {
@@ -413,6 +445,16 @@ class WP_SAML_Auth {
 
 		$existing_user = get_user_by( $get_user_by, $attributes[ $attribute ][0] );
 		if ( $existing_user ) {
+			$field_map = [
+				'email' => 'user_email',
+				'login' => 'user_login',
+				'slug'  => 'user_nicename',
+			];
+			$user_field = isset( $field_map[ $get_user_by ] ) ? $field_map[ $get_user_by ] : $get_user_by;
+			if ( mb_strtolower( $existing_user->$user_field, 'UTF-8' ) !== mb_strtolower( $attributes[ $attribute ][0], 'UTF-8' ) ) {
+				return new WP_Error( 'wp_saml_auth_attribute_mismatch', esc_html__( 'SAML attribute does not exactly match the existing user. Please contact your administrator.', 'wp-saml-auth' ) );
+			}
+
 			/**
 			 * Runs after a existing user has been authenticated in WordPress
 			 *
@@ -440,7 +482,30 @@ class WP_SAML_Auth {
 		 * @param array $attributes Attributes from the SAML response.
 		 */
 		$user_args = apply_filters( 'wp_saml_auth_insert_user', $user_args, $attributes );
-		$user_id   = wp_insert_user( $user_args );
+
+		// In multisite, check if we should prevent auto-adding users to sites.
+		if ( is_multisite() ) {
+			/**
+			 * Controls whether auto-provisioned users should be added to sites in multisite.
+			 *
+			 * In multisite environments, when wp_insert_user() is called with a 'role' parameter,
+			 * WordPress automatically adds the user to the current site. During SAML login, this is
+			 * typically the main site (ID 1). Setting this filter to false will create network users
+			 * without adding them to any site.
+			 *
+			 * @param bool  $auto_add_to_blog Whether to add the user to sites. Default true.
+			 * @param int   $blog_id          The current blog ID where the user would be added.
+			 * @param array $user_args        Arguments passed to wp_insert_user().
+			 * @param array $attributes       Attributes from the SAML response.
+			 */
+			$auto_add_to_blog = apply_filters( 'wp_saml_auth_auto_add_to_blog', true, get_current_blog_id(), $user_args, $attributes );
+
+			if ( ! $auto_add_to_blog && isset( $user_args['role'] ) ) {
+				unset( $user_args['role'] );
+			}
+		}
+
+		$user_id = wp_insert_user( $user_args );
 		if ( is_wp_error( $user_id ) ) {
 			return $user_id;
 		}
@@ -448,7 +513,11 @@ class WP_SAML_Auth {
 		$user = get_user_by( 'id', $user_id );
 
 		/**
-		 * Runs after the user has been authenticated in WordPress
+		 * Runs after the user has been authenticated in WordPress.
+		 *
+		 * Note: Since 2.3.1, in multisite environments with the
+		 * wp_saml_auth_auto_add_to_blog filter returning false,
+		 * the user may have no role on the current site.
 		 *
 		 * @param WP_User $user       The new user object.
 		 * @param array   $attributes All attributes received from the SAML Response
@@ -506,6 +575,7 @@ class WP_SAML_Auth {
 			ABSPATH . 'simplesaml',
 			ABSPATH . 'private/simplesamlphp',
 			ABSPATH . 'simplesamlphp',
+			ABSPATH . 'vendor/simplesamlphp/simplesamlphp', // Composer installation path.
 			plugin_dir_path( __DIR__ ) . 'simplesamlphp',
 		] );
 
@@ -513,7 +583,13 @@ class WP_SAML_Auth {
 			$trimmed_base = rtrim( $base_path, '/\\' );
 
 			if ( is_dir( $trimmed_base ) ) {
-				// If an autoloader exists in a guessed path, try to include it.
+				// Check for SimpleSAMLphp 2.x autoloader first (vendor/autoload.php).
+				$simplesamlphp_autoloader_path = $trimmed_base . '/vendor/autoload.php';
+				if ( file_exists( $simplesamlphp_autoloader_path ) ) {
+					return $simplesamlphp_autoloader_path;
+				}
+
+				// Fall back to SimpleSAMLphp 1.x autoloader (lib/_autoload.php).
 				$simplesamlphp_autoloader_path = $trimmed_base . '/lib/_autoload.php';
 				if ( file_exists( $simplesamlphp_autoloader_path ) ) {
 					return $simplesamlphp_autoloader_path;
@@ -691,11 +767,9 @@ class WP_SAML_Auth {
 		}
 
 		$connection_type = self::get_option( 'connection_type' );
-		$simplesamlphp_version = $this->get_simplesamlphp_version();
-		$simplesamlphp_version_status = $this->check_simplesamlphp_version( $simplesamlphp_version );
 		$plugin_page = 'https://wordpress.org/plugins/wp-saml-auth';
 
-		// Using 'internal' (default) connection type.
+		// Scenario 1 - Using 'internal' (default) connection type.
 		if ( 'internal' === $connection_type ) {
 			if ( file_exists( WP_SAML_AUTH_AUTOLOADER ) ) {
 				require_once WP_SAML_AUTH_AUTOLOADER;
@@ -718,10 +792,21 @@ class WP_SAML_Auth {
 					]
 				);
 			}
+			return;
 		}
 
-		// If we have a SimpleSAMLphp version but the connection type is set, we haven't set up SimpleSAMLphp correctly.
-		if ( ! $simplesamlphp_version && $connection_type === 'simplesaml' ) {
+		// Early return if not using SimpleSAMLphp connection type.
+		if ( 'simplesamlphp' !== $connection_type ) {
+			return;
+		}
+
+		$simplesamlphp_version = $this->get_simplesamlphp_version();
+		$simplesamlphp_version_status = $this->check_simplesamlphp_version( $simplesamlphp_version );
+
+		// All scenarios below are for SimpleSAMLphp connection type.
+
+		// Scenario 2 - If we do not have a SimpleSAMLphp version, we haven't set up SimpleSAMLphp correctly.
+		if ( ! $simplesamlphp_version ) {
 			// Only show this notice if we're on the settings page.
 			if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'wp-saml-auth-settings' ) {
 				return;
@@ -729,7 +814,7 @@ class WP_SAML_Auth {
 			wp_admin_notice(
 				sprintf(
 					// Translators: %s is the link to the plugin page.
-					__( 'SimpleSAMLphp is defined as the SAML connection type, but the SimpleSAMLphp library was not found.Visit the <a href="%s">plugin page</a> for more information', 'wp-saml-auth' ),
+					__( 'SimpleSAMLphp is defined as the SAML connection type, but the SimpleSAMLphp library was not found. Visit the <a href="%s">plugin page</a> for more information', 'wp-saml-auth' ),
 					$plugin_page
 				),
 				[
@@ -741,59 +826,40 @@ class WP_SAML_Auth {
 					],
 				]
 			);
+			return;
 		}
 
-		// Check SimpleSAMLphp version.
-		if ( $simplesamlphp_version !== false ) {
-			if ( 'critical' === $simplesamlphp_version_status ) {
-				$min_version = self::get_option( 'critical_simplesamlphp_version' );
-				wp_admin_notice(
-					sprintf(
-						// Translators: 1 is the installed version of SimpleSAMLphp, 2 is the minimum version and 3 is the most secure version.
-						__( '<strong>Security Alert:</strong> The SimpleSAMLphp version used by the WP SAML Auth plugin (%1$s) has a critical security vulnerability (CVE-2023-26881). Please update to version %2$s or later. <a href="%3$s">Learn more</a>.', 'wp-saml-auth' ),
-						esc_html( $simplesamlphp_version ),
-						esc_html( $min_version ),
-						esc_url( admin_url( 'options-general.php?page=wp-saml-auth-settings' ) )
-					),
-					[
-						'type' => 'error',
-						'dismissible' => false,
-						'attributes' => [
-							'data-slug' => 'wp-saml-auth',
-							'data-type' => 'simplesamlphp-critical-vulnerability',
-						],
-					]
-				);
-			} elseif ( 'warning' === $simplesamlphp_version_status ) {
-				$min_version = self::get_option( 'min_simplesamlphp_version' );
-				wp_admin_notice(
-					sprintf(
-						// Translators: 1 is the installed version of SimpleSAMLphp, 2 is the minimum version and 3 is the most secure version.
-						__( '<strong>Security Recommendation:</strong> The  SimpleSAMLphp version used by the WP SAML Auth plugin (%1$s) is older than the recommended secure version. Please consider updating to version %2$s or later. <a href="%3$s">Learn more</a>.', 'wp-saml-auth' ),
-						esc_html( $simplesamlphp_version ),
-						esc_html( $min_version ),
-						esc_url( admin_url( 'options-general.php?page=wp-saml-auth-settings' ) )
-					),
-					[
-						'type' => 'warning',
-						'dismissible' => true,
-						'attributes' => [
-							'data-slug' => 'wp-saml-auth',
-							'data-type' => 'simplesamlphp-version-warning',
-						],
-					]
-				);
-			}
-		} elseif ( 'unknown' === $simplesamlphp_version_status ) {
-			// Only show this notice if we're on the settings page.
-			if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'wp-saml-auth-settings' ) {
-				return;
-			}
+		// Scenario 3 - Check SimpleSAMLphp version warnings.
+		if ( 'critical' === $simplesamlphp_version_status ) {
+			$min_version = self::get_option( 'critical_simplesamlphp_version' );
 			wp_admin_notice(
 				sprintf(
-					// Translators: 1 is the minimum recommended version of SimpleSAMLphp. 2 is a link to the WP SAML Auth settings page.
-					__( '<strong>Warning:</strong> WP SAML Auth was unable to determine your SimpleSAMLphp version. Please ensure you are using version %1$s or later for security. <a href="%2$s">Learn more</a>.', 'wp-saml-auth' ),
-					esc_html( self::get_option( 'min_simplesamlphp_version' ) ),
+					// Translators: 1 is the installed version of SimpleSAMLphp, 2 is the minimum version and 3 is the most secure version.
+					__( '<strong>Security Alert:</strong> The SimpleSAMLphp version used by the WP SAML Auth plugin (%1$s) has a critical security vulnerability (CVE-2023-26881). Please update to version %2$s or later. <a href="%3$s">Learn more</a>.', 'wp-saml-auth' ),
+					esc_html( $simplesamlphp_version ),
+					esc_html( $min_version ),
+					esc_url( admin_url( 'options-general.php?page=wp-saml-auth-settings' ) )
+				),
+				[
+					'type' => 'error',
+					'dismissible' => false,
+					'attributes' => [
+						'data-slug' => 'wp-saml-auth',
+						'data-type' => 'simplesamlphp-critical-vulnerability',
+					],
+				]
+			);
+			return;
+		}
+
+		if ( 'warning' === $simplesamlphp_version_status ) {
+			$min_version = self::get_option( 'min_simplesamlphp_version' );
+			wp_admin_notice(
+				sprintf(
+					// Translators: 1 is the installed version of SimpleSAMLphp, 2 is the minimum version and 3 is the most secure version.
+					__( '<strong>Security Recommendation:</strong> The  SimpleSAMLphp version used by the WP SAML Auth plugin (%1$s) is older than the recommended secure version. Please consider updating to version %2$s or later. <a href="%3$s">Learn more</a>.', 'wp-saml-auth' ),
+					esc_html( $simplesamlphp_version ),
+					esc_html( $min_version ),
 					esc_url( admin_url( 'options-general.php?page=wp-saml-auth-settings' ) )
 				),
 				[
@@ -801,11 +867,38 @@ class WP_SAML_Auth {
 					'dismissible' => true,
 					'attributes' => [
 						'data-slug' => 'wp-saml-auth',
-						'data-type' => 'simplesamlphp-version-unknown',
+						'data-type' => 'simplesamlphp-version-warning',
 					],
 				]
 			);
+			return;
 		}
+
+		// Version is OK - no warnings needed.
+		if ( 'ok' === $simplesamlphp_version_status ) {
+			return;
+		}
+		// Scenario 4 - Unable to determine SimpleSAMLphp version ("unknown").
+		// Only show this notice if we're on the settings page.
+		if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'wp-saml-auth-settings' ) {
+			return;
+		}
+		wp_admin_notice(
+			sprintf(
+				// Translators: 1 is the minimum recommended version of SimpleSAMLphp. 2 is a link to the WP SAML Auth settings page.
+				__( '<strong>Warning:</strong> WP SAML Auth was unable to determine your SimpleSAMLphp version. Please ensure you are using version %1$s or later for security. <a href="%2$s">Learn more</a>.', 'wp-saml-auth' ),
+				esc_html( self::get_option( 'min_simplesamlphp_version' ) ),
+				esc_url( admin_url( 'options-general.php?page=wp-saml-auth-settings' ) )
+			),
+			[
+				'type' => 'warning',
+				'dismissible' => true,
+				'attributes' => [
+					'data-slug' => 'wp-saml-auth',
+					'data-type' => 'simplesamlphp-version-unknown',
+				],
+			]
+		);
 	}
 
 	/**

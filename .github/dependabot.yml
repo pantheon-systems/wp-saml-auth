@@ -1,3 +1,6 @@
+# This file is managed by github-terraform. Manual changes will be overwritten.
+# To modify it, edit orgs/pantheon-systems/files/dependabot/custom/wp-saml-auth.yml
+# in https://github.com/pantheon-systems/github-terraform
 version: 2
 updates:
 - package-ecosystem: composer
@@ -8,6 +11,17 @@ updates:
     day: tuesday
   target-branch: "develop"
   open-pull-requests-limit: 99
+  groups:
+    composer-security:
+      applies-to: security-updates
+      update-types:
+      - minor
+      - patch
+    composer-minor-patch:
+      applies-to: version-updates
+      update-types:
+      - minor
+      - patch
   ignore:
   - dependency-name: onelogin/php-saml
     versions:
@@ -27,10 +41,32 @@ updates:
     interval: weekly
     timezone: America/Los_Angeles
     day: tuesday
-  target-branch: "develop"
+  target-branch: "main"
   open-pull-requests-limit: 99
+  groups:
+    npm-security:
+      applies-to: security-updates
+      update-types:
+      - minor
+      - patch
+    npm-minor-patch:
+      applies-to: version-updates
+      update-types:
+      - minor
+      - patch
 - package-ecosystem: "github-actions"
-  target-branch: "develop"
+  target-branch: "main"
   directory: "/"
   schedule:
     interval: daily
+  groups:
+    github-actions-security:
+      applies-to: security-updates
+      update-types:
+      - minor
+      - patch
+    github-actions-minor-patch:
+      applies-to: version-updates
+      update-types:
+      - minor
+      - patch

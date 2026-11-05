@@ -13,7 +13,13 @@ function samltheme_parent_theme_enqueue_styles() {
 
 add_filter( 'wp_saml_auth_option', function( $value, $option_name ){
     if ( 'connection_type' === $option_name ) {
-        return 'internal';
+        return 'simplesamlphp';
+    }
+
+    // Set auth_source to match the authentication source configured in SimpleSAMLphp's authsources.php
+    // This is required when connection_type is 'simplesamlphp' for the plugin to find the correct IdP config
+    if ( 'auth_source' === $option_name ) {
+        return 'example-userpass';
     }
     if ( 'internal_config' === $option_name ) {
         $value['idp']['entityId'] = home_url( '/simplesaml' );

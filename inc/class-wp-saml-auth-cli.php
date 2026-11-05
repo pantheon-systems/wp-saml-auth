@@ -91,7 +91,6 @@ class WP_SAML_Auth_CLI {
 	protected static function scaffold_config_function( $assoc_args ) {
 		$defaults   = [
 			'type'                   => 'internal',
-			'simplesamlphp_autoload' => __DIR__ . '/simplesamlphp/lib/_autoload.php',
 			'auth_source'            => 'default-sp',
 			'auto_provision'         => true,
 			'permit_wp_login'        => true,
@@ -118,17 +117,15 @@ class WP_SAML_Auth_CLI {
 		];
 		$values         = str_replace( array_keys( $search_replace ), array_values( $search_replace ), $values );
 		$values         = rtrim( $values, ')' ) . "\t);";
-		$function       = <<<EOT
-/**
- * Set WP SAML Auth configuration options
- */
-function wpsax_filter_option( \$value, \$option_name ) {
-	\$defaults = $values
-	\$value = isset( \$defaults[ \$option_name ] ) ? \$defaults[ \$option_name ] : \$value;
-	return \$value;
-}
-add_filter( 'wp_saml_auth_option', 'wpsax_filter_option', 10, 2 );
-EOT;
+		$function = "/**\n"
+			. " * Set WP SAML Auth configuration options\n"
+			. " */\n"
+			. "function wpsax_filter_option( \$value, \$option_name ) {\n"
+			. "\t\$defaults = " . $values . "\n"
+			. "\t\$value = isset( \$defaults[ \$option_name ] ) ? \$defaults[ \$option_name ] : \$value;\n"
+			. "\treturn \$value;\n"
+			. "}\n"
+			. "add_filter( 'wp_saml_auth_option', 'wpsax_filter_option', 10, 2 );";
 		return $function;
 	}
 }

@@ -41,12 +41,17 @@
         "test:install:withdb": "bin/install-local-tests.sh"
     },
     "autoload": {
-        "psr-4": { "PantheonSystems\\WPSamlAuth\\Behat\\": "tests/behat/bootstrap/" }
+        "psr-4": {
+            "PantheonSystems\\WPSamlAuth\\Behat\\": "tests/behat/bootstrap/"
+        }
     },
     "config": {
         "allow-plugins": {
             "dealerdirect/phpcodesniffer-composer-installer": true,
             "pantheon-systems/wpunit-helpers": true
+        },
+        "platform": {
+            "php": "7.4.33"
         }
     }
 }

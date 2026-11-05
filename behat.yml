@@ -22,4 +22,4 @@ default:
   extensions:
     Behat\MinkExtension:
       # base_url set by ENV
-      goutte: ~
+      browserkit_http: ~

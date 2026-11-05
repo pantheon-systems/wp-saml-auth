@@ -387,7 +387,7 @@ class WP_SAML_Auth_Settings {
 				'type'        => 'text',
 				'choices'     => false,
 				'description' => __( 'SP (WordPress) entity identifier.', 'wp-saml-auth' ),
-				'default'     => 'urn:' . parse_url( home_url(), PHP_URL_HOST ),
+				'default'     => 'urn:' . wp_parse_url( home_url(), PHP_URL_HOST ),
 				'required'    => true,
 			],
 			[

@@ -1,10 +1,10 @@
 === WP SAML Auth ===
-Contributors: getpantheon, danielbachhuber, Outlandish Josh, jspellman, jazzs3quence
+Contributors: getpantheon, danielbachhuber, Outlandish Josh, jspellman, jazzs3quence, AnaisPantheor, metasim
 Tags: authentication, SAML
 Requires at least: 6.4
-Tested up to: 6.8.1
-Requires PHP: 7.3
-Stable tag: 2.2.0
+Tested up to: 7.0
+Requires PHP: 7.4
+Stable tag: 2.3.5-dev
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -45,6 +45,8 @@ Additional explanation of each setting can be found in the code snippet below.
 To install SimpleSAMLphp locally for testing purposes, the [Identity Provider QuickStart](https://simplesamlphp.org/docs/stable/simplesamlphp-idp) is a good place to start. On Pantheon, the SimpleSAMLphp web directory needs to be symlinked to `~/code/simplesaml` to be properly handled by Nginx. [Read the docs](https://pantheon.io/docs/shibboleth-sso/) for more details about configuring SimpleSAMLphp on Pantheon.
 
 Because SAML authentication is handled as a part of the login flow, your SAML identity provider will need to send responses back to `wp-login.php`. For instance, if your domain is `pantheon.io`, then you'd use `http://pantheon.io/wp-login.php` as your `AssertionConsumerService` configuration value.
+
+**Where to add configuration code:** When using the filter-based configuration approach, add your code to a location that loads before the plugin initializes. You can [create a custom must-use plugin](https://docs.pantheon.io/guides/wordpress-configurations/mu-plugin) or add the code to your theme's `functions.php` file (note: theme-based configuration will need to be migrated if you switch themes).
 
 To configure the plugin with a filter, or for additional detail on each setting, use this code snippet:
 
@@ -103,14 +105,23 @@ To configure the plugin with a filter, or for additional detail on each setting,
             /**
              * Path to SimpleSAMLphp autoloader.
              *
-             * Follow the standard implementation by installing SimpleSAMLphp
-             * alongside the plugin, and provide the path to its autoloader.
-             * Alternatively, this plugin will work if it can find the
-             * `SimpleSAML_Auth_Simple` class.
+             * SimpleSAMLphp v2.x uses 'vendor/autoload.php'
+             * SimpleSAMLphp v1.x uses 'lib/_autoload.php'
+             *
+             * The plugin will automatically search for SimpleSAMLphp in common
+             * installation paths and detect the correct autoloader for both versions.
+             *
+             * You typically don't need to set this - leave it commented out to use auto-detection.
+             * Only set this value if SimpleSAMLphp is in a non-standard location.
+             *
+             * Examples:
+             * - SimpleSAMLphp v2.x: dirname( __FILE__ ) . '/simplesamlphp/vendor/autoload.php'
+             * - SimpleSAMLphp v1.x: dirname( __FILE__ ) . '/simplesamlphp/lib/_autoload.php'
+             * - Composer (site root): ABSPATH . 'vendor/autoload.php'
              *
              * @param string
              */
-            'simplesamlphp_autoload' => dirname( __FILE__ ) . '/simplesamlphp/lib/_autoload.php',
+            // 'simplesamlphp_autoload' => dirname( __FILE__ ) . '/simplesamlphp/vendor/autoload.php',
             /**
              * Authentication source to pass to SimpleSAMLphp
              *
@@ -201,23 +212,96 @@ If you need to adapt authentication behavior based on the SAML response, you can
         return $ret;
     }, 10, 2 );
 
-If you have installed SimpleSAMLphp to a non-default path, you can set that path via the `wp_saml_auth_simplesamlphp_path_array` filter. By default, it is assumed that SimpleSAMLphp is installed into one of the following paths:
+If you're using the OneLogin connection type and need to modify the `internal_config` (e.g. to set `requestedAuthnContext` to `false`), you can use the `wp_saml_auth_internal_config` filter:
+
+    /**
+     * Modify the OneLogin SAML configuration.
+     */
+    add_filter( 'wp_saml_auth_internal_config', function( $config ) {
+        $config['security']['requestedAuthnContext'] = false;
+        return $config;
+    } );
+
+In multisite environments, you can prevent auto-provisioned users from being automatically added to sites using the `wp_saml_auth_auto_add_to_blog` filter. By default, WordPress multisite adds new users to the site where they log in (typically site ID 1) with the `default_role`.
+
+    /**
+     * Prevent auto-provisioned users from being added to any site.
+     * Users will be created as network users only.
+     */
+    add_filter( 'wp_saml_auth_auto_add_to_blog', '__return_false' );
+
+You can also prevent users from being added only to specific sites:
+
+    /**
+     * Prevent auto-provisioned users from being added to site ID 1,
+     * but allow them to be added to other sites.
+     */
+    add_filter( 'wp_saml_auth_auto_add_to_blog', function( $add_user, $blog_id ) {
+        // Don't add users to site ID 1
+        if ( 1 === $blog_id ) {
+            return false;
+        }
+        return $add_user;
+    }, 10, 2 );
+
+When this filter returns `false`, users are created as network users without being added to the site. This is useful for large multisite installations where you want to manage site membership separately from authentication.
+
+**Note for developers using the `wp_saml_auth_new_user_authenticated` action:** When this filter returns `false`, the user passed to `wp_saml_auth_new_user_authenticated` will have no role on the current site. If your hook relies on `$user->roles`, check for an empty array:
+
+    add_action( 'wp_saml_auth_new_user_authenticated', function( $user, $attributes ) {
+        if ( empty( $user->roles ) ) {
+            // Network-only user, no role on this site.
+            return;
+        }
+        // Your existing logic.
+    }, 10, 2 );
+
+== Installing SimpleSAMLphp ==
+
+The plugin supports both SimpleSAMLphp v1.x and v2.x. The autoloader is automatically detected:
+
+**SimpleSAMLphp v2.x** uses `vendor/autoload.php`
+**SimpleSAMLphp v1.x** uses `lib/_autoload.php`
+
+= Default Search Paths =
+
+The plugin automatically searches for SimpleSAMLphp in these locations:
 * `ABSPATH . 'simplesaml'`
 * `ABSPATH . 'private/simplesamlphp'`
 * `ABSPATH . 'simplesamlphp'`
+* `ABSPATH . 'vendor/simplesamlphp/simplesamlphp'` (Composer installation)
+* `plugin_dir_path . 'simplesamlphp'`
+
+For each path, the plugin checks for both `vendor/autoload.php` (v2.x) and `lib/_autoload.php` (v1.x).
+
+**This means Composer installations work automatically!** If you run `composer require simplesamlphp/simplesamlphp` in your site root, the plugin will find it without any additional configuration.
+
+= Composer Installation (Advanced) =
+
+If you install SimpleSAMLphp via Composer to a **custom location** (not the standard `vendor/simplesamlphp/simplesamlphp`), you can specify the autoloader path:
+
+	add_filter( 'wp_saml_auth_option', function( $value, $option_name ) {
+		if ( 'simplesamlphp_autoload' === $option_name ) {
+			// Point to your custom Composer vendor autoloader
+			return '/custom/path/vendor/autoload.php';
+		}
+		return $value;
+	}, 10, 2 );
+
+= Custom Installation Paths =
+
+If SimpleSAMLphp is installed in a non-default location, you can set custom search paths with the `wp_saml_auth_simplesamlphp_path_array` filter:
 
 	add_filter( 'wp_saml_auth_simplesamlphp_path_array', function( $simplesamlphp_path_array ) {
-		// Override default paths with a defined path.
-		return [ ABSPATH . 'path/to/simplesamlphp' ];
-	}
+		// Override default paths with custom paths
+		return [ '/custom/path/to/simplesamlphp' ];
+	} );
 
-You can also define an explicit path to the SimpleSAMLphp autoloader file (defaults to the `lib/_autoload.php` file under the SimpleSAMLphp path) with the `wp_saml_auth_ssp_autoloader` filter.
+Or define an explicit autoloader path with the `wp_saml_auth_ssp_autoloader` filter:
 
 	add_filter( 'wp_saml_auth_ssp_autoloader', function( $ssp_autoloader ) {
-		if ( ! file_exists( $ssp_autoloader ) ) {
-			return ABSPATH . 'path/to/simplesamlphp/autoload.php';
-		}
-	}
+		return ABSPATH . 'path/to/simplesamlphp/vendor/autoload.php';
+	} );
 
 == WP-CLI Commands ==
 
@@ -243,9 +327,11 @@ This plugin implements a variety of [WP-CLI](https://wp-cli.org) commands. All c
 
 Use `wp help saml-auth <command>` to learn more about each command.
 
+**Note:** The `scaffold-config` command generates a configuration function with default values. The `simplesamlphp_autoload` option is not included in the scaffolded output because the plugin auto-detects SimpleSAMLphp installations. Only add this option manually if SimpleSAMLphp is in a non-standard location.
+
 == Contributing ==
 
-See [CONTRIBUTING.md](https://github.com/pantheon-systems/wp-saml-auth/blob/master/CONTRIBUTING.md) for information on contributing.
+See [CONTRIBUTING.md](https://github.com/pantheon-systems/wp-saml-auth/blob/main/CONTRIBUTING.md) for information on contributing.
 
 == Frequently Asked Questions ==
 
@@ -309,6 +395,33 @@ Minimum supported PHP version is 7.3.
 
 
 == Changelog ==
+
+= 2.3.5-dev =
+
+= 2.3.4 (12 August 2026) =
+* Restores the `vendor` directory to the WordPress.org package. 2.3.3 shipped without it, which broke SAML login for sites that took the update [[#499](https://github.com/pantheon-systems/wp-saml-auth/pull/499)].
+
+= 2.3.3 (11 August 2026) =
+* **Security:** Fixes an account takeover where an accent-insensitive database collation could match a SAML attribute to the wrong WordPress user. User lookup is now verified with a case-insensitive, accent-sensitive comparison [[#495](https://github.com/pantheon-systems/wp-saml-auth/pull/495)].
+* Adds PHP 8.5 compatibility [[#482](https://github.com/pantheon-systems/wp-saml-auth/pull/482)].
+* Updates dependencies [[#492](https://github.com/pantheon-systems/wp-saml-auth/pull/492)][[#494](https://github.com/pantheon-systems/wp-saml-auth/pull/494)].
+
+= 2.3.2 (15 May 2026) =
+* Update dependencies [[#477](https://github.com/pantheon-systems/wp-saml-auth/pull/477)].
+
+= 2.3.1 (March 6, 2026) =
+* Adds `wp_saml_auth_auto_add_to_blog` filter to control whether auto-provisioned users are added to sites in multisite environments [[#465](https://github.com/pantheon-systems/wp-saml-auth/pull/465)].
+* When `wp_saml_auth_auto_add_to_blog` returns `false`, the `wp_saml_auth_new_user_authenticated` action will receive a user with no role on the current site. Hooks relying on `$user->roles` being non-empty should account for this [[#465](https://github.com/pantheon-systems/wp-saml-auth/pull/465)].
+
+= 2.3.0 (January 8, 2026) =
+* Adds PHP 8.4 compatibility [[#410](https://github.com/pantheon-systems/wp-saml-auth/pull/410)].
+* Increases minimum supported PHP version to 7.4.
+* Compatible with WordPress 6.9
+* Fix warning message on the plugin's settings page for users who aren't using SimpleSAML [[#445](https://github.com/pantheon-systems/wp-saml-auth/pull/445)][[#451](https://github.com/pantheon-systems/wp-saml-auth/pull/451)].
+* Skip SimpleSAMLphp autoloader discovery when the SimpleSAML\Auth\Simple class is already loaded [[#444](https://github.com/pantheon-systems/wp-saml-auth/pull/444)].
+* Adds `wp_saml_auth_internal_config` filter to allow customization of the OneLogin SAML configuration [[#497](https://github.com/pantheon-systems/wp-saml-auth/pull/497)].
+* Fix autoloader detection logic for Composer-installed SimpleSAMLphp.[[#452](https://github.com/pantheon-systems/wp-saml-auth/pull/452)]
+* Fix incorrect warning display when SimpleSAMLphp version detection succeeds. [[#455](https://github.com/pantheon-systems/wp-saml-auth/pull/455)]
 
 = 2.2.0 (9 June 2024) =
 * Add a hook to modify returned attributes. [[#379](https://github.com/pantheon-systems/wp-saml-auth/pull/379/)]
